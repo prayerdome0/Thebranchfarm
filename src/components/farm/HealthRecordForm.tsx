@@ -2,9 +2,10 @@
 
 import { CircleAlert } from "lucide-react";
 import { useState } from "react";
+import { useStoreConfig } from "@/contexts/StoreConfigContext";
+import { asStoredCloudinaryAsset, resolveCloudinaryConfig, uploadHealthPhotoToCloudinary } from "@/lib/cloudinary";
 import { HEALTH_RECORD_TYPES } from "@/lib/constants";
 import { animalLabel } from "@/lib/firebase/data";
-import { uploadHealthPhoto } from "@/lib/firebase/storage";
 import { healthRecordSchema } from "@/lib/validation";
 import { friendlyError, todayIso } from "@/lib/utils";
 import type { Animal, HealthRecord } from "@/types";
@@ -56,6 +57,7 @@ export function HealthRecordForm({
     path: defaults?.photoPath,
   });
   const [error, setError] = useState("");
+  const { settings } = useStoreConfig();
 
   const update = (name: string, value: string) => setForm((current) => ({ ...current, [name]: value }));
 
@@ -167,11 +169,17 @@ export function HealthRecordForm({
         label="Supporting photo (optional)"
         value={photo.url}
         path={photo.path}
-        upload={async (file, onProgress) => {
-          const result = await uploadHealthPhoto(form.animalId || "health", file, onProgress);
-          return { url: result.downloadUrl, path: result.storagePath };
-        }}
+        upload={async (file, onProgress) =>
+          asStoredCloudinaryAsset(
+            await uploadHealthPhotoToCloudinary(
+              file,
+              resolveCloudinaryConfig(settings),
+              onProgress,
+            ),
+          )
+        }
         onChange={(result) => setPhoto({ url: result.url, path: result.path })}
+        hint="Uploaded to Cloudinary with the unsigned branch_farm preset. JPG, PNG or WebP up to 8 MB."
       />
 
       <label className="field field-full">

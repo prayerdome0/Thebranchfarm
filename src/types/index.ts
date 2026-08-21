@@ -57,9 +57,9 @@ export interface Animal extends FarmRecordBase {
   status: AnimalStatus;
   healthStatus: AnimalHealthStatus;
   notes?: string;
-  /** Public download URL of the uploaded photograph (Firebase Storage). */
+  /** Public Cloudinary delivery URL of the uploaded photograph. */
   photo?: string;
-  /** Storage path used to delete/replace the photograph. */
+  /** Cloudinary asset marker/public ID (legacy records may contain a Firebase path). */
   photoPath?: string;
 }
 
@@ -132,9 +132,9 @@ export interface FarmSettings {
   promoDiscountPercent?: number;
   /** Product id pinned to the homepage hero (falls back to first featured). */
   heroProductId?: string;
-  /** Cloudinary cloud name used for unsigned uploads (products, quotations, receipts, invoices). */
+  /** Cloudinary cloud name used for all unsigned uploads. */
   cloudinaryCloudName?: string;
-  /** Cloudinary unsigned upload preset (default: "branch_farm"). */
+  /** Legacy settings field; uploads always use the fixed "branch_farm" preset. */
   cloudinaryUploadPreset?: string;
   updatedAt?: TimestampValue;
   updatedBy?: string;
@@ -233,9 +233,9 @@ export interface FarmVideo {
   title: string;
   description?: string;
   category: string;
-  /** Public download URL of the uploaded video (Firebase Storage). */
+  /** Public Cloudinary delivery URL of the uploaded video. */
   videoUrl: string;
-  /** Storage path used to delete/replace the video. */
+  /** Cloudinary asset marker/public ID (legacy records may contain a Firebase path). */
   storagePath: string;
   /** Optional poster/thumbnail image shown before play. */
   posterUrl?: string;

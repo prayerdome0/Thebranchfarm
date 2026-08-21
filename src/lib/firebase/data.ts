@@ -289,8 +289,7 @@ export function defaultSettings(): FarmSettings {
     promoDiscountPercent: 0,
     heroProductId: "",
     cloudinaryCloudName: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || "",
-    cloudinaryUploadPreset:
-      process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || CLOUDINARY.uploadPreset,
+    cloudinaryUploadPreset: CLOUDINARY.uploadPreset,
   };
 }
 

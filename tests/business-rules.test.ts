@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { BUSINESS, ANIMAL_STATUS_LABELS, HEALTH_STATUS_LABELS } from "../src/lib/constants";
+import { BUSINESS, ANIMAL_STATUS_LABELS, CLOUDINARY, HEALTH_STATUS_LABELS } from "../src/lib/constants";
+import { resolveCloudinaryConfig } from "../src/lib/cloudinary";
 import { animalSchema, healthRecordSchema, registerSchema } from "../src/lib/validation";
 import { documentCategory, friendlyError, money } from "../src/lib/utils";
 
@@ -15,6 +16,26 @@ test("currency formatting uses Eswatini E", () => {
   assert.equal(money(35.5), "E35.50");
   assert.equal(money(null), "—");
   assert.equal(money(undefined), "—");
+});
+
+test("every upload uses the fixed unsigned branch_farm Cloudinary preset", () => {
+  const config = resolveCloudinaryConfig({
+    cloudinaryCloudName: "the-branch-farm",
+    cloudinaryUploadPreset: "must-not-be-used",
+  });
+  assert.equal(config.uploadPreset, "branch_farm");
+  assert.equal(CLOUDINARY.uploadPreset, "branch_farm");
+  assert.deepEqual(Object.keys(CLOUDINARY.folders).sort(), [
+    "animals",
+    "documents",
+    "health",
+    "invoices",
+    "products",
+    "quotations",
+    "receipts",
+    "videoPosters",
+    "videos",
+  ]);
 });
 
 test("an animal record accepts a full purchase profile", () => {

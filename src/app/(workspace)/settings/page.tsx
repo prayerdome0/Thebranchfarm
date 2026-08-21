@@ -50,7 +50,7 @@ export default function SettingsPage() {
         promoDiscountPercent: parsed.data.promoDiscountPercent,
         heroProductId: parsed.data.heroProductId,
         cloudinaryCloudName: parsed.data.cloudinaryCloudName || "",
-        cloudinaryUploadPreset: parsed.data.cloudinaryUploadPreset || "branch_farm",
+        cloudinaryUploadPreset: "branch_farm",
       });
       showToast("Settings saved.", "success");
     } catch (cause) {
@@ -188,8 +188,8 @@ export default function SettingsPage() {
                 <div>
                   <h3>Media uploads — Cloudinary</h3>
                   <p>
-                    Product photos and business paperwork (quotations, receipts, invoices) upload
-                    straight to Cloudinary with an unsigned preset.
+                    All photos, videos and downloadable files upload straight to Cloudinary with
+                    the same unsigned preset.
                   </p>
                 </div>
               </div>
@@ -204,14 +204,9 @@ export default function SettingsPage() {
                 </label>
                 <label className="field">
                   <span>Unsigned upload preset</span>
-                  <input
-                    value={form.cloudinaryUploadPreset || ""}
-                    onChange={(e) => update("cloudinaryUploadPreset", e.target.value)}
-                    placeholder="branch_farm"
-                  />
+                  <input value="branch_farm" readOnly aria-readonly="true" />
                   <small>
-                    The preset must be UNSIGNED in Cloudinary. Leave as branch_farm unless you
-                    renamed it.
+                    All uploads use this fixed preset. It must be configured as UNSIGNED in Cloudinary.
                   </small>
                 </label>
               </div>

@@ -2,8 +2,9 @@
 
 import { CircleAlert } from "lucide-react";
 import { useState } from "react";
+import { useStoreConfig } from "@/contexts/StoreConfigContext";
+import { asStoredCloudinaryAsset, resolveCloudinaryConfig, uploadAnimalPhotoToCloudinary } from "@/lib/cloudinary";
 import { ANIMAL_STATUSES, ANIMAL_TYPES, HEALTH_STATUSES } from "@/lib/constants";
-import { uploadAnimalPhoto } from "@/lib/firebase/storage";
 import { animalSchema } from "@/lib/validation";
 import { friendlyError } from "@/lib/utils";
 import type {
@@ -110,6 +111,7 @@ export function AnimalForm({
     path: defaults?.photoPath,
   });
   const [error, setError] = useState("");
+  const { settings } = useStoreConfig();
 
   const update = (name: string, value: string) => setForm((current) => ({ ...current, [name]: value }));
 
@@ -198,11 +200,17 @@ export function AnimalForm({
         label="Animal photo"
         value={photo.url}
         path={photo.path}
-        upload={async (file, onProgress) => {
-          const result = await uploadAnimalPhoto(form.animalId || "new", file, onProgress);
-          return { url: result.downloadUrl, path: result.storagePath };
-        }}
+        upload={async (file, onProgress) =>
+          asStoredCloudinaryAsset(
+            await uploadAnimalPhotoToCloudinary(
+              file,
+              resolveCloudinaryConfig(settings),
+              onProgress,
+            ),
+          )
+        }
         onChange={(result) => setPhoto({ url: result.url, path: result.path })}
+        hint="Uploaded to Cloudinary with the unsigned branch_farm preset. JPG, PNG or WebP up to 8 MB."
       />
 
       <label className="field field-full">

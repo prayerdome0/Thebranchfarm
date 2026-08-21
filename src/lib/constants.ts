@@ -103,20 +103,24 @@ export const DOCUMENT_TYPE_LABELS: Record<string, string> = DOCUMENT_TYPES.reduc
 /* ------------------------------- Cloudinary ------------------------------- */
 
 /**
- * Cloudinary unsigned uploads for storefront media and business paperwork.
+ * Cloudinary unsigned uploads for all farm media and downloadable files.
  * The upload preset below must exist in the farm's Cloudinary account as an
  * UNSIGNED preset. The cloud name comes from settings or NEXT_PUBLIC_* env.
  */
 export const CLOUDINARY = {
   uploadPreset: "branch_farm",
   cloudNameEnv: "NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME",
-  presetEnv: "NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET",
-  /** Folders keep the Cloudinary library organised per document stream. */
+  /** Folders keep every uploaded asset organised in one Cloudinary library. */
   folders: {
+    animals: "branch_farm/animals",
+    health: "branch_farm/health",
+    documents: "branch_farm/documents",
     products: "branch_farm/products",
     quotations: "branch_farm/quotations",
     receipts: "branch_farm/receipts",
     invoices: "branch_farm/invoices",
+    videos: "branch_farm/videos",
+    videoPosters: "branch_farm/video-posters",
   } as Record<string, string>,
 } as const;
 

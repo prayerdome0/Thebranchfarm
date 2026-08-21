@@ -4,9 +4,9 @@ A focused farm-management system for **The Branch Farm**, Mahlabane, Eswatini.
 
 The system covers the actual farm operation plus a small public **storefront**: customers
 browse farm produce and livestock, add to a cart and place an order without paying online.
-Firebase is the single source of truth for identity, data and files. Orders are placed
-against Firestore and fulfilled by staff — there is no payment gateway and no separate
-storage vendor.
+Firebase is the source of truth for identity and application data; Cloudinary stores all
+uploaded media and downloadable files. Orders are placed against Firestore and fulfilled by
+staff — there is no payment gateway.
 
 ## The seven modules
 
@@ -62,23 +62,23 @@ storage vendor.
   a sample catalogue is shown and orders are stored locally in the browser. An admin can also
   seed the sample catalogue into Firestore from **Products → Add sample products**.
 
-## Cloudinary uploads (products, quotations, receipts, invoices)
+## Cloudinary uploads and downloads
 
-Product photos and business paperwork upload **straight from the browser to Cloudinary** using
-the unsigned upload preset **`branch_farm`** — no API keys in the app. Files are organised in
-the Cloudinary library as `branch_farm/products`, `branch_farm/quotations`,
-`branch_farm/receipts` and `branch_farm/invoices`.
+All animal and health photos, product images, farm videos and thumbnails, and every farm
+document upload **straight from the browser to Cloudinary**. Every upload uses the same fixed
+unsigned preset, **`branch_farm`** — callers and saved settings cannot override it. Assets are
+organised under `branch_farm/animals`, `branch_farm/health`, `branch_farm/products`,
+`branch_farm/videos`, `branch_farm/video-posters`, `branch_farm/documents`, and the dedicated
+quotation, receipt and invoice folders. Stored secure Cloudinary URLs power viewing, playback
+and document downloads.
 
 Setup:
 
-1. In Cloudinary → Settings → Upload presets, create (or keep) an **unsigned** preset named
-   `branch_farm`.
+1. In Cloudinary → Settings → Upload presets, create an **unsigned** preset named `branch_farm`.
 2. Put your **cloud name** (Cloudinary dashboard → Product Environment) in
-   **Settings → Media uploads** in the workspace, or set
-   `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` in the environment.
-3. That's it — product images (Product form) and quotation/receipt/invoice files
-   (Farm documents → document type) now upload to Cloudinary. Until the cloud name is set, the
-   app gracefully falls back to Firebase Storage so uploads never break.
+   **Settings → Media uploads**, or set `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME`.
+3. All upload surfaces now use Cloudinary. A missing cloud name or invalid preset produces a
+   clear upload error instead of silently storing the file with another provider.
 
 ## REST API
 
@@ -113,7 +113,7 @@ endpoints answer `503` — nothing breaks.
 1. Admin buys a cow → **Animals → Add animal** → enter ID/tag, name, type, breed, sex,
    date of birth, date purchased, purchase price, supplier, location, weight, status and
    notes → **upload the photograph** → Save.
-2. The photo is stored in **Firebase Storage**; the animal information is stored in **Firestore**.
+2. The photo is stored in **Cloudinary**; the animal information is stored in **Firestore**.
 3. **Animals → (the animal) → View** shows the actual photograph at the top, then all the
    basic information, then the health history, related documents and activity.
 4. If a staff member notices something: **Animals → (the animal) → Add health record** —
@@ -139,18 +139,18 @@ access until an administrator promotes it to staff or admin.
 
 - **Firebase Authentication** — admin and staff accounts. Email/password sign-in.
 - **Firestore** — `animals`, `animalHealth`, `users`, `farmDocuments`, `farmActivities`, `settings`.
-- **Firebase Storage** — `animal-photos/{animalId}/…` for photographs and
-  `documents/{uid}/…` for farm files (PDF, images, Word, Excel, videos, other).
+- **Cloudinary** — all uploaded photos, product media, videos and downloadable documents,
+  using the fixed unsigned `branch_farm` upload preset.
 - **Cloud Functions** — a small, focused set: `bootstrapInitialAdmin` (allowlist promotion),
   `setUserRole`, `setUserStatus`, `createStaffAccount` and `notifyOrderCreated` (order
-  webhook notification). Everything else runs directly against Firestore/Storage.
+  webhook notification). Everything else runs directly against Firestore and Cloudinary.
 
-No third-party APIs are used. Firebase alone handles storage, database and authentication.
+Firebase handles authentication and data; Cloudinary handles all newly uploaded files.
 
 ## Technology
 
 - Next.js 16 App Router + React 19 + TypeScript
-- Firebase Auth, Firestore, Storage, callable Cloud Functions and Security Rules
+- Firebase Auth, Firestore, callable Cloud Functions and Security Rules; Cloudinary media delivery
 - Zod validation
 - Custom accessible CSS design system (no template UI kit)
 - Node test runner + TSX

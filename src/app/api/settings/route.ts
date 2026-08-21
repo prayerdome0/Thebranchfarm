@@ -20,7 +20,7 @@ export async function GET() {
     freeDeliveryThreshold: STORE.freeDeliveryThreshold,
     promoCode: "",
     promoDiscountPercent: 0,
-    cloudinaryUploadPreset: process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || "branch_farm",
+    cloudinaryUploadPreset: "branch_farm",
   };
 
   const admin = getAdmin();

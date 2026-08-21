@@ -10,10 +10,10 @@ import type { FarmSettings } from "@/types";
  * is needed. Two things identify the account and preset:
  *
  *   - cloud name  → Settings → Media uploads, or NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
- *   - upload preset → "branch_farm" (Settings → Media uploads, or
- *                      NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET)
+ *   - upload preset → the fixed `branch_farm` preset
  *
- * The preset must exist in Cloudinary as an **unsigned** preset.
+ * The `branch_farm` preset must exist in Cloudinary as an **unsigned** preset.
+ * It is deliberately not configurable so every upload uses the same policy.
  */
 
 export interface CloudinaryConfig {
@@ -37,11 +37,7 @@ export function resolveCloudinaryConfig(settings?: Partial<FarmSettings> | null)
     (settings?.cloudinaryCloudName || "").trim() ||
     process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME ||
     "";
-  const uploadPreset =
-    (settings?.cloudinaryUploadPreset || "").trim() ||
-    process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET ||
-    CLOUDINARY.uploadPreset;
-  return { cloudName, uploadPreset };
+  return { cloudName, uploadPreset: CLOUDINARY.uploadPreset };
 }
 
 export function cloudinaryEnabled(config: CloudinaryConfig) {
@@ -94,7 +90,9 @@ export function uploadToCloudinary(
 
   return new Promise<CloudinaryUploadResult>((resolve, reject) => {
     const body = new FormData();
-    body.append("upload_preset", config.uploadPreset);
+    // Never accept a caller- or settings-provided preset. All farm uploads use
+    // the one unsigned preset configured for this application.
+    body.append("upload_preset", CLOUDINARY.uploadPreset);
     if (folder) body.append("folder", folder);
     body.append("file", file);
 
@@ -152,17 +150,75 @@ export function uploadProductImageToCloudinary(
   });
 }
 
-/** Quotations, receipts and invoices → `branch_farm/<type>`. */
+/** Any downloadable farm document → its matching `branch_farm` folder. */
+export function uploadFarmDocumentToCloudinary(
+  file: File,
+  docType: "general" | "quotation" | "receipt" | "invoice",
+  config: CloudinaryConfig,
+  onProgress?: (percent: number) => void,
+) {
+  const folderKey = docType === "general" ? "documents" : `${docType}s`;
+  return uploadToCloudinary(file, {
+    config,
+    folder: CLOUDINARY.folders[folderKey],
+    resourceType: "auto",
+    onProgress,
+  });
+}
+
+/** Backwards-compatible business-document helper. */
 export function uploadBusinessDocumentToCloudinary(
   file: File,
   docType: "quotation" | "receipt" | "invoice",
   config: CloudinaryConfig,
   onProgress?: (percent: number) => void,
 ) {
-  return uploadToCloudinary(file, {
-    config,
-    folder: CLOUDINARY.folders[docType] || "branch_farm/documents",
-    resourceType: "auto",
-    onProgress,
-  });
+  return uploadFarmDocumentToCloudinary(file, docType, config, onProgress);
+}
+
+function uploadFarmAsset(
+  file: File,
+  folder: string,
+  resourceType: "image" | "video" | "raw" | "auto",
+  config: CloudinaryConfig,
+  onProgress?: (percent: number) => void,
+) {
+  return uploadToCloudinary(file, { config, folder, resourceType, onProgress });
+}
+
+export function uploadAnimalPhotoToCloudinary(
+  file: File,
+  config: CloudinaryConfig,
+  onProgress?: (percent: number) => void,
+) {
+  return uploadFarmAsset(file, CLOUDINARY.folders.animals, "image", config, onProgress);
+}
+
+export function uploadHealthPhotoToCloudinary(
+  file: File,
+  config: CloudinaryConfig,
+  onProgress?: (percent: number) => void,
+) {
+  return uploadFarmAsset(file, CLOUDINARY.folders.health, "image", config, onProgress);
+}
+
+export function uploadFarmVideoToCloudinary(
+  file: File,
+  config: CloudinaryConfig,
+  onProgress?: (percent: number) => void,
+) {
+  return uploadFarmAsset(file, CLOUDINARY.folders.videos, "video", config, onProgress);
+}
+
+export function uploadVideoPosterToCloudinary(
+  file: File,
+  config: CloudinaryConfig,
+  onProgress?: (percent: number) => void,
+) {
+  return uploadFarmAsset(file, CLOUDINARY.folders.videoPosters, "image", config, onProgress);
+}
+
+/** Convert an upload result into the URL/path shape used by existing records. */
+export function asStoredCloudinaryAsset(result: CloudinaryUploadResult) {
+  return { url: result.url, path: `cloudinary:${result.publicId}` };
 }
