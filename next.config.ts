@@ -21,7 +21,9 @@ const nextConfig: NextConfig = {
           // "This page couldn't load" in the browser.
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=()" },
-          { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+          // NOTE: Cross-Origin-Opener-Policy intentionally omitted — "same-origin"
+          // forces the document into an isolated browsing context group that breaks
+          // iframe embedding and surfaces as "This page couldn't load".
         ],
       },
     ];
