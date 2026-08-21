@@ -133,6 +133,15 @@ export function friendlyError(error: unknown) {
     unavailable: "The service is temporarily unavailable. Please try again.",
     "failed-precondition": "That action is not valid in the current state. Refresh and try again.",
     "invalid-argument": "Please review the information and try again.",
+    // Callable/back-office service problems (reached when the backend cannot answer).
+    "functions/not-found": "The ordering service is still being set up. Please try again shortly or reach the farm on WhatsApp.",
+    "not-found": "That service or record is not available yet. Please try again shortly.",
+    internal: "The service hit an unexpected problem. Please try again, or reach the farm on WhatsApp if it continues.",
+    unimplemented: "This feature is still being set up. Please try again shortly.",
+    "deadline-exceeded": "The service took too long to respond. Check your connection and try again.",
+    "resource-exhausted": "The service is busy right now. Please try again in a moment.",
+    cancelled: "The request was interrupted. Please try again.",
+    aborted: "The request was interrupted. Please try again.",
   };
   return (
     messages[code] ||

@@ -147,6 +147,27 @@ The website can render without seeded Firestore products using the official read
 
 > Firebase CLI authentication is not available inside this repository by default, so deployment is deliberately not performed by build scripts. This prevents accidental modification of a production project.
 
+### Automatic backend deployment (recommended)
+
+The storefront redeploys automatically from `main`, but the Cloud Functions and security rules only deploy manually. If the two drift apart, **every callable answers HTTP 404 and checkout fails with "Something went wrong. Please try again."** while quotations, order tracking and staff actions fail the same way.
+
+A ready-to-use `Deploy Firebase backend` workflow ships in this repository at `firebase/firebase-deploy.yml`: it deploys `firestore:rules,firestore:indexes,storage,functions` whenever backend files land on `main`, and fails loudly if any callable still answers 404. One-time setup:
+
+1. Enable the workflow by copying the template into place (or adding it via the GitHub web UI → Actions → New workflow):
+
+   ```bash
+   mkdir -p .github/workflows && cp firebase/firebase-deploy.yml .github/workflows/firebase-deploy.yml
+   ```
+
+2. Firebase console → Project settings → **Service accounts** → **Generate new private key** (an account with the Firebase Admin role on `thebranchfarm`).
+3. GitHub → repository **Settings → Secrets and variables → Actions** → add `FIREBASE_SERVICE_ACCOUNT` with the downloaded JSON.
+4. Run the workflow once from **Actions → Deploy Firebase backend → Run workflow**. After that, any change under `functions/` or `firebase/` merged to `main` is published automatically.
+
+### Troubleshooting
+
+- **"We couldn't place the order — Something went wrong. Please try again."** → Open `https://us-central1-thebranchfarm.cloudfunctions.net/createOrder`. A Google "404 Page not found" means the backend functions are not deployed (or the deploy failed): run step 4 above or the GitHub workflow. Any other response (for example an HTTP 400 JSON error) means the service is live and the browser console's logged error (`Order placement failed: …`) has the real cause.
+- **"Quotation is not working"** / staff actions failing with the generic message → same check with `…/createQuotation`. New callables exist only after the functions deploy completes.
+
 ### Firebase App Hosting
 
 `apphosting.yaml` contains a production-ready Next.js runtime profile and the public Firebase web configuration. Create these App Hosting secrets before rollout:

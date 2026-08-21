@@ -415,7 +415,8 @@ const quotationSchema = z.object({
 
 export const createQuotation = onCall({ region: REGION }, async (request) => {
   const current = await actor(request.auth?.uid, ["staff", "admin"]);
-  const input = quotationSchema.parse(request.data);
+  let input: z.infer<typeof quotationSchema>;
+  try { input = quotationSchema.parse(request.data); } catch { throw new HttpsError("invalid-argument", "Check the quotation details."); }
   const items = input.items.map((item) => {
     const discount = Number(item.discount || 0);
     const subtotal = Math.max(0, (item.price - discount) * item.quantity);
