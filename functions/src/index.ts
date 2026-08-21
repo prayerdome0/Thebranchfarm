@@ -234,7 +234,7 @@ export const createOrder = onCall({ region: REGION, timeoutSeconds: 60 }, async 
     deliveryFee,
     total,
     status: "pending" as const,
-    agreementAccepted: true,
+    agreementAccepted: input.agreementAccepted,
     signature: input.signature,
     signatureHash,
     documentVersion: 1,

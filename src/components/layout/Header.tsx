@@ -27,6 +27,7 @@ const publicLinks = [
   { href: "/about", label: "Our Farm" },
   { href: "/products", label: "Products" },
   { href: "/gallery", label: "Gallery" },
+  { href: "/videos", label: "Videos" },
   { href: "/track-order", label: "Track Order" },
   { href: "/contact", label: "Contact" },
 ];

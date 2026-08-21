@@ -23,6 +23,7 @@ This repository is not a brochure template. It contains a connected Next.js mark
 - Firebase registration, login, logout and password reset
 - Customer overview, orders, documents, notifications and profile pages
 - Contact form, map reference, gallery, about page and public QR verification
+- Farm film journal and homepage video previews using clearly labelled illustrative stock footage with local poster fallbacks
 - User-initiated, locally synthesised farm ambience (no autoplay or third-party audio tracking)
 - Animated farm story with reduced-motion support
 
@@ -183,8 +184,8 @@ The tests cover official launch prices/availability, delivery policy, Lilangeni 
 
 - `public/logo.png` is the supplied official logo.
 - Launch visuals in `public/media/` are AI-created brand illustrations, consistently labelled in the interface and never represented as photographs of current facilities.
-- The homepage farm film is the CC0 Pexels/Pixabay clip `855340`, labelled as illustrative stock footage and not as footage of The Branch Farm. A local poster remains if the remote video is unavailable, and reduced-motion visitors see the still instead.
-- Administrators can replace/add gallery and product media through Cloudinary as authentic farm photographs become available.
+- The homepage farm film is the CC0 Pexels/Pixabay clip `855340`, labelled as illustrative stock footage and not as footage of The Branch Farm. The `/videos` film journal adds dairy, poultry and future-egg clips with local posters, so the visual story remains useful when remote video is unavailable.
+- Administrators can replace/add gallery and product media through Cloudinary as authentic farm photographs and films become available.
 
 ## Current official configuration
 

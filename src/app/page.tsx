@@ -28,9 +28,10 @@ import {
 import { useProducts } from "@/contexts/ProductContext";
 import { useSound } from "@/contexts/SoundContext";
 import { useBusinessSettings } from "@/contexts/BusinessSettingsContext";
+import { FarmVideoCard } from "@/components/media/FarmVideoCard";
 import { ProductCard } from "@/components/products/ProductCard";
 import { SectionHeading } from "@/components/ui/SectionHeading";
-import { BUSINESS } from "@/lib/constants";
+import { BUSINESS, FARM_VIDEOS } from "@/lib/constants";
 import { phoneHref, whatsappHref } from "@/lib/utils";
 
 const activities = [
@@ -132,6 +133,20 @@ export default function HomePage() {
               <li><span><Leaf size={19} /></span><div><strong>Built for growth</strong><p>Dairy today, with more farm products to follow.</p></div></li>
             </ul>
             <Link href="/about" className="button button-secondary">Discover our farm <ArrowRight size={18} /></Link>
+          </div>
+        </div>
+      </section>
+
+      <section className="section films-section">
+        <div className="container">
+          <SectionHeading
+            eyebrow="More to watch"
+            title="A growing farm story, in motion."
+            description="Watch more illustrative films about the dairy, livestock and future product lines we are building toward."
+            action={<Link href="/videos" className="text-link">Watch all films <ArrowRight size={17} /></Link>}
+          />
+          <div className="farm-video-grid farm-video-grid-preview">
+            {FARM_VIDEOS.slice(1, 4).map((video) => <FarmVideoCard key={video.id} video={video} />)}
           </div>
         </div>
       </section>

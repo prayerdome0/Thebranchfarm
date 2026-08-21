@@ -26,7 +26,7 @@ interface AuthContextValue {
   loading: boolean;
   isAdmin: boolean;
   isStaff: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<UserProfile | null>;
   register: (values: { fullName: string; email: string; phone: string; password: string }) => Promise<void>;
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
@@ -120,9 +120,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       isAdmin: user?.role === "admin",
       isStaff: user?.role === "staff" || user?.role === "admin",
-      login: async (email, password) => {
-        await loginUser(email, password);
-      },
+      login: async (email, password) => loginUser(email, password),
       register: async (values) => {
         await registerUser(values);
       },

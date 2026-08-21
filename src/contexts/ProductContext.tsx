@@ -1,9 +1,15 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { INITIAL_PRODUCTS } from "@/lib/constants";
+import { INITIAL_PRODUCTS, PRODUCT_FALLBACK_IMAGES } from "@/lib/constants";
 import { watchProducts } from "@/lib/firebase/data";
 import type { Product } from "@/types";
+
+function normalizeProduct(product: Product): Product {
+  const fallback = PRODUCT_FALLBACK_IMAGES[product.category] || PRODUCT_FALLBACK_IMAGES.other;
+  const images = Array.isArray(product.images) ? product.images.filter(Boolean) : [];
+  return { ...product, images: images.length ? images : [fallback] };
+}
 
 interface ProductContextValue {
   products: Product[];
@@ -25,7 +31,8 @@ export function ProductProvider({ children }: { children: ReactNode }) {
     try {
       const stop = watchProducts((incoming) => {
         if (cancelled) return;
-        setProducts(incoming);
+        const normalized = incoming.map(normalizeProduct);
+        setProducts(normalized);
         setUsingInitialCatalog(
           incoming === INITIAL_PRODUCTS ||
             incoming.every((item) => INITIAL_PRODUCTS.some((seed) => seed.id === item.id))
