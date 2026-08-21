@@ -1,6 +1,6 @@
 "use client";
 
-import { CircleAlert, Save, Store } from "lucide-react";
+import { CircleAlert, Cloud, Save, Store } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { Loading } from "@/components/ui/Loading";
@@ -49,6 +49,8 @@ export default function SettingsPage() {
         promoCode: parsed.data.promoCode,
         promoDiscountPercent: parsed.data.promoDiscountPercent,
         heroProductId: parsed.data.heroProductId,
+        cloudinaryCloudName: parsed.data.cloudinaryCloudName || "",
+        cloudinaryUploadPreset: parsed.data.cloudinaryUploadPreset || "branch_farm",
       });
       showToast("Settings saved.", "success");
     } catch (cause) {
@@ -174,6 +176,43 @@ export default function SettingsPage() {
                       </option>
                     ))}
                   </select>
+                </label>
+              </div>
+            </section>
+
+            <section className="dashboard-panel">
+              <div className="settings-section-head">
+                <span>
+                  <Cloud size={19} />
+                </span>
+                <div>
+                  <h3>Media uploads — Cloudinary</h3>
+                  <p>
+                    Product photos and business paperwork (quotations, receipts, invoices) upload
+                    straight to Cloudinary with an unsigned preset.
+                  </p>
+                </div>
+              </div>
+              <div className="form-grid">
+                <label className="field">
+                  <span>Cloudinary cloud name</span>
+                  <input
+                    value={form.cloudinaryCloudName || ""}
+                    onChange={(e) => update("cloudinaryCloudName", e.target.value)}
+                    placeholder="e.g. thebranchfarm (from your Cloudinary dashboard)"
+                  />
+                </label>
+                <label className="field">
+                  <span>Unsigned upload preset</span>
+                  <input
+                    value={form.cloudinaryUploadPreset || ""}
+                    onChange={(e) => update("cloudinaryUploadPreset", e.target.value)}
+                    placeholder="branch_farm"
+                  />
+                  <small>
+                    The preset must be UNSIGNED in Cloudinary. Leave as branch_farm unless you
+                    renamed it.
+                  </small>
                 </label>
               </div>
             </section>

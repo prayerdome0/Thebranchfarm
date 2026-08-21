@@ -96,9 +96,14 @@ export interface FarmDocument extends FarmRecordBase {
   fileSize: number;
   /** pdf | image | word | excel | video | other */
   category: string;
+  /** Business document type: general | quotation | receipt | invoice. */
+  docType?: string;
   downloadUrl: string;
   storagePath: string;
+  /** Cloudinary public id when the file was uploaded through Cloudinary. */
+  cloudinaryPublicId?: string;
   relatedAnimalId?: string;
+  relatedOrderId?: string;
 }
 
 export interface ActivityRecord extends FarmRecordBase {
@@ -127,6 +132,10 @@ export interface FarmSettings {
   promoDiscountPercent?: number;
   /** Product id pinned to the homepage hero (falls back to first featured). */
   heroProductId?: string;
+  /** Cloudinary cloud name used for unsigned uploads (products, quotations, receipts, invoices). */
+  cloudinaryCloudName?: string;
+  /** Cloudinary unsigned upload preset (default: "branch_farm"). */
+  cloudinaryUploadPreset?: string;
   updatedAt?: TimestampValue;
   updatedBy?: string;
   updatedByName?: string;
@@ -162,6 +171,11 @@ export interface Product {
   trackInventory: boolean;
   /** When true, customers may still order after stock reaches zero (pre-order). */
   allowBackorder?: boolean;
+  /**
+   * When true the product is listed but advertised as "coming soon" — it
+   * cannot be bought yet, the price is only indicative.
+   */
+  comingSoon?: boolean;
   /** Primary image. */
   image?: string;
   imagePath?: string;

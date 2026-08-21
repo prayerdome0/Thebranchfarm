@@ -64,6 +64,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [lines, hydrated]);
 
   const add = useCallback((product: Product, quantity = 1) => {
+    // Coming-soon lines are listed but not buyable yet.
+    if (product.comingSoon) return;
     setLines((current) => {
       const existing = current.find((line) => line.productId === product.id);
       if (existing) {

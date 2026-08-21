@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ArrowLeft, Check, MapPin, MessageSquareText, Phone, ShoppingBag } from "lucide-react";
+import { ArrowLeft, Check, FileText, MapPin, MessageSquareText, Phone, Receipt, ShoppingBag } from "lucide-react";
 import { Loading } from "@/components/ui/Loading";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { SignaturePad } from "@/components/store/SignaturePad";
@@ -230,6 +230,25 @@ export default function OrderDetailPage() {
             <button className="button button-secondary button-small" onClick={notifyCustomer}>
               <MessageSquareText size={15} /> Notify status
             </button>
+          </div>
+
+          <div style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <a
+              className="button button-secondary button-small"
+              target="_blank"
+              rel="noreferrer"
+              href={`/api/orders/${order.id}/receipt?reference=${encodeURIComponent(order.reference)}`}
+            >
+              <Receipt size={15} /> Print receipt
+            </a>
+            <a
+              className="button button-secondary button-small"
+              target="_blank"
+              rel="noreferrer"
+              href={`/api/orders/${order.id}/invoice?reference=${encodeURIComponent(order.reference)}`}
+            >
+              <FileText size={15} /> Print invoice
+            </a>
           </div>
         </div>
       </div>

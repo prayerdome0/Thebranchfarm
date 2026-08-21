@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ArrowRight, Check, Copy, MessageSquareText, PackageCheck, Truck } from "lucide-react";
+import { ArrowRight, Check, Copy, MessageSquareText, PackageCheck, Receipt, Truck } from "lucide-react";
 import { Loading } from "@/components/ui/Loading";
 import { useToast } from "@/contexts/ToastContext";
 import { FULFILLMENT_LABELS, ORDER_STATUS_FLOW, ORDER_STATUS_LABELS } from "@/lib/constants";
@@ -93,6 +93,16 @@ export default function OrderSuccessPage() {
           <Link className="button button-primary" href="/track">
             Track this order <PackageCheck size={18} />
           </Link>
+          {order.paymentStatus === "paid" && (
+            <a
+              className="button button-secondary"
+              href={`/api/orders/${order.id}/receipt?reference=${encodeURIComponent(order.reference)}`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <Receipt size={18} /> Print receipt
+            </a>
+          )}
           <a
             className="button button-whatsapp"
             href={`https://wa.me/26876581804?text=${encodeURIComponent(`Hello, I placed order ${order.reference}.`)}`}

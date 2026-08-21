@@ -83,6 +83,7 @@ export default function ProductDetailPage() {
 
   const soldOut = product.trackInventory && product.stock <= 0;
   const preOrder = soldOut && product.allowBackorder;
+  const comingSoon = Boolean(product.comingSoon);
   const price = product.salePrice != null && product.salePrice > 0 ? product.salePrice : product.price;
   const lineTotal = price * quantity;
 
@@ -145,8 +146,14 @@ export default function ProductDetailPage() {
                 {PRODUCT_KIND_LABELS[product.kind]}
                 <span>·</span>
                 {PRODUCT_CATEGORY_LABELS[product.category] || product.category}
-                <span className={soldOut && !preOrder ? "coming" : "available"}>
-                  {soldOut ? (preOrder ? "Pre-order" : "Out of stock") : "In stock"}
+                <span className={comingSoon || (soldOut && !preOrder) ? "coming" : "available"}>
+                  {comingSoon
+                    ? "Coming soon"
+                    : soldOut
+                      ? preOrder
+                        ? "Pre-order"
+                        : "Out of stock"
+                      : "In stock"}
                 </span>
               </div>
               <h1>{product.name}</h1>
@@ -163,7 +170,20 @@ export default function ProductDetailPage() {
                 <MapPin size={15} /> Farm location: <strong>{BUSINESS.location}</strong>
               </div>
 
-              {preOrder && (
+              {comingSoon && (
+                <div className="coming-detail" style={{ marginTop: 18 }}>
+                  <Leaf size={20} />
+                  <div>
+                    <strong>Coming soon</strong>
+                    <span>
+                      This line is on its way to the farm shop — the price shown is indicative.
+                      WhatsApp us to be notified the moment it lands.
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {preOrder && !comingSoon && (
                 <div className="coming-detail" style={{ marginTop: 18 }}>
                   <Truck size={20} />
                   <div>
@@ -203,13 +223,13 @@ export default function ProductDetailPage() {
                 <div className="detail-buttons">
                   <button
                     className="button button-primary"
-                    disabled={soldOut && !preOrder}
+                    disabled={comingSoon || (soldOut && !preOrder)}
                     onClick={() => {
                       add(product, quantity);
                       router.push("/cart");
                     }}
                   >
-                    <ShoppingBag size={18} /> Add to cart
+                    <ShoppingBag size={18} /> {comingSoon ? "Coming soon" : "Add to cart"}
                   </button>
                   <Link className="button button-secondary" href="/track">
                     Track order

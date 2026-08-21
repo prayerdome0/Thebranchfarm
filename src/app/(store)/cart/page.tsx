@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, ShoppingBag, Trash2, Truck } from "lucide-react";
+import { useState } from "react";
+import { ArrowRight, FileText, ShoppingBag, Trash2, Truck } from "lucide-react";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { QuantityStepper } from "@/components/store/ProductCard";
 import { useCart } from "@/contexts/CartContext";
@@ -10,6 +11,36 @@ import { useStoreConfig } from "@/contexts/StoreConfigContext";
 export default function CartPage() {
   const { lines, subtotal, setQuantity, remove } = useCart();
   const { deliveryFee, freeDeliveryThreshold, formatMoney } = useStoreConfig();
+  const [quoting, setQuoting] = useState(false);
+
+  /** Builds a printable farm quotation for the current cart via /api/quotations. */
+  const downloadQuotation = async () => {
+    setQuoting(true);
+    try {
+      const response = await fetch("/api/quotations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          items: lines.map((line) => ({
+            productId: line.productId,
+            name: line.name,
+            unit: line.unit,
+            price: line.price,
+            quantity: line.quantity,
+          })),
+        }),
+      });
+      if (!response.ok) throw new Error("quotation-failed");
+      const html = await response.text();
+      const blobUrl = URL.createObjectURL(new Blob([html], { type: "text/html" }));
+      window.open(blobUrl, "_blank");
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
+    } catch {
+      window.alert("Could not build the quotation right now. Please try again.");
+    } finally {
+      setQuoting(false);
+    }
+  };
 
   if (!lines.length) {
     return (
@@ -121,6 +152,14 @@ export default function CartPage() {
             <Link className="button button-primary button-large button-full" href="/checkout">
               Continue to checkout <ArrowRight size={18} />
             </Link>
+            <button
+              className="button button-secondary button-full"
+              onClick={downloadQuotation}
+              disabled={quoting}
+              style={{ marginTop: 10 }}
+            >
+              <FileText size={17} /> {quoting ? "Preparing…" : "Download quotation"}
+            </button>
             <div className="summary-note">
               <span>No online payment needed — pay on collection or delivery.</span>
             </div>

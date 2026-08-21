@@ -3,7 +3,13 @@
 import { useState } from "react";
 import { CircleAlert, CloudUpload, Trash2 } from "lucide-react";
 import { PhotoField } from "@/components/farm/PhotoField";
+import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { PRODUCT_CATEGORIES, PRODUCT_KIND_LABELS } from "@/lib/constants";
+import {
+  cloudinaryEnabled,
+  resolveCloudinaryConfig,
+  uploadProductImageToCloudinary,
+} from "@/lib/cloudinary";
 import { uploadProductImage } from "@/lib/firebase/storage";
 import { productSchema } from "@/lib/validation";
 import { friendlyError } from "@/lib/utils";
@@ -33,6 +39,7 @@ export function ProductForm({
     stock: initial?.stock ?? 0,
     trackInventory: initial?.trackInventory ?? true,
     allowBackorder: initial?.allowBackorder ?? false,
+    comingSoon: initial?.comingSoon ?? false,
     active: initial?.active ?? true,
     featured: initial?.featured ?? false,
     image: initial?.image,
@@ -43,6 +50,22 @@ export function ProductForm({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [serverError, setServerError] = useState("");
   const [saving, setSaving] = useState(false);
+  const { settings } = useStoreConfig();
+
+  /**
+   * Product photos upload straight to Cloudinary with the unsigned
+   * `branch_farm` preset (Settings → Media uploads). If Cloudinary is not
+   * configured yet we fall back to Firebase Storage so uploads keep working.
+   */
+  const uploadImage = async (file: File, onProgress?: (percent: number) => void) => {
+    const config = resolveCloudinaryConfig(settings);
+    if (cloudinaryEnabled(config)) {
+      const result = await uploadProductImageToCloudinary(file, config, onProgress);
+      return { url: result.url, path: `cloudinary:${result.publicId}` };
+    }
+    const result = await uploadProductImage(file, onProgress);
+    return { url: result.downloadUrl, path: result.storagePath };
+  };
 
   const update = <K extends keyof ProductFormValues>(key: K, value: ProductFormValues[K]) =>
     setForm((current) => ({ ...current, [key]: value }));
@@ -78,9 +101,9 @@ export function ProductForm({
   const addImage = async (file?: File) => {
     if (!file) return;
     try {
-      const result = await uploadProductImage(file);
-      update("images", [...(form.images || []), result.downloadUrl]);
-      update("imagePaths", [...(form.imagePaths || []), result.storagePath]);
+      const result = await uploadImage(file);
+      update("images", [...(form.images || []), result.url]);
+      update("imagePaths", [...(form.imagePaths || []), result.path]);
     } catch (cause) {
       setServerError(friendlyError(cause));
     }
@@ -226,6 +249,16 @@ export function ProductForm({
           <label className="check-field" style={{ marginTop: 0 }}>
             <input
               type="checkbox"
+              checked={form.comingSoon || false}
+              onChange={(e) => update("comingSoon", e.target.checked)}
+            />
+            <span>
+              <i>✓</i> Coming soon (listed, not buyable yet)
+            </span>
+          </label>
+          <label className="check-field" style={{ marginTop: 0 }}>
+            <input
+              type="checkbox"
               checked={form.active}
               onChange={(e) => update("active", e.target.checked)}
             />
@@ -251,15 +284,12 @@ export function ProductForm({
         <PhotoField
           value={form.image}
           path={form.imagePath}
-          upload={async (file, onProgress) => {
-            const result = await uploadProductImage(file, onProgress);
-            return { url: result.downloadUrl, path: result.storagePath };
-          }}
+          upload={uploadImage}
           onChange={(result) => {
             update("image", result.url);
             update("imagePath", result.path);
           }}
-          hint="Main image shown in listings. JPG, PNG or WebP up to 8 MB."
+          hint="Main image shown in listings. Uploaded to Cloudinary (unsigned branch_farm preset) — or Firebase Storage when Cloudinary is not configured. JPG, PNG or WebP up to 8 MB."
         />
 
         <div>

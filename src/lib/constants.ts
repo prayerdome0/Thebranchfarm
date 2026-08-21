@@ -81,6 +81,45 @@ export const DOCUMENT_CATEGORY_LABELS: Record<string, string> = {
   other: "Other file",
 };
 
+/* --------------------------- Business documents --------------------------- */
+
+export const DOCUMENT_TYPES = [
+  { value: "general", label: "General farm document" },
+  { value: "quotation", label: "Quotation" },
+  { value: "receipt", label: "Receipt" },
+  { value: "invoice", label: "Invoice" },
+] as const;
+
+export type DocumentType = (typeof DOCUMENT_TYPES)[number]["value"];
+
+export const DOCUMENT_TYPE_LABELS: Record<string, string> = DOCUMENT_TYPES.reduce(
+  (acc, type) => {
+    acc[type.value] = type.label;
+    return acc;
+  },
+  {} as Record<string, string>,
+);
+
+/* ------------------------------- Cloudinary ------------------------------- */
+
+/**
+ * Cloudinary unsigned uploads for storefront media and business paperwork.
+ * The upload preset below must exist in the farm's Cloudinary account as an
+ * UNSIGNED preset. The cloud name comes from settings or NEXT_PUBLIC_* env.
+ */
+export const CLOUDINARY = {
+  uploadPreset: "branch_farm",
+  cloudNameEnv: "NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME",
+  presetEnv: "NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET",
+  /** Folders keep the Cloudinary library organised per document stream. */
+  folders: {
+    products: "branch_farm/products",
+    quotations: "branch_farm/quotations",
+    receipts: "branch_farm/receipts",
+    invoices: "branch_farm/invoices",
+  } as Record<string, string>,
+} as const;
+
 function toLabels<T extends string>(options: SelectOption<T>[]): Record<T, string> {
   return options.reduce(
     (acc, option) => {

@@ -23,9 +23,17 @@ const IMAGES: GalleryImage[] = [
   { src: "/media/farm-operations.jpg", caption: "Daily operations", tag: "Farm", wide: true },
   { src: "/media/lashubile.jpg", caption: "In the paddock", tag: "Livestock" },
   { src: "/media/latsambile.jpg", caption: "Grazing time", tag: "Livestock" },
+  { src: "/media/milking-parlour.jpg", caption: "Morning milking", tag: "Dairy", wide: true },
+  { src: "/media/milk-bottles.jpg", caption: "Bottled at the farm", tag: "Dairy" },
+  { src: "/media/emasi-jars.jpg", caption: "Emasi setting in jars", tag: "Dairy", tall: true },
+  { src: "/media/calf-pasture.jpg", caption: "The newest calf", tag: "Livestock" },
+  { src: "/media/goats-herd.jpg", caption: "The Boer goat flock", tag: "Livestock" },
+  { src: "/media/pigs-pen.jpg", caption: "Pigs on pasture", tag: "Livestock", tall: true },
+  { src: "/media/vegetable-garden.jpg", caption: "The vegetable garden", tag: "Produce", wide: true },
+  { src: "/media/farm-dam-sunrise.jpg", caption: "The dam at sunrise", tag: "Farm", wide: true },
 ];
 
-const TAGS = ["All", "Farm", "Livestock", "Produce"];
+const TAGS = ["All", "Farm", "Livestock", "Produce", "Dairy"];
 
 export default function GalleryPage() {
   const [tag, setTag] = useState("All");
