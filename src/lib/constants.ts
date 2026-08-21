@@ -1,4 +1,4 @@
-import type { Product } from "@/types";
+import type { FarmVideo, Product, ProductCategory } from "@/types";
 
 export const BUSINESS = {
   name: "The Branch Farm",
@@ -79,7 +79,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     price: 0,
     unit: "tray",
     availability: "coming-soon",
-    images: ["/media/farm-operations.jpg"],
+    images: ["/media/eggs.jpg"],
     featured: true,
   },
   {
@@ -91,7 +91,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     price: 0,
     unit: "kg",
     availability: "coming-soon",
-    images: ["/media/farm-hero.jpg"],
+    images: ["/media/cattle.jpg"],
   },
   {
     id: "farm-pork",
@@ -113,7 +113,60 @@ export const INITIAL_PRODUCTS: Product[] = [
     price: 0,
     unit: "bird",
     availability: "coming-soon",
-    images: ["/media/farm-hero.jpg"],
+    images: ["/media/poultry.jpg"],
+  },
+];
+
+export const PRODUCT_FALLBACK_IMAGES: Record<ProductCategory, string> = {
+  dairy: "/media/raw-milk.jpg",
+  eggs: "/media/eggs.jpg",
+  beef: "/media/cattle.jpg",
+  pork: "/media/farm-operations.jpg",
+  chicken: "/media/poultry.jpg",
+  other: "/media/farm-hero.jpg",
+};
+
+/**
+ * Stock films are deliberately presented as illustrative until The Branch Farm
+ * has authentic footage to publish. Posters are local, so the story still
+ * looks complete when a remote video is unavailable or a visitor is offline.
+ */
+export const FARM_VIDEOS: FarmVideo[] = [
+  {
+    id: "cattle-grazing",
+    title: "Rooted in care",
+    description: "A calm look at cattle, pasture and the patient work behind good dairy.",
+    category: "Livestock",
+    src: "https://videos.pexels.com/video-files/855340/855340-hd_1920_1080_25fps.mp4",
+    poster: "/media/cattle.jpg",
+    credit: "Illustrative stock film · Pexels/Pixabay 855340",
+  },
+  {
+    id: "dairy-morning",
+    title: "The dairy rhythm",
+    description: "Traditional milking in motion — a visual note on the care behind fresh milk.",
+    category: "Dairy",
+    src: "https://videos.pexels.com/video-files/8064118/8064118-hd_1920_1080_24fps.mp4",
+    poster: "/media/raw-milk.jpg",
+    credit: "Illustrative stock film · Pexels 8064118",
+  },
+  {
+    id: "poultry-growing",
+    title: "A range that is growing",
+    description: "Poultry is part of our future range and will launch when the farm is ready.",
+    category: "Poultry",
+    src: "https://videos.pexels.com/video-files/4458054/4458054-uhd_2560_1440_24fps.mp4",
+    poster: "/media/poultry.jpg",
+    credit: "Illustrative stock film · Pexels 4458054",
+  },
+  {
+    id: "farm-eggs",
+    title: "Gathered with intention",
+    description: "A closer look at eggs as we prepare a future product line for local customers.",
+    category: "Future products",
+    src: "https://videos.pexels.com/video-files/7033772/7033772-uhd_2560_1440_25fps.mp4",
+    poster: "/media/eggs.jpg",
+    credit: "Illustrative stock film · Pexels 7033772",
   },
 ];
 

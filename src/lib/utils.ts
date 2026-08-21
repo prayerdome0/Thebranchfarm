@@ -83,12 +83,17 @@ export function friendlyError(error: unknown) {
       ? String((error as { code: string }).code)
       : "";
   const messages: Record<string, string> = {
-    "auth/email-already-in-use": "An account already exists for this email address.",
+    "auth/email-already-in-use": "An account already exists for this email address. Try signing in instead.",
     "auth/invalid-credential": "The email or password is incorrect.",
     "auth/invalid-email": "Please enter a valid email address.",
+    "auth/user-not-found": "The email or password is incorrect.",
+    "auth/wrong-password": "The email or password is incorrect.",
+    "auth/user-disabled": "This account has been disabled. Please contact the farm team.",
+    "auth/operation-not-allowed": "Email sign-in is not enabled yet. Please contact the farm team.",
     "auth/weak-password": "Use a stronger password with at least 8 characters.",
     "auth/too-many-requests": "Too many attempts. Please wait and try again.",
     "auth/network-request-failed": "We could not reach the service. Check your connection and try again.",
+    "auth/invalid-api-key": "The sign-in service is not configured correctly. Please try again later.",
     "permission-denied": "You do not have permission to complete that action.",
     unauthenticated: "Please sign in and try again.",
     unavailable: "The service is temporarily unavailable. Please try again.",

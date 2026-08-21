@@ -19,6 +19,15 @@ test("official launch catalogue has exactly the declared active products and pri
   }
 });
 
+test("coming-soon products keep a clear visual placeholder", () => {
+  const future = INITIAL_PRODUCTS.filter((product) => product.availability === "coming-soon");
+  assert.equal(future.length, 4);
+  for (const product of future) {
+    assert.equal(product.images.length > 0, true);
+    assert.equal(product.images[0].startsWith("/media/"), true);
+  }
+});
+
 test("delivery is free only in configured areas and never invents another fee", () => {
   assert.deepEqual(deliveryDetails("Manzini"), { fee: 0, label: "FREE delivery" });
   assert.deepEqual(deliveryDetails("Matsapha industrial area"), { fee: 0, label: "FREE delivery" });
@@ -54,6 +63,19 @@ test("order status workflow prevents skipping controlled stages", () => {
   assert.equal(ORDER_TRANSITIONS.pending.includes("delivered"), false);
   assert.deepEqual(ORDER_TRANSITIONS.delivered, ["completed"]);
   assert.deepEqual(ORDER_TRANSITIONS.completed, []);
+});
+
+test("registration trims profile fields and canonicalizes email", () => {
+  const result = registerSchema.parse({
+    fullName: "  Customer User  ",
+    email: "  CUSTOMER@example.com ",
+    phone: "  +268 7900 0000  ",
+    password: "strong-password",
+    confirmPassword: "strong-password",
+  });
+  assert.equal(result.fullName, "Customer User");
+  assert.equal(result.email, "customer@example.com");
+  assert.equal(result.phone, "+268 7900 0000");
 });
 
 test("public registration cannot select a privileged role", () => {

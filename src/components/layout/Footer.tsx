@@ -26,6 +26,7 @@ export function Footer() {
             <li><Link href="/shop">Shop products</Link></li>
             <li><Link href="/about">Our farm</Link></li>
             <li><Link href="/gallery">Gallery</Link></li>
+            <li><Link href="/videos">Farm films</Link></li>
             <li><Link href="/track-order">Track an order</Link></li>
             <li><Link href="/verify">Verify a document</Link></li>
           </ul>

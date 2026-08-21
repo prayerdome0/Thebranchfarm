@@ -7,7 +7,6 @@ import { Suspense, useState } from "react";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { useAuth } from "@/contexts/AuthContext";
 import { friendlyError } from "@/lib/utils";
-import { getUserProfile } from "@/lib/firebase/auth";
 
 function LoginForm() {
   const router = useRouter();
@@ -24,9 +23,7 @@ function LoginForm() {
     if (!email || !password) { setError("Enter your email and password."); return; }
     setLoading(true); setError("");
     try {
-      await login(email.trim(), password);
-      const current = (await import("@/lib/firebase/config")).auth.currentUser;
-      const profile = current ? await getUserProfile(current.uid) : null;
+      const profile = await login(email.trim(), password);
       const requested = search.get("next");
       const safeRequested = requested?.startsWith("/") && !requested.startsWith("//") ? requested : null;
       router.replace(safeRequested || (profile?.role === "admin" ? "/admin" : profile?.role === "staff" ? "/staff" : "/dashboard"));

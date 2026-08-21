@@ -47,6 +47,16 @@ export interface Product {
   updatedAt?: TimestampValue;
 }
 
+export interface FarmVideo {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  src: string;
+  poster: string;
+  credit: string;
+}
+
 export interface CartItem {
   product: Product;
   quantity: number;
