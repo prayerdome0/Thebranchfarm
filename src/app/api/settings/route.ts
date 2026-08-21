@@ -1,5 +1,5 @@
 import { BUSINESS, STORE } from "@/lib/constants";
-import { errorResponse, getAdmin } from "@/lib/server/admin";
+import { getAdmin } from "@/lib/server/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +20,7 @@ export async function GET() {
     freeDeliveryThreshold: STORE.freeDeliveryThreshold,
     promoCode: "",
     promoDiscountPercent: 0,
-    cloudinaryUploadPreset: process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || "branch_farm",
+    cloudinaryUploadPreset: "branch_farm",
   };
 
   const admin = getAdmin();

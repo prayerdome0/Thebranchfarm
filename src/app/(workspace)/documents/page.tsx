@@ -9,12 +9,10 @@ import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { useToast } from "@/contexts/ToastContext";
 import { DOCUMENT_CATEGORY_LABELS, DOCUMENT_TYPE_LABELS, DOCUMENT_TYPES } from "@/lib/constants";
 import {
-  cloudinaryEnabled,
   resolveCloudinaryConfig,
-  uploadBusinessDocumentToCloudinary,
+  uploadFarmDocumentToCloudinary,
 } from "@/lib/cloudinary";
 import { createFarmDocument, deleteFarmDocument, getAnimals, getFarmDocuments } from "@/lib/firebase/data";
-import { uploadFarmDocument } from "@/lib/firebase/storage";
 import { documentSchema } from "@/lib/validation";
 import { cn, documentCategory, formatBytes, formatDate, friendlyError } from "@/lib/utils";
 import type { Animal, FarmDocument } from "@/types";
@@ -67,8 +65,6 @@ export default function DocumentsPage() {
   const update = (key: keyof typeof form, value: string) =>
     setForm((current) => ({ ...current, [key]: value }));
 
-  const isBusinessDoc = form.docType !== "general";
-
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     setError("");
@@ -95,34 +91,12 @@ export default function DocumentsPage() {
     setUploading(true);
     setProgress(0);
     try {
-      // Quotations, receipts and invoices upload to Cloudinary with the
-      // unsigned `branch_farm` preset; general farm files go to Firebase
-      // Storage. If Cloudinary is not configured we fall back gracefully.
-      let downloadUrl = "";
-      let storagePath = "";
-      let cloudinaryPublicId: string | undefined;
-      const config = resolveCloudinaryConfig(settings);
-      if (form.docType !== "general" && cloudinaryEnabled(config)) {
-        const uploaded = await uploadBusinessDocumentToCloudinary(
-          file,
-          form.docType,
-          config,
-          setProgress,
-        );
-        downloadUrl = uploaded.url;
-        storagePath = `cloudinary:${uploaded.publicId}`;
-        cloudinaryPublicId = uploaded.publicId;
-      } else {
-        const uploaded = await uploadFarmDocument(file, setProgress);
-        downloadUrl = uploaded.downloadUrl;
-        storagePath = uploaded.storagePath;
-        if (isBusinessDoc) {
-          showToast(
-            "Cloudinary is not configured yet — the file was stored in Firebase Storage instead. Add the cloud name under Settings → Media uploads.",
-            "success",
-          );
-        }
-      }
+      const uploaded = await uploadFarmDocumentToCloudinary(
+        file,
+        form.docType,
+        resolveCloudinaryConfig(settings),
+        setProgress,
+      );
       await createFarmDocument({
         name: parsed.data.name,
         description: parsed.data.description,
@@ -131,9 +105,9 @@ export default function DocumentsPage() {
         fileSize: file.size,
         category: documentCategory(file.name, file.type),
         docType: form.docType,
-        downloadUrl,
-        storagePath,
-        cloudinaryPublicId,
+        downloadUrl: uploaded.url,
+        storagePath: `cloudinary:${uploaded.publicId}`,
+        cloudinaryPublicId: uploaded.publicId,
         relatedAnimalId: parsed.data.relatedAnimalId,
         relatedOrderId: parsed.data.relatedOrderId,
       });
@@ -174,8 +148,8 @@ export default function DocumentsPage() {
         <div>
           <h2>Farm documents</h2>
           <p>
-            Farm files, quotations, receipts and invoices — business paperwork uploads to Cloudinary
-            (unsigned <strong>branch_farm</strong> preset), everything else to Firebase Storage.
+            All farm files, quotations, receipts and invoices upload to Cloudinary with the same
+            unsigned <strong>branch_farm</strong> preset.
           </p>
         </div>
         <button className="button button-primary" onClick={() => setShowForm(true)}>
@@ -292,12 +266,9 @@ export default function DocumentsPage() {
                     </option>
                   ))}
                 </select>
-                {form.docType !== "general" && (
-                  <small>
-                    Uploaded to Cloudinary with the unsigned <strong>branch_farm</strong> preset
-                    (folder branch_farm/{form.docType}s) when configured.
-                  </small>
-                )}
+                <small>
+                  Uploaded to Cloudinary with the unsigned <strong>branch_farm</strong> preset.
+                </small>
               </label>
               <label className="field">
                 <span>Name *</span>

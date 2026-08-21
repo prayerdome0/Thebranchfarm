@@ -3,10 +3,15 @@
 import { useState } from "react";
 import { CircleAlert, CloudUpload, Film } from "lucide-react";
 import { PhotoField } from "@/components/farm/PhotoField";
+import { useStoreConfig } from "@/contexts/StoreConfigContext";
+import {
+  asStoredCloudinaryAsset,
+  resolveCloudinaryConfig,
+  uploadFarmVideoToCloudinary,
+  uploadVideoPosterToCloudinary,
+} from "@/lib/cloudinary";
 import { VIDEO_CATEGORIES } from "@/lib/constants";
-import { uploadFarmVideo, uploadVideoThumbnail } from "@/lib/firebase/storage";
 import { friendlyError } from "@/lib/utils";
-import type { FarmVideo } from "@/types";
 
 export type VideoFormValues = {
   title: string;
@@ -36,6 +41,7 @@ export function VideoForm({
   const [uploadingVideo, setUploadingVideo] = useState(false);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const { settings } = useStoreConfig();
 
   const handleVideo = async (file?: File) => {
     if (!file || uploadingVideo) return;
@@ -51,8 +57,12 @@ export function VideoForm({
     setUploadingVideo(true);
     setVideoProgress(0);
     try {
-      const result = await uploadFarmVideo(file, setVideoProgress);
-      setVideo({ url: result.downloadUrl, path: result.storagePath });
+      const result = await uploadFarmVideoToCloudinary(
+        file,
+        resolveCloudinaryConfig(settings),
+        setVideoProgress,
+      );
+      setVideo(asStoredCloudinaryAsset(result));
     } catch (cause) {
       setError(friendlyError(cause));
     } finally {
@@ -172,12 +182,17 @@ export function VideoForm({
           label="Thumbnail (poster)"
           value={poster.url}
           path={poster.path}
-          upload={async (file, onProgress) => {
-            const result = await uploadVideoThumbnail(file, onProgress);
-            return { url: result.downloadUrl, path: result.storagePath };
-          }}
+          upload={async (file, onProgress) =>
+            asStoredCloudinaryAsset(
+              await uploadVideoPosterToCloudinary(
+                file,
+                resolveCloudinaryConfig(settings),
+                onProgress,
+              ),
+            )
+          }
           onChange={(result) => setPoster({ url: result.url, path: result.path })}
-          hint="Optional cover image shown before the video plays. JPG, PNG or WebP up to 8 MB."
+          hint="Optional cover image. Uploaded to Cloudinary with the unsigned branch_farm preset. JPG, PNG or WebP up to 8 MB."
         />
       </section>
 

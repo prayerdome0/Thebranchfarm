@@ -1,11 +1,11 @@
-import { ApiError, errorResponse, getAdmin, requireStaff } from "@/lib/server/admin";
+import { ApiError, errorResponse, requireStaff } from "@/lib/server/admin";
 
 export const dynamic = "force-dynamic";
 
 /**
  * GET /api/documents?docType=quotation — staff list of farm documents and
  * business paperwork (quotations, receipts, invoices). Files themselves live in
- * Cloudinary (unsigned branch_farm preset) or Firebase Storage; this indexes them.
+ * Cloudinary with the unsigned branch_farm preset; this route indexes them.
  */
 export async function GET(request: Request) {
   try {
@@ -36,7 +36,7 @@ export async function GET(request: Request) {
 const DOC_TYPES = new Set(["general", "quotation", "receipt", "invoice"]);
 
 /**
- * POST /api/documents — register an uploaded document (its Cloudinary/Firebase
+ * POST /api/documents — register an uploaded document (its Cloudinary delivery
  * URL) in the farm index. Body: { name, fileName, fileType, fileSize,
  * category, docType, downloadUrl, storagePath?, cloudinaryPublicId?,
  * description?, relatedAnimalId?, relatedOrderId? }.

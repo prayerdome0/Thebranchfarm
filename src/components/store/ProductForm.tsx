@@ -6,11 +6,10 @@ import { PhotoField } from "@/components/farm/PhotoField";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { PRODUCT_CATEGORIES, PRODUCT_KIND_LABELS } from "@/lib/constants";
 import {
-  cloudinaryEnabled,
+  asStoredCloudinaryAsset,
   resolveCloudinaryConfig,
   uploadProductImageToCloudinary,
 } from "@/lib/cloudinary";
-import { uploadProductImage } from "@/lib/firebase/storage";
 import { productSchema } from "@/lib/validation";
 import { friendlyError } from "@/lib/utils";
 import type { Product, ProductKind } from "@/types";
@@ -52,20 +51,15 @@ export function ProductForm({
   const [saving, setSaving] = useState(false);
   const { settings } = useStoreConfig();
 
-  /**
-   * Product photos upload straight to Cloudinary with the unsigned
-   * `branch_farm` preset (Settings → Media uploads). If Cloudinary is not
-   * configured yet we fall back to Firebase Storage so uploads keep working.
-   */
-  const uploadImage = async (file: File, onProgress?: (percent: number) => void) => {
-    const config = resolveCloudinaryConfig(settings);
-    if (cloudinaryEnabled(config)) {
-      const result = await uploadProductImageToCloudinary(file, config, onProgress);
-      return { url: result.url, path: `cloudinary:${result.publicId}` };
-    }
-    const result = await uploadProductImage(file, onProgress);
-    return { url: result.downloadUrl, path: result.storagePath };
-  };
+  /** Product photos always use Cloudinary's unsigned `branch_farm` preset. */
+  const uploadImage = async (file: File, onProgress?: (percent: number) => void) =>
+    asStoredCloudinaryAsset(
+      await uploadProductImageToCloudinary(
+        file,
+        resolveCloudinaryConfig(settings),
+        onProgress,
+      ),
+    );
 
   const update = <K extends keyof ProductFormValues>(key: K, value: ProductFormValues[K]) =>
     setForm((current) => ({ ...current, [key]: value }));
@@ -289,7 +283,7 @@ export function ProductForm({
             update("image", result.url);
             update("imagePath", result.path);
           }}
-          hint="Main image shown in listings. Uploaded to Cloudinary (unsigned branch_farm preset) — or Firebase Storage when Cloudinary is not configured. JPG, PNG or WebP up to 8 MB."
+          hint="Main image shown in listings. Uploaded to Cloudinary with the unsigned branch_farm preset. JPG, PNG or WebP up to 8 MB."
         />
 
         <div>

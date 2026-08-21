@@ -3,7 +3,7 @@
 const CACHE = "branch-farm-static-v1";
 const STATIC_PREFIXES = ["/media/", "/logo.png", "/_next/static/"];
 
-self.addEventListener("install", (event) => {
+self.addEventListener("install", () => {
   self.skipWaiting();
 });
 

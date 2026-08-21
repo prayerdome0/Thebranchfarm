@@ -20,12 +20,28 @@ const KINDS = [
 
 function ShopCatalog() {
   const search = useSearchParams();
-  const initialKind = search.get("kind") || "all";
+  const searchKey = search.toString();
+  return (
+    <ShopCatalogContent
+      key={searchKey}
+      initialKind={search.get("kind") || "all"}
+      initialQuery={search.get("q") || ""}
+    />
+  );
+}
+
+function ShopCatalogContent({
+  initialKind,
+  initialQuery,
+}: {
+  initialKind: string;
+  initialQuery: string;
+}) {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [kind, setKind] = useState(initialKind);
   const [category, setCategory] = useState("all");
-  const [query, setQuery] = useState(search.get("q") || "");
+  const [query, setQuery] = useState(initialQuery);
 
   useEffect(() => {
     const stop = watchProducts((list) => {
@@ -34,11 +50,6 @@ function ShopCatalog() {
     });
     return () => stop();
   }, []);
-
-  useEffect(() => {
-    setKind(search.get("kind") || "all");
-    setQuery(search.get("q") || "");
-  }, [search]);
 
   const visible = useMemo(() => {
     const term = query.trim().toLowerCase();

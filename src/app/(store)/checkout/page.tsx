@@ -249,7 +249,7 @@ export default function CheckoutPage() {
                       <p>
                         {freeDelivery
                           ? "Your order qualifies for free delivery."
-                          : `Delivery is ${formatMoney(deliveryFee)}. We'll confirm the address when we call.`}
+                          : `Delivery is ${formatMoney(deliveryFee)}. We’ll confirm the address when we call.`}
                       </p>
                     </div>
                   </div>
@@ -259,7 +259,7 @@ export default function CheckoutPage() {
                   <MapPin size={18} />
                   <div>
                     <strong>Free pickup</strong>
-                    <p>Collect from the farm. We'll confirm a time when we call.</p>
+                    <p>Collect from the farm. We’ll confirm a time when we call.</p>
                   </div>
                 </div>
               )}

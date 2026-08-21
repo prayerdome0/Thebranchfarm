@@ -59,7 +59,7 @@ export default function NewAnimalPage() {
           <div className="section-row" style={{ marginBottom: 20 }}>
             <div>
               <h2>Add animal</h2>
-              <p>Record the animal&apos;s details, then upload its photograph to Firebase Storage.</p>
+              <p>Record the animal&apos;s details, then upload its photograph to Cloudinary.</p>
             </div>
             <Link className="button button-ghost" href="/animals">
               <ArrowLeft size={16} /> Back

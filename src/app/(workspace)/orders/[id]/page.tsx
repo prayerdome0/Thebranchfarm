@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ArrowLeft, Check, FileText, MapPin, MessageSquareText, Phone, Receipt, ShoppingBag } from "lucide-react";
+import { ArrowLeft, Check, FileText, MessageSquareText, Phone, Receipt, ShoppingBag } from "lucide-react";
 import { Loading } from "@/components/ui/Loading";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { SignaturePad } from "@/components/store/SignaturePad";

@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import {
   Activity as ActivityIcon,
-  ArrowLeft,
   FileText,
   HeartPulse,
   Pencil,
@@ -52,7 +51,7 @@ export default function AnimalDetailPage() {
   const params = useParams<{ id: string }>();
   const id = params.id;
   const router = useRouter();
-  const { user, isAdmin } = useAuth();
+  const { isAdmin } = useAuth();
   const { showToast } = useToast();
 
   const [animal, setAnimal] = useState<Animal | null>(null);

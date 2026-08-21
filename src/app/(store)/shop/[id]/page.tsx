@@ -7,7 +7,6 @@ import { useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
-  Check,
   Leaf,
   MapPin,
   ShieldCheck,
@@ -24,7 +23,11 @@ import { getProduct, getProducts } from "@/lib/firebase/data";
 import type { Product } from "@/types";
 
 export default function ProductDetailPage() {
-  const params = useParams<{ id: string }>();
+  const { id } = useParams<{ id: string }>();
+  return <ProductDetail key={id} id={id} />;
+}
+
+function ProductDetail({ id }: { id: string }) {
   const router = useRouter();
   const { add } = useCart();
   const { formatMoney, deliveryFee } = useStoreConfig();
@@ -34,12 +37,11 @@ export default function ProductDetailPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setLoading(true);
-    getProduct(params.id).then((found) => {
+    getProduct(id).then((found) => {
       setProduct(found);
       setLoading(false);
     });
-  }, [params.id]);
+  }, [id]);
 
   useEffect(() => {
     if (!product) return;
@@ -64,7 +66,6 @@ export default function ProductDetailPage() {
   }, [product]);
 
   const [activeImage, setActiveImage] = useState(0);
-  useEffect(() => setActiveImage(0), [params.id]);
 
   if (loading) return <Loading label="Loading product…" />;
 

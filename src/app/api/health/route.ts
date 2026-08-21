@@ -10,6 +10,6 @@ export async function GET() {
     service: "the-branch-farm",
     time: new Date().toISOString(),
     firebaseAdmin: admin ? "configured" : adminConfigured() ? "misconfigured" : "not-configured",
-    cloudinaryPreset: process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || "branch_farm",
+    cloudinaryPreset: "branch_farm",
   });
 }
