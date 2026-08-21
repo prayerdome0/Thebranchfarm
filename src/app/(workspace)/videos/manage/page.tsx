@@ -2,24 +2,27 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { Clapperboard, ExternalLink, Plus, Search, Trash2 } from "lucide-react";
+import { Clapperboard, ExternalLink, Plus, Search, Sparkles, Trash2 } from "lucide-react";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Loading } from "@/components/ui/Loading";
 import { VideoForm, type VideoFormValues } from "@/components/store/VideoForm";
+import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/contexts/ToastContext";
-import { createVideo, deleteVideo, watchVideos } from "@/lib/firebase/data";
+import { createVideo, deleteVideo, seedDemoVideos, watchManagedVideos } from "@/lib/firebase/data";
 import { formatDate } from "@/lib/utils";
 import type { FarmVideo } from "@/types";
 
 export default function WorkspaceVideosPage() {
+  const { isAdmin } = useAuth();
   const { showToast } = useToast();
   const [videos, setVideos] = useState<FarmVideo[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [adding, setAdding] = useState(false);
+  const [seeding, setSeeding] = useState(false);
 
   useEffect(() => {
-    const stop = watchVideos((list) => {
+    const stop = watchManagedVideos((list) => {
       setVideos(list);
       setLoading(false);
     });
@@ -49,6 +52,18 @@ export default function WorkspaceVideosPage() {
     setAdding(false);
   };
 
+  const handleSeed = async () => {
+    setSeeding(true);
+    try {
+      const count = await seedDemoVideos();
+      showToast(`${count} sample videos added`, "success");
+    } catch {
+      showToast("Could not add sample videos", "error");
+    } finally {
+      setSeeding(false);
+    }
+  };
+
   return (
     <div className="dashboard-stack">
       <section className="dashboard-section-title">
@@ -56,9 +71,16 @@ export default function WorkspaceVideosPage() {
           <h2>Videos</h2>
           <p>Upload farm videos to share on the public videos page.</p>
         </div>
-        <button className="button button-primary" onClick={() => setAdding((value) => !value)}>
-          <Plus size={18} /> {adding ? "Close" : "Add video"}
-        </button>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          {isAdmin && !videos.length && (
+            <button className="button button-secondary" onClick={handleSeed} disabled={seeding}>
+              <Sparkles size={17} /> {seeding ? "Adding…" : "Add sample videos"}
+            </button>
+          )}
+          <button className="button button-primary" onClick={() => setAdding((value) => !value)}>
+            <Plus size={18} /> {adding ? "Close" : "Add video"}
+          </button>
+        </div>
       </section>
 
       {adding && (
@@ -138,12 +160,19 @@ export default function WorkspaceVideosPage() {
           description={
             videos.length
               ? "Try a different search."
-              : "Upload the first farm video to share it with your customers."
+              : "Upload the first farm video to share it with your customers — or load the sample farm films."
           }
           action={
-            <button className="button button-primary" onClick={() => setAdding(true)}>
-              <Plus size={18} /> Add video
-            </button>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
+              <button className="button button-primary" onClick={() => setAdding(true)}>
+                <Plus size={18} /> Add video
+              </button>
+              {isAdmin && (
+                <button className="button button-secondary" onClick={handleSeed} disabled={seeding}>
+                  <Sparkles size={17} /> {seeding ? "Adding…" : "Load sample videos"}
+                </button>
+              )}
+            </div>
           }
         />
       )}

@@ -137,6 +137,7 @@ export default function ProductsPage() {
                     <strong>{product.name}</strong>
                     <small>
                       {PRODUCT_CATEGORY_LABELS[product.category] || product.category}
+                      {product.comingSoon ? " · coming soon" : ""}
                       {!product.active ? " · hidden" : product.featured ? " · featured" : ""}
                     </small>
                   </span>

@@ -12,6 +12,7 @@ import type { Product } from "@/types";
 export function ProductCard({ product }: { product: Product }) {
   const { add } = useCart();
   const { formatMoney } = useStoreConfig();
+  const comingSoon = Boolean(product.comingSoon);
   const soldOut = product.trackInventory && product.stock <= 0;
   const preOrder = soldOut && product.allowBackorder;
   const price = product.salePrice != null && product.salePrice > 0 ? product.salePrice : product.price;
@@ -45,15 +46,23 @@ export function ProductCard({ product }: { product: Product }) {
         )}
         <span
           className="availability-pill status-badge"
-          style={soldOut && !preOrder ? { background: "#fff0ee", color: "#a33b32" } : undefined}
+          style={
+            comingSoon
+              ? { background: "#fdf6e7", color: "#8a6416" }
+              : soldOut && !preOrder
+                ? { background: "#fff0ee", color: "#a33b32" }
+                : undefined
+          }
         >
-          {product.salePrice != null && product.salePrice > 0
-            ? "Sale"
-            : soldOut
-              ? preOrder
-                ? "Pre-order"
-                : "Out of stock"
-              : "Available"}
+          {comingSoon
+            ? "Coming soon"
+            : product.salePrice != null && product.salePrice > 0
+              ? "Sale"
+              : soldOut
+                ? preOrder
+                  ? "Pre-order"
+                  : "Out of stock"
+                : "Available"}
         </span>
       </Link>
       <div className="product-card-body">
@@ -83,16 +92,22 @@ export function ProductCard({ product }: { product: Product }) {
             </strong>
             <small>
               per {product.unit}
-              {product.trackInventory ? ` · ${product.stock} left` : ""}
+              {comingSoon
+                ? " · arriving soon"
+                : product.trackInventory
+                  ? ` · ${product.stock} left`
+                  : ""}
             </small>
           </span>
           <button
             className="button button-primary button-small"
             onClick={() => add(product)}
-            disabled={soldOut && !preOrder}
-            aria-label={`Add ${product.name} to cart`}
+            disabled={comingSoon || (soldOut && !preOrder)}
+            aria-label={
+              comingSoon ? `${product.name} is coming soon` : `Add ${product.name} to cart`
+            }
           >
-            <Plus size={16} /> {preOrder ? "Pre-order" : "Add"}
+            <Plus size={16} /> {comingSoon ? "Soon" : preOrder ? "Pre-order" : "Add"}
           </button>
         </div>
       </div>
@@ -102,14 +117,15 @@ export function ProductCard({ product }: { product: Product }) {
 
 export function AddToCartButton({ product, large = false }: { product: Product; large?: boolean }) {
   const { add } = useCart();
+  const comingSoon = Boolean(product.comingSoon);
   const soldOut = product.trackInventory && product.stock <= 0 && !product.allowBackorder;
   return (
     <button
       className={large ? "button button-primary button-large" : "button button-primary"}
       onClick={() => add(product)}
-      disabled={soldOut}
+      disabled={comingSoon || soldOut}
     >
-      <ShoppingBag size={18} /> Add to cart
+      <ShoppingBag size={18} /> {comingSoon ? "Coming soon" : "Add to cart"}
     </button>
   );
 }

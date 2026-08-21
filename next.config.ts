@@ -6,6 +6,8 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "firebasestorage.googleapis.com" },
       { protocol: "https", hostname: "storage.googleapis.com" },
       { protocol: "https", hostname: "**.firebasestorage.app" },
+      // Cloudinary — product photos and business paperwork (unsigned branch_farm preset).
+      { protocol: "https", hostname: "res.cloudinary.com" },
     ],
   },
   experimental: {

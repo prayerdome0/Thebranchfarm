@@ -5,8 +5,14 @@ import { useEffect, useMemo, useState } from "react";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Loading } from "@/components/ui/Loading";
 import { useAuth } from "@/contexts/AuthContext";
+import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { useToast } from "@/contexts/ToastContext";
-import { DOCUMENT_CATEGORY_LABELS } from "@/lib/constants";
+import { DOCUMENT_CATEGORY_LABELS, DOCUMENT_TYPE_LABELS, DOCUMENT_TYPES } from "@/lib/constants";
+import {
+  cloudinaryEnabled,
+  resolveCloudinaryConfig,
+  uploadBusinessDocumentToCloudinary,
+} from "@/lib/cloudinary";
 import { createFarmDocument, deleteFarmDocument, getAnimals, getFarmDocuments } from "@/lib/firebase/data";
 import { uploadFarmDocument } from "@/lib/firebase/storage";
 import { documentSchema } from "@/lib/validation";
@@ -22,8 +28,10 @@ function CategoryIcon({ category, size = 22 }: { category: string; size?: number
 export default function DocumentsPage() {
   const { isAdmin } = useAuth();
   const { showToast } = useToast();
+  const { settings } = useStoreConfig();
   const [documents, setDocuments] = useState<FarmDocument[]>([]);
   const [animals, setAnimals] = useState<Animal[]>([]);
+  const [typeFilter, setTypeFilter] = useState("all");
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -31,7 +39,13 @@ export default function DocumentsPage() {
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState("");
   const [file, setFile] = useState<File | null>(null);
-  const [form, setForm] = useState({ name: "", description: "", relatedAnimalId: "" });
+  const [form, setForm] = useState({
+    name: "",
+    description: "",
+    docType: "general" as "general" | "quotation" | "receipt" | "invoice",
+    relatedAnimalId: "",
+    relatedOrderId: "",
+  });
 
   const load = () => {
     getFarmDocuments().then((list) => {
@@ -42,10 +56,18 @@ export default function DocumentsPage() {
   };
   useEffect(load, []);
 
-  const visible = useMemo(() => documents, [documents]);
+  const visible = useMemo(
+    () =>
+      typeFilter === "all"
+        ? documents
+        : documents.filter((doc) => (doc.docType || "general") === typeFilter),
+    [documents, typeFilter],
+  );
 
   const update = (key: keyof typeof form, value: string) =>
     setForm((current) => ({ ...current, [key]: value }));
+
+  const isBusinessDoc = form.docType !== "general";
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -61,7 +83,9 @@ export default function DocumentsPage() {
     const parsed = documentSchema.safeParse({
       name: form.name || file.name,
       description: form.description,
+      docType: form.docType,
       relatedAnimalId: form.relatedAnimalId || undefined,
+      relatedOrderId: form.relatedOrderId || undefined,
     });
     if (!parsed.success) {
       setError(parsed.error.issues[0]?.message || "Please review the information.");
@@ -71,7 +95,34 @@ export default function DocumentsPage() {
     setUploading(true);
     setProgress(0);
     try {
-      const uploaded = await uploadFarmDocument(file, setProgress);
+      // Quotations, receipts and invoices upload to Cloudinary with the
+      // unsigned `branch_farm` preset; general farm files go to Firebase
+      // Storage. If Cloudinary is not configured we fall back gracefully.
+      let downloadUrl = "";
+      let storagePath = "";
+      let cloudinaryPublicId: string | undefined;
+      const config = resolveCloudinaryConfig(settings);
+      if (form.docType !== "general" && cloudinaryEnabled(config)) {
+        const uploaded = await uploadBusinessDocumentToCloudinary(
+          file,
+          form.docType,
+          config,
+          setProgress,
+        );
+        downloadUrl = uploaded.url;
+        storagePath = `cloudinary:${uploaded.publicId}`;
+        cloudinaryPublicId = uploaded.publicId;
+      } else {
+        const uploaded = await uploadFarmDocument(file, setProgress);
+        downloadUrl = uploaded.downloadUrl;
+        storagePath = uploaded.storagePath;
+        if (isBusinessDoc) {
+          showToast(
+            "Cloudinary is not configured yet — the file was stored in Firebase Storage instead. Add the cloud name under Settings → Media uploads.",
+            "success",
+          );
+        }
+      }
       await createFarmDocument({
         name: parsed.data.name,
         description: parsed.data.description,
@@ -79,13 +130,22 @@ export default function DocumentsPage() {
         fileType: file.type || "application/octet-stream",
         fileSize: file.size,
         category: documentCategory(file.name, file.type),
-        downloadUrl: uploaded.downloadUrl,
-        storagePath: uploaded.storagePath,
+        docType: form.docType,
+        downloadUrl,
+        storagePath,
+        cloudinaryPublicId,
         relatedAnimalId: parsed.data.relatedAnimalId,
+        relatedOrderId: parsed.data.relatedOrderId,
       });
       showToast("Document uploaded.", "success");
       setFile(null);
-      setForm({ name: "", description: "", relatedAnimalId: "" });
+      setForm({
+        name: "",
+        description: "",
+        docType: "general",
+        relatedAnimalId: "",
+        relatedOrderId: "",
+      });
       setShowForm(false);
       load();
     } catch (cause) {
@@ -98,7 +158,7 @@ export default function DocumentsPage() {
   };
 
   const remove = async (doc: FarmDocument) => {
-    if (!window.confirm(`Delete "${doc.name}"? The file will be removed from Firebase Storage.`)) return;
+    if (!window.confirm(`Delete "${doc.name}"? The record will be removed.`)) return;
     try {
       await deleteFarmDocument(doc.id);
       showToast("Document deleted.", "success");
@@ -113,12 +173,28 @@ export default function DocumentsPage() {
       <section className="dashboard-section-title">
         <div>
           <h2>Farm documents</h2>
-          <p>PDFs, images, Word and Excel files, videos and other farm files — stored in Firebase Storage.</p>
+          <p>
+            Farm files, quotations, receipts and invoices — business paperwork uploads to Cloudinary
+            (unsigned <strong>branch_farm</strong> preset), everything else to Firebase Storage.
+          </p>
         </div>
         <button className="button button-primary" onClick={() => setShowForm(true)}>
           <Plus size={18} /> Upload document
         </button>
       </section>
+
+      <div className="filter-scroll" role="tablist" aria-label="Filter documents by type">
+        {[{ value: "all", label: "All" }, ...DOCUMENT_TYPES].map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            className={cn(typeFilter === option.value && "active")}
+            onClick={() => setTypeFilter(option.value)}
+          >
+            {option.label.replace(" document", "").replace("General farm", "General")}
+          </button>
+        ))}
+      </div>
 
       {loading ? (
         <Loading label="Loading documents…" />
@@ -130,10 +206,22 @@ export default function DocumentsPage() {
                 <span className="document-icon">
                   <CategoryIcon category={doc.category} />
                 </span>
-                <span className={`status-badge status-${doc.category}`}>
-                  {DOCUMENT_CATEGORY_LABELS[doc.category] || doc.category}
+                <span
+                  className={`status-badge status-${doc.category}`}
+                  style={
+                    doc.docType && doc.docType !== "general"
+                      ? { background: "#fdf6e7", color: "#8a6416" }
+                      : undefined
+                  }
+                >
+                  {DOCUMENT_TYPE_LABELS[doc.docType || "general"] ||
+                    DOCUMENT_CATEGORY_LABELS[doc.category] ||
+                    doc.category}
                 </span>
               </div>
+              {doc.relatedOrderId && (
+                <p style={{ fontSize: ".68rem", color: "var(--muted)" }}>Order {doc.relatedOrderId}</p>
+              )}
               <h4>{doc.name}</h4>
               <p>{doc.fileName}</p>
               {doc.description && <p style={{ marginTop: 4 }}>{doc.description}</p>}
@@ -192,16 +280,52 @@ export default function DocumentsPage() {
                 <small>PDF, images, Word, Excel, videos and other farm files up to 50 MB.</small>
               </label>
               <label className="field">
+                <span>Document type *</span>
+                <select
+                  value={form.docType}
+                  onChange={(e) => update("docType", e.target.value)}
+                  disabled={uploading}
+                >
+                  {DOCUMENT_TYPES.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                {form.docType !== "general" && (
+                  <small>
+                    Uploaded to Cloudinary with the unsigned <strong>branch_farm</strong> preset
+                    (folder branch_farm/{form.docType}s) when configured.
+                  </small>
+                )}
+              </label>
+              <label className="field">
                 <span>Name *</span>
                 <input
                   value={form.name}
                   onChange={(e) => update("name", e.target.value)}
-                  placeholder="e.g. Cattle vaccination certificate"
+                  placeholder={
+                    form.docType === "quotation"
+                      ? "e.g. Quotation Q-0042 — Green Grocers"
+                      : form.docType === "receipt"
+                        ? "e.g. Receipt for order TB-7K2M9Q"
+                        : form.docType === "invoice"
+                          ? "e.g. Invoice INV-2026-011"
+                          : "e.g. Cattle vaccination certificate"
+                  }
                 />
               </label>
               <label className="field">
                 <span>Description</span>
                 <input value={form.description} onChange={(e) => update("description", e.target.value)} />
+              </label>
+              <label className="field">
+                <span>Related order reference (optional)</span>
+                <input
+                  value={form.relatedOrderId}
+                  onChange={(e) => update("relatedOrderId", e.target.value)}
+                  placeholder="e.g. TB-7K2M9Q"
+                />
               </label>
               <label className="field">
                 <span>Related animal (optional)</span>

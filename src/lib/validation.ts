@@ -87,7 +87,9 @@ export const activitySchema = z.object({
 export const documentSchema = z.object({
   name: z.string().trim().min(2, "Enter a name for this document").max(200),
   description: z.string().trim().max(1000).optional(),
+  docType: z.enum(["general", "quotation", "receipt", "invoice"]).optional(),
   relatedAnimalId: z.string().optional(),
+  relatedOrderId: z.string().trim().max(120).optional(),
 });
 
 export const staffSchema = z.object({
@@ -122,6 +124,8 @@ export const settingsSchema = z.object({
     .optional()
     .default(0),
   heroProductId: z.string().trim().max(200).optional().default(""),
+  cloudinaryCloudName: z.string().trim().max(120).optional().default(""),
+  cloudinaryUploadPreset: z.string().trim().max(120).optional().default("branch_farm"),
 });
 
 export const productSchema = z.object({
@@ -135,6 +139,7 @@ export const productSchema = z.object({
   stock: z.coerce.number().min(0, "Stock cannot be negative").default(0),
   trackInventory: z.boolean().default(true),
   allowBackorder: z.boolean().default(false),
+  comingSoon: z.boolean().default(false),
   active: z.boolean().default(true),
   featured: z.boolean().default(false),
 });

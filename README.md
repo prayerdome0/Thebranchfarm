@@ -28,12 +28,23 @@ storage vendor.
 ## The storefront
 
 - **Public shop** at `/shop` — browse farm produce and livestock, search, filter by type/category.
+- **Live dairy lines** — fresh milk at **E16/litre**, and the two sour-milk (emasi) lines:
+  **Latsambile** at **E20** and **Lashubile** at **E35**. Every other catalogue line is listed
+  with a **Coming soon** badge — visible, priced indicatively, but not buyable until the farm
+  flips it live (per-product *Coming soon* checkbox in Products).
 - **Cart** is stored in the browser (`localStorage`) and works for guests — no sign-in to buy.
 - **Checkout** collects name, phone, pickup/delivery and preferred payment method. No online
   payment: the customer pays by cash, EFT or mobile money on collection or delivery.
 - **Order tracking** at `/track` — look up an order by its `TB-XXXXXX` reference.
 - **Videos** at `/videos` — farm tours, livestock and daily-life clips uploaded by staff/admin
   (MP4/WebM up to 200 MB, with an optional thumbnail) and played back inline on the public site.
+  Four sample **photo-films** (cinematic slideshows cut from gallery stills) ship in
+  `public/media/videos/` and play out of the box; admins can seed them into Firestore from
+  **Videos → Add sample videos**.
+- **Quotations, receipts & invoices** — the cart has a *Download quotation* button
+  (`POST /api/quotations` renders a printable quote); staff can print a **receipt** or
+  **invoice** for any order from the order page (`/api/orders/{id}/receipt|invoice`); and
+  supporting paperwork files are uploaded through **Cloudinary** (below).
 - **Animations** — scroll-reveal fades and cinematic stills are used across the homepage, shop
   and videos pages (with `prefers-reduced-motion` respected).
 - **Store settings** — currency, delivery fee, free-delivery threshold, a promo code and the
@@ -50,6 +61,52 @@ storage vendor.
 - **Demo fallback**: when Firestore is unreachable (e.g. a preview without a deployed backend),
   a sample catalogue is shown and orders are stored locally in the browser. An admin can also
   seed the sample catalogue into Firestore from **Products → Add sample products**.
+
+## Cloudinary uploads (products, quotations, receipts, invoices)
+
+Product photos and business paperwork upload **straight from the browser to Cloudinary** using
+the unsigned upload preset **`branch_farm`** — no API keys in the app. Files are organised in
+the Cloudinary library as `branch_farm/products`, `branch_farm/quotations`,
+`branch_farm/receipts` and `branch_farm/invoices`.
+
+Setup:
+
+1. In Cloudinary → Settings → Upload presets, create (or keep) an **unsigned** preset named
+   `branch_farm`.
+2. Put your **cloud name** (Cloudinary dashboard → Product Environment) in
+   **Settings → Media uploads** in the workspace, or set
+   `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` in the environment.
+3. That's it — product images (Product form) and quotation/receipt/invoice files
+   (Farm documents → document type) now upload to Cloudinary. Until the cloud name is set, the
+   app gracefully falls back to Firebase Storage so uploads never break.
+
+## REST API
+
+Next.js route handlers under `/api` make the storefront scriptable (POS systems, WhatsApp
+bots, integrations). Public reads work everywhere; writes and staff reads require
+`Authorization: Bearer <firebase id token>` of an active staff/admin account. Without
+`FIREBASE_ADMIN_*` credentials the public endpoints serve the sample catalogue and protected
+endpoints answer `503` — nothing breaks.
+
+| Endpoint | Purpose |
+| --- | --- |
+| `GET /api/health` | Service status + backend configuration. |
+| `GET /api/products` | Public catalogue — `?kind=`, `?category=`, `?q=`, `?comingSoon=0/1`. |
+| `POST /api/products` | Staff: create a product. |
+| `GET/PATCH/DELETE /api/products/{id}` | Fetch / staff update / admin delete a product. |
+| `POST /api/orders` | Place an order — server-side pricing and atomic stock decrement. |
+| `GET /api/orders` | Staff: list orders. |
+| `GET/PATCH /api/orders/{id}` | Staff: fetch / update status, payment, signature, notes. |
+| `GET /api/orders/{id}/receipt` | Printable receipt (by id or `?reference=TB-…`). |
+| `GET /api/orders/{id}/invoice` | Printable invoice (by id or `?reference=TB-…`). |
+| `POST /api/quotations` | Printable quotation for a list of items (cart button uses this). |
+| `GET /api/quotations` | Staff: list archived quotations. |
+| `GET /api/videos` · `POST /api/videos` | Public video list · staff publish a video. |
+| `DELETE /api/videos/{id}` | Admin: remove a video. |
+| `GET /api/settings` | Public storefront settings. |
+| `GET/POST /api/documents` | Staff: index of farm documents (`?docType=quotation|receipt|invoice`) · register an uploaded file. |
+| `DELETE /api/documents/{id}` | Admin: remove a document record. |
+| `GET /api/track/{reference}` | Public order tracking by `TB-XXXXXX` reference. |
 
 ## The core flow
 

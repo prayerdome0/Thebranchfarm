@@ -21,10 +21,9 @@ import {
 } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import { auth, db, functions } from "./config";
-import { BUSINESS } from "@/lib/constants";
+import { BUSINESS, CLOUDINARY, STORE } from "@/lib/constants";
 import { deleteStorageObject } from "./storage";
-import { DEMO_PRODUCTS, demoOrders, generateOrderReference } from "@/lib/store";
-import { STORE } from "@/lib/constants";
+import { DEMO_PRODUCTS, DEMO_VIDEOS, demoOrders, generateOrderReference } from "@/lib/store";
 import type {
   ActivityRecord,
   Animal,
@@ -289,6 +288,9 @@ export function defaultSettings(): FarmSettings {
     promoCode: "",
     promoDiscountPercent: 0,
     heroProductId: "",
+    cloudinaryCloudName: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || "",
+    cloudinaryUploadPreset:
+      process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || CLOUDINARY.uploadPreset,
   };
 }
 
@@ -529,18 +531,41 @@ export async function updateOrder(
 
 /* -------------------------------- Videos ------------------------------- */
 
+function demoVideos(): FarmVideo[] {
+  return DEMO_VIDEOS.map((video, index) => ({ ...video, id: `demo-video-${index + 1}` }));
+}
+
 export async function getVideos(): Promise<FarmVideo[]> {
   try {
     const snapshot = await getDocs(
       query(collection(db, "videos"), orderBy("createdAt", "desc"), limit(200)),
     );
-    return snapshot.docs.map((item) => mapped<FarmVideo>(item));
+    const videos = snapshot.docs.map((item) => mapped<FarmVideo>(item));
+    return videos.length ? videos : demoVideos();
   } catch {
-    return [];
+    return demoVideos();
   }
 }
 
 export function watchVideos(callback: (videos: FarmVideo[]) => void): Unsubscribe {
+  try {
+    return onSnapshot(
+      query(collection(db, "videos"), orderBy("createdAt", "desc"), limit(200)),
+      (snapshot) => {
+        const videos = snapshot.docs.map((item) => mapped<FarmVideo>(item));
+        callback(videos.length ? videos : demoVideos());
+      },
+      () => callback(demoVideos()),
+    );
+  } catch {
+    callback(demoVideos());
+    return () => {};
+  }
+}
+
+/** Workspace list: real Firestore records only — no demo fallback, so demo
+ * entries are never shown as deletable records. */
+export function watchManagedVideos(callback: (videos: FarmVideo[]) => void): Unsubscribe {
   try {
     return onSnapshot(
       query(collection(db, "videos"), orderBy("createdAt", "desc"), limit(200)),
@@ -555,6 +580,17 @@ export function watchVideos(callback: (videos: FarmVideo[]) => void): Unsubscrib
 
 export async function createVideo(values: Omit<FarmVideo, "id" | keyof ReturnType<typeof stamp>>) {
   return addDoc(collection(db, "videos"), { ...values, ...stamp() });
+}
+
+/** Seeds the sample farm videos into Firestore (admin convenience action). */
+export async function seedDemoVideos(): Promise<number> {
+  const batch = writeBatch(db);
+  const ref = collection(db, "videos");
+  DEMO_VIDEOS.forEach((video) => {
+    batch.set(doc(ref), { ...video, ...stamp() });
+  });
+  await batch.commit();
+  return DEMO_VIDEOS.length;
 }
 
 export async function deleteVideo(id: string) {
