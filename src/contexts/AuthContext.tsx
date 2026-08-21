@@ -35,6 +35,19 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+function profileFromFirebaseUser(current: FirebaseUser): UserProfile {
+  return {
+    uid: current.uid,
+    fullName: current.displayName || "Customer",
+    email: current.email || "",
+    phone: "",
+    role: "user",
+    status: "active",
+    createdAt: null,
+    updatedAt: null,
+  };
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
@@ -42,65 +55,56 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let stopProfile: (() => void) | undefined;
-    let timeout: number | undefined;
-    // Safety: never leave UI stuck on "Checking your access…" on Vercel if Firebase is unreachable.
-    timeout = window.setTimeout(() => setLoading(false), 4000) as unknown as number;
+    let cancelled = false;
+    const timeout = window.setTimeout(() => {
+      if (!cancelled) setLoading(false);
+    }, 8000);
 
-    let stopAuth: (() => void) | undefined;
-    try {
-      stopAuth = onAuthStateChanged(
-        auth,
-        (current) => {
-          stopProfile?.();
-          stopProfile = undefined;
-          setFirebaseUser(current);
-          if (!current) {
-            setUser(null);
-            setLoading(false);
-            if (timeout) window.clearTimeout(timeout);
-            return;
-          }
+    const stopAuth = onAuthStateChanged(auth, (current) => {
+      stopProfile?.();
+      stopProfile = undefined;
+      setFirebaseUser(current);
 
-          try {
-            stopProfile = onSnapshot(
-              doc(db, "users", current.uid),
-              (snapshot) => {
-                if (snapshot.exists()) {
-                  const profile = { uid: snapshot.id, ...snapshot.data() } as UserProfile;
-                  setUser(profile.status === "disabled" ? null : profile);
-                } else {
-                  setUser(null);
-                }
-                setLoading(false);
-                if (timeout) window.clearTimeout(timeout);
-              },
-              () => {
-                setUser(null);
-                setLoading(false);
-                if (timeout) window.clearTimeout(timeout);
-              }
-            );
-          } catch {
-            setUser(null);
+      if (!current) {
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+
+      // A signed-in Firebase user is a real session even before the Firestore
+      // profile snapshot arrives (or if that document is still being created).
+      setUser((existing) => existing?.uid === current.uid ? existing : profileFromFirebaseUser(current));
+
+      try {
+        stopProfile = onSnapshot(
+          doc(db, "users", current.uid),
+          (snapshot) => {
+            if (cancelled) return;
+            if (snapshot.exists()) {
+              const profile = { uid: snapshot.id, ...snapshot.data() } as UserProfile;
+              setUser(profile.status === "disabled" ? null : profile);
+            } else {
+              setUser(profileFromFirebaseUser(current));
+            }
             setLoading(false);
-            if (timeout) window.clearTimeout(timeout);
-          }
-        },
-        () => {
-          setUser(null);
-          setLoading(false);
-          if (timeout) window.clearTimeout(timeout);
-        }
-      );
-    } catch {
-      setLoading(false);
-      if (timeout) window.clearTimeout(timeout);
-    }
+          },
+          () => {
+            if (cancelled) return;
+            setUser(profileFromFirebaseUser(current));
+            setLoading(false);
+          },
+        );
+      } catch {
+        setUser(profileFromFirebaseUser(current));
+        setLoading(false);
+      }
+    });
 
     return () => {
-      if (timeout) window.clearTimeout(timeout);
-      try { stopProfile?.(); } catch {}
-      try { stopAuth?.(); } catch {}
+      cancelled = true;
+      window.clearTimeout(timeout);
+      try { stopProfile?.(); } catch { /* ignore */ }
+      try { stopAuth(); } catch { /* ignore */ }
     };
   }, []);
 
@@ -113,6 +117,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const login = useCallback(async (email: string, password: string) => {
+    const profile = await loginUser(email, password);
+    if (profile) {
+      setUser(profile);
+      setLoading(false);
+    }
+    return profile;
+  }, []);
+
+  const register = useCallback(async (values: { fullName: string; email: string; phone: string; password: string }) => {
+    const profile = await registerUser(values);
+    setUser(profile);
+    setLoading(false);
+  }, []);
+
+  const logout = useCallback(async () => {
+    await logoutUser();
+    setUser(null);
+    setFirebaseUser(null);
+  }, []);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
@@ -120,15 +145,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       isAdmin: user?.role === "admin",
       isStaff: user?.role === "staff" || user?.role === "admin",
-      login: async (email, password) => loginUser(email, password),
-      register: async (values) => {
-        await registerUser(values);
-      },
-      logout: logoutUser,
+      login,
+      register,
+      logout,
       resetPassword: resetUserPassword,
       refreshToken,
     }),
-    [user, firebaseUser, loading, refreshToken],
+    [user, firebaseUser, loading, login, register, logout, refreshToken],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

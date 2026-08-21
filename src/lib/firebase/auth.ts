@@ -1,15 +1,53 @@
 import {
   createUserWithEmailAndPassword,
-  deleteUser,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signOut,
   updateProfile,
-  type UserCredential,
+  type User,
 } from "firebase/auth";
 import { doc, getDoc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
 import { auth, db } from "./config";
 import type { UserProfile } from "@/types";
+
+function profileFromAuth(user: User, extras?: Partial<UserProfile>): UserProfile {
+  return {
+    uid: user.uid,
+    fullName: extras?.fullName || user.displayName || "Customer",
+    email: (extras?.email || user.email || "").trim().toLowerCase(),
+    phone: extras?.phone || "",
+    role: extras?.role || "user",
+    status: extras?.status || "active",
+    createdAt: extras?.createdAt ?? null,
+    updatedAt: extras?.updatedAt ?? null,
+  };
+}
+
+async function ensureIdToken(user: User) {
+  try {
+    await user.getIdToken(true);
+  } catch {
+    // Token refresh is best-effort; Firestore will retry with the current token.
+  }
+}
+
+async function writeUserProfile(
+  user: User,
+  input: { fullName: string; email: string; phone: string },
+) {
+  const profile = {
+    uid: user.uid,
+    fullName: input.fullName,
+    email: input.email,
+    phone: input.phone,
+    role: "user" as const,
+    status: "active" as const,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  };
+  await setDoc(doc(db, "users", user.uid), profile);
+  return profile;
+}
 
 export async function registerUser(input: {
   fullName: string;
@@ -17,60 +55,88 @@ export async function registerUser(input: {
   phone: string;
   password: string;
 }) {
-  // Firebase and the user profile must use the same canonical email. This also
-  // keeps the Firestore create rule from rejecting otherwise valid sign-ups
-  // when a visitor enters spaces or capital letters.
   const fullName = input.fullName.trim();
   const email = input.email.trim().toLowerCase();
   const phone = input.phone.trim();
-  let credential: UserCredential | null = null;
+
+  const credential = await createUserWithEmailAndPassword(auth, email, input.password);
+  if (fullName) {
+    try {
+      await updateProfile(credential.user, { displayName: fullName });
+    } catch {
+      // Display name is cosmetic; the Firestore profile is the source of truth.
+    }
+  }
+
+  // Security rules compare the profile email to the Auth ID token email.
+  await ensureIdToken(credential.user);
 
   try {
-    credential = await createUserWithEmailAndPassword(auth, email, input.password);
-    await updateProfile(credential.user, { displayName: fullName });
-    const profile = {
-      uid: credential.user.uid,
-      fullName,
-      email,
-      phone,
-      role: "user" as const,
-      status: "active" as const,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    };
-    await setDoc(doc(db, "users", credential.user.uid), profile);
-    return profile;
-  } catch (error) {
-    // Do not leave an Auth-only account behind if profile creation fails. A
-    // later retry should be able to use the same email address.
-    if (credential) {
-      try { await deleteUser(credential.user); } catch {}
+    await writeUserProfile(credential.user, { fullName, email, phone });
+  } catch {
+    // Keep the Firebase Auth account even if the first profile write fails
+    // (rules propagation, brief network blip). Sign-in recovers the document.
+    try {
+      await ensureIdToken(credential.user);
+      await writeUserProfile(credential.user, { fullName, email, phone });
+    } catch {
+      // Registration still succeeded: the customer can sign in with this email.
     }
-    throw error;
   }
+
+  return profileFromAuth(credential.user, { fullName, email, phone });
 }
 
 export async function loginUser(email: string, password: string): Promise<UserProfile | null> {
   const normalizedEmail = email.trim().toLowerCase();
   const credential = await signInWithEmailAndPassword(auth, normalizedEmail, password);
-  const profileRef = doc(db, "users", credential.user.uid);
-  let snapshot = await getDoc(profileRef);
-  if (!snapshot.exists()) {
-    // Recovery path for older Auth users. Security Rules only permit a user-role profile.
-    await setDoc(profileRef, {
-      uid: credential.user.uid,
-      fullName: credential.user.displayName || "Customer",
-      email: credential.user.email || normalizedEmail,
-      phone: "",
-      role: "user",
-      status: "active",
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
-    snapshot = await getDoc(profileRef);
+  const user = credential.user;
+  const profileRef = doc(db, "users", user.uid);
+
+  try {
+    let snapshot = await getDoc(profileRef);
+    if (!snapshot.exists()) {
+      await ensureIdToken(user);
+      await setDoc(profileRef, {
+        uid: user.uid,
+        fullName: user.displayName || "Customer",
+        email: (user.email || normalizedEmail).toLowerCase(),
+        phone: "",
+        role: "user",
+        status: "active",
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+      snapshot = await getDoc(profileRef);
+    } else {
+      try {
+        await updateDoc(profileRef, {
+          lastLoginAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+      } catch {
+        // lastLoginAt must never block a successful Firebase sign-in.
+      }
+    }
+
+    if (snapshot.exists()) {
+      const profile = { uid: snapshot.id, ...snapshot.data() } as UserProfile;
+      if (profile.status === "disabled") {
+        await signOut(auth);
+        const disabled = new Error("This account has been disabled. Please contact the farm team.");
+        (disabled as Error & { code: string }).code = "auth/user-disabled";
+        throw disabled;
+      }
+      return profile;
+    }
+  } catch (error) {
+    if (typeof error === "object" && error && "code" in error && (error as { code: string }).code === "auth/user-disabled") {
+      throw error;
+    }
+    // Auth succeeded. Return a real session even if Firestore is briefly down.
   }
-  await updateDoc(profileRef, { lastLoginAt: serverTimestamp(), updatedAt: serverTimestamp() });
-  return snapshot.exists() ? ({ uid: snapshot.id, ...snapshot.data() } as UserProfile) : null;
+
+  return profileFromAuth(user, { email: normalizedEmail });
 }
 
 export function logoutUser() {
@@ -78,7 +144,7 @@ export function logoutUser() {
 }
 
 export function resetUserPassword(email: string) {
-  return sendPasswordResetEmail(auth, email);
+  return sendPasswordResetEmail(auth, email.trim().toLowerCase());
 }
 
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {

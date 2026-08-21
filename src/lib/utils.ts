@@ -78,29 +78,68 @@ export function initials(name?: string) {
 }
 
 export function friendlyError(error: unknown) {
-  const code =
+  const rawCode =
     typeof error === "object" && error && "code" in error
       ? String((error as { code: string }).code)
       : "";
+  const message =
+    error instanceof Error
+      ? error.message
+      : typeof error === "object" && error && "message" in error
+        ? String((error as { message: string }).message)
+        : "";
+  const fromMessage = message.match(/\((auth\/[a-z0-9-]+)\)/i)?.[1] || "";
+  const code = rawCode || fromMessage;
+  const normalized = code.replace(/^(auth|functions|firestore)\//, "");
   const messages: Record<string, string> = {
     "auth/email-already-in-use": "An account already exists for this email address. Try signing in instead.",
+    "email-already-in-use": "An account already exists for this email address. Try signing in instead.",
     "auth/invalid-credential": "The email or password is incorrect.",
+    "invalid-credential": "The email or password is incorrect.",
+    "auth/invalid-login-credentials": "The email or password is incorrect.",
+    "invalid-login-credentials": "The email or password is incorrect.",
     "auth/invalid-email": "Please enter a valid email address.",
+    "invalid-email": "Please enter a valid email address.",
     "auth/user-not-found": "The email or password is incorrect.",
+    "user-not-found": "The email or password is incorrect.",
     "auth/wrong-password": "The email or password is incorrect.",
+    "wrong-password": "The email or password is incorrect.",
+    "auth/missing-password": "Enter your password.",
+    "missing-password": "Enter your password.",
+    "auth/missing-email": "Enter your email address.",
+    "missing-email": "Enter your email address.",
     "auth/user-disabled": "This account has been disabled. Please contact the farm team.",
+    "user-disabled": "This account has been disabled. Please contact the farm team.",
     "auth/operation-not-allowed": "Email sign-in is not enabled yet. Please contact the farm team.",
+    "operation-not-allowed": "Email sign-in is not enabled yet. Please contact the farm team.",
     "auth/weak-password": "Use a stronger password with at least 8 characters.",
+    "weak-password": "Use a stronger password with at least 8 characters.",
     "auth/too-many-requests": "Too many attempts. Please wait and try again.",
+    "too-many-requests": "Too many attempts. Please wait and try again.",
     "auth/network-request-failed": "We could not reach the service. Check your connection and try again.",
+    "network-request-failed": "We could not reach the service. Check your connection and try again.",
     "auth/invalid-api-key": "The sign-in service is not configured correctly. Please try again later.",
+    "invalid-api-key": "The sign-in service is not configured correctly. Please try again later.",
+    "auth/unauthorized-domain": "This website is not authorized for sign-in yet. Please contact the farm team.",
+    "unauthorized-domain": "This website is not authorized for sign-in yet. Please contact the farm team.",
+    "auth/configuration-not-found": "Firebase Authentication is not fully configured yet. Please try again later.",
+    "configuration-not-found": "Firebase Authentication is not fully configured yet. Please try again later.",
+    "auth/invalid-app-credential": "Sign-in is temporarily unavailable. Please try again shortly.",
+    "invalid-app-credential": "Sign-in is temporarily unavailable. Please try again shortly.",
+    "auth/argument-error": "Please check your email and password and try again.",
+    "argument-error": "Please check your email and password and try again.",
     "permission-denied": "You do not have permission to complete that action.",
     unauthenticated: "Please sign in and try again.",
     unavailable: "The service is temporarily unavailable. Please try again.",
     "failed-precondition": "That action is not valid in the current state. Refresh and try again.",
     "invalid-argument": "Please review the information and try again.",
   };
-  return messages[code] || messages[code.replace("functions/", "")] || "Something went wrong. Please try again.";
+  return (
+    messages[code] ||
+    messages[normalized] ||
+    messages[`auth/${normalized}`] ||
+    "Something went wrong. Please try again."
+  );
 }
 
 export function generateVerificationCode() {

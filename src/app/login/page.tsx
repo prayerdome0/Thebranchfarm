@@ -23,7 +23,7 @@ function LoginForm() {
     if (!email || !password) { setError("Enter your email and password."); return; }
     setLoading(true); setError("");
     try {
-      const profile = await login(email.trim(), password);
+      const profile = await login(email.trim().toLowerCase(), password);
       const requested = search.get("next");
       const safeRequested = requested?.startsWith("/") && !requested.startsWith("//") ? requested : null;
       router.replace(safeRequested || (profile?.role === "admin" ? "/admin" : profile?.role === "staff" ? "/staff" : "/dashboard"));
