@@ -15,7 +15,10 @@ const nextConfig: NextConfig = {
         source: "/(.*)",
         headers: [
           { key: "X-Content-Type-Options", value: "nosniff" },
-          { key: "X-Frame-Options", value: "DENY" },
+          // NOTE: X-Frame-Options / CSP frame-ancestors intentionally omitted —
+          // a DENY/SAMEORIGIN policy blocks the app from rendering inside the
+          // sandboxed live-preview iframe (host: *.e2b.app), which surfaces as
+          // "This page couldn't load" in the browser.
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=()" },
           { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
