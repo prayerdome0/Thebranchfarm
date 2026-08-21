@@ -9,9 +9,12 @@ export const metadata: Metadata = {
     template: "%s · The Branch Farm",
   },
   description:
-    "Farm management for The Branch Farm, Eswatini: livestock and animal records, animal health, staff, farm documents, activity and settings.",
+    "Farm management for The Branch Farm, Eswatini: livestock and animal records, animal health, staff, farm documents, activity, a public farm shop and settings.",
   applicationName: "The Branch Farm",
+  manifest: "/manifest.webmanifest",
   icons: { icon: "/logo.png", apple: "/logo.png" },
+  appleWebApp: { capable: true, statusBarStyle: "default", title: "The Branch Farm" },
+  formatDetection: { telephone: true },
 };
 
 export const viewport: Viewport = {

@@ -5,12 +5,17 @@ import {
   doc,
   getDoc,
   getDocs,
+  increment,
   limit,
   onSnapshot,
   orderBy,
   query,
+  runTransaction,
   serverTimestamp,
   setDoc,
+  updateDoc,
+  where,
+  writeBatch,
   type DocumentData,
   type Unsubscribe,
 } from "firebase/firestore";
@@ -18,12 +23,18 @@ import { httpsCallable } from "firebase/functions";
 import { auth, db, functions } from "./config";
 import { BUSINESS } from "@/lib/constants";
 import { deleteStorageObject } from "./storage";
+import { DEMO_PRODUCTS, demoOrders, generateOrderReference } from "@/lib/store";
+import { STORE } from "@/lib/constants";
 import type {
   ActivityRecord,
   Animal,
   FarmDocument,
   FarmSettings,
+  FarmVideo,
   HealthRecord,
+  Order,
+  OrderItem,
+  Product,
   UserProfile,
 } from "@/types";
 
@@ -273,6 +284,11 @@ export function defaultSettings(): FarmSettings {
     whatsapp: BUSINESS.whatsappDisplay,
     email: "",
     currency: BUSINESS.currency,
+    deliveryFee: STORE.deliveryFee,
+    freeDeliveryThreshold: STORE.freeDeliveryThreshold,
+    promoCode: "",
+    promoDiscountPercent: 0,
+    heroProductId: "",
   };
 }
 
@@ -288,6 +304,265 @@ export async function getFarmSettings(): Promise<FarmSettings> {
 
 export async function saveFarmSettings(values: FarmSettings) {
   return setDoc(doc(db, "settings", "farm"), { ...values, ...updateStamp() });
+}
+
+/* ------------------------------ Storefront ------------------------------ */
+
+function demoProducts(): Product[] {
+  return DEMO_PRODUCTS.map((product, index) => ({ ...product, id: `demo-${index + 1}` }));
+}
+
+/** Active catalogue. Falls back to the sample catalog when Firestore is unreachable. */
+export async function getProducts(): Promise<Product[]> {
+  try {
+    const snapshot = await getDocs(
+      query(collection(db, "products"), orderBy("createdAt", "desc"), limit(500)),
+    );
+    return snapshot.docs
+      .map((item) => mapped<Product>(item))
+      .filter((product) => product.active);
+  } catch {
+    return demoProducts();
+  }
+}
+
+export function watchProducts(callback: (products: Product[]) => void): Unsubscribe {
+  try {
+    return onSnapshot(
+      query(collection(db, "products"), orderBy("createdAt", "desc"), limit(500)),
+      (snapshot) =>
+        callback(
+          snapshot.docs
+            .map((item) => mapped<Product>(item))
+            .filter((product) => product.active),
+        ),
+      () => callback(demoProducts()),
+    );
+  } catch {
+    callback(demoProducts());
+    return () => {};
+  }
+}
+
+/** Admin view: all products, including inactive ones. */
+export async function getAllProducts(): Promise<Product[]> {
+  try {
+    const snapshot = await getDocs(
+      query(collection(db, "products"), orderBy("createdAt", "desc"), limit(500)),
+    );
+    return snapshot.docs.map((item) => mapped<Product>(item));
+  } catch {
+    return demoProducts();
+  }
+}
+
+export function watchAllProducts(callback: (products: Product[]) => void): Unsubscribe {
+  try {
+    return onSnapshot(
+      query(collection(db, "products"), orderBy("createdAt", "desc"), limit(500)),
+      (snapshot) => callback(snapshot.docs.map((item) => mapped<Product>(item))),
+      () => callback(demoProducts()),
+    );
+  } catch {
+    callback(demoProducts());
+    return () => {};
+  }
+}
+
+export async function getProduct(id: string): Promise<Product | null> {
+  try {
+    const snapshot = await getDoc(doc(db, "products", id));
+    return snapshot.exists() ? mapped<Product>(snapshot) : null;
+  } catch {
+    return demoProducts().find((product) => product.id === id) || null;
+  }
+}
+
+export async function createProduct(values: Omit<Product, "id">) {
+  return addDoc(collection(db, "products"), { ...values, ...stamp() });
+}
+
+export async function updateProduct(id: string, values: Omit<Product, "id">) {
+  return setDoc(doc(db, "products", id), { ...values, ...updateStamp() });
+}
+
+export async function deleteProduct(id: string) {
+  const snapshot = await getDoc(doc(db, "products", id));
+  const data = snapshot.exists() ? (snapshot.data() as Product) : null;
+  if (data?.imagePath) await deleteStorageObject(data.imagePath).catch(() => {});
+  return deleteDoc(doc(db, "products", id));
+}
+
+/** Seeds the sample catalog into Firestore (admin convenience action). */
+export async function seedDemoProducts(): Promise<number> {
+  const batch = writeBatch(db);
+  const ref = collection(db, "products");
+  DEMO_PRODUCTS.forEach((product) => {
+    batch.set(doc(ref), { ...product, ...stamp() });
+  });
+  await batch.commit();
+  return DEMO_PRODUCTS.length;
+}
+
+/* ------------------------------- Orders ------------------------------- */
+
+export async function createOrder(values: {
+  items: OrderItem[];
+  subtotal: number;
+  deliveryFee: number;
+  total: number;
+  customer: { name: string; phone: string; email?: string };
+  fulfillment: Order["fulfillment"];
+  deliveryAddress?: string;
+  notes?: string;
+  paymentMethod?: string;
+}): Promise<Order> {
+  const order: Omit<Order, "id"> = {
+    ...values,
+    reference: generateOrderReference(),
+    status: "pending" as const,
+    paymentStatus: "unpaid" as const,
+    createdAt: serverTimestamp() as unknown as Date,
+    updatedAt: serverTimestamp() as unknown as Date,
+  };
+
+  try {
+    // Atomically check stock and decrement it together with creating the order,
+    // so an order can never oversell an inventory-tracked product.
+    const ref = await runTransaction(db, async (transaction) => {
+      for (const item of values.items) {
+        if (!item.productId || item.productId.startsWith("demo-")) continue;
+        const productRef = doc(db, "products", item.productId);
+        const snapshot = await transaction.get(productRef);
+        if (!snapshot.exists()) continue;
+        const product = snapshot.data() as Product;
+        if (product.trackInventory && !product.allowBackorder) {
+          const remaining = (product.stock ?? 0) - item.quantity;
+          if (remaining < 0) {
+            throw new Error(`insufficient-stock:${product.name}`);
+          }
+        }
+        if (product.trackInventory) {
+          transaction.update(productRef, { stock: increment(-item.quantity) });
+        }
+      }
+      const orderRef = doc(collection(db, "orders"));
+      transaction.set(orderRef, order);
+      return orderRef;
+    });
+
+    return { ...order, id: ref.id };
+  } catch (cause) {
+    const message = cause instanceof Error ? cause.message : "";
+    if (message.startsWith("insufficient-stock:")) {
+      throw new Error(`Insufficient stock for "${message.slice("insufficient-stock:".length)}". Please reduce the quantity.`);
+    }
+    // Firestore unreachable (e.g. preview without a backend) → store locally.
+    const fallback: Order = {
+      ...order,
+      id: `local-${Date.now()}`,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    return demoOrders.add(fallback);
+  }
+}
+
+/** Admin list of all orders. Falls back to local demo orders. */
+export async function getOrders(): Promise<Order[]> {
+  try {
+    const snapshot = await getDocs(
+      query(collection(db, "orders"), orderBy("createdAt", "desc"), limit(500)),
+    );
+    return snapshot.docs.map((item) => mapped<Order>(item));
+  } catch {
+    return demoOrders.list();
+  }
+}
+
+export function watchOrders(callback: (orders: Order[]) => void): Unsubscribe {
+  try {
+    return onSnapshot(
+      query(collection(db, "orders"), orderBy("createdAt", "desc"), limit(500)),
+      (snapshot) => callback(snapshot.docs.map((item) => mapped<Order>(item))),
+      () => callback(demoOrders.list()),
+    );
+  } catch {
+    callback(demoOrders.list());
+    return () => {};
+  }
+}
+
+export async function getOrder(id: string): Promise<Order | null> {
+  try {
+    const snapshot = await getDoc(doc(db, "orders", id));
+    return snapshot.exists() ? mapped<Order>(snapshot) : null;
+  } catch {
+    return demoOrders.get(id);
+  }
+}
+
+export async function getOrderByReference(reference: string): Promise<Order | null> {
+  try {
+    const snapshot = await getDocs(
+      query(collection(db, "orders"), where("reference", "==", reference), limit(1)),
+    );
+    const first = snapshot.docs[0];
+    return first ? mapped<Order>(first) : null;
+  } catch {
+    return demoOrders.get(reference);
+  }
+}
+
+export async function updateOrder(
+  id: string,
+  patch: Partial<Pick<Order, "status" | "paymentStatus" | "notes" | "signature" | "signedByName" | "signedAt">>,
+) {
+  try {
+    await updateDoc(doc(db, "orders", id), { ...patch, ...updateStamp() });
+    return true;
+  } catch {
+    demoOrders.update(id, { ...patch, updatedAt: new Date() });
+    return true;
+  }
+}
+
+/* -------------------------------- Videos ------------------------------- */
+
+export async function getVideos(): Promise<FarmVideo[]> {
+  try {
+    const snapshot = await getDocs(
+      query(collection(db, "videos"), orderBy("createdAt", "desc"), limit(200)),
+    );
+    return snapshot.docs.map((item) => mapped<FarmVideo>(item));
+  } catch {
+    return [];
+  }
+}
+
+export function watchVideos(callback: (videos: FarmVideo[]) => void): Unsubscribe {
+  try {
+    return onSnapshot(
+      query(collection(db, "videos"), orderBy("createdAt", "desc"), limit(200)),
+      (snapshot) => callback(snapshot.docs.map((item) => mapped<FarmVideo>(item))),
+      () => callback([]),
+    );
+  } catch {
+    callback([]);
+    return () => {};
+  }
+}
+
+export async function createVideo(values: Omit<FarmVideo, "id" | keyof ReturnType<typeof stamp>>) {
+  return addDoc(collection(db, "videos"), { ...values, ...stamp() });
+}
+
+export async function deleteVideo(id: string) {
+  const snapshot = await getDoc(doc(db, "videos", id));
+  const data = snapshot.exists() ? (snapshot.data() as FarmVideo) : null;
+  if (data?.storagePath) await deleteStorageObject(data.storagePath).catch(() => {});
+  if (data?.posterPath) await deleteStorageObject(data.posterPath).catch(() => {});
+  return deleteDoc(doc(db, "videos", id));
 }
 
 /* ------------------------------ Helpers ------------------------------ */

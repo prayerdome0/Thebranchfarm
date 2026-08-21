@@ -6,8 +6,13 @@ export function cn(...classes: Array<string | false | null | undefined>) {
 }
 
 export function money(value: number | null | undefined) {
+  return formatMoney(value, BUSINESS.currency);
+}
+
+/** Currency-aware formatting, using the farm's configured symbol when provided. */
+export function formatMoney(value: number | null | undefined, currency: string = BUSINESS.currency) {
   if (value == null || Number.isNaN(value)) return "—";
-  return `${BUSINESS.currency}${value.toLocaleString("en-SZ", {
+  return `${currency}${value.toLocaleString("en-SZ", {
     minimumFractionDigits: Number.isInteger(value) ? 0 : 2,
     maximumFractionDigits: 2,
   })}`;

@@ -1,0 +1,144 @@
+"use client";
+
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { ArrowRight, Check, Copy, MessageSquareText, PackageCheck, Truck } from "lucide-react";
+import { Loading } from "@/components/ui/Loading";
+import { useToast } from "@/contexts/ToastContext";
+import { FULFILLMENT_LABELS, ORDER_STATUS_FLOW, ORDER_STATUS_LABELS } from "@/lib/constants";
+import { getOrderByReference } from "@/lib/firebase/data";
+import { formatDate, money } from "@/lib/utils";
+import type { Order } from "@/types";
+
+export default function OrderSuccessPage() {
+  const params = useParams<{ reference: string }>();
+  const { showToast } = useToast();
+  const [order, setOrder] = useState<Order | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    getOrderByReference(params.reference).then((found) => {
+      setOrder(found);
+      setLoading(false);
+    });
+  }, [params.reference]);
+
+  if (loading) {
+    return (
+      <section className="page-shell" style={{ display: "grid", placeItems: "center" }}>
+        <Loading label="Loading your order…" />
+      </section>
+    );
+  }
+
+  if (!order) {
+    return (
+      <section className="page-shell not-found-panel">
+        <span>404</span>
+        <h1>Order not found.</h1>
+        <p>We couldn&apos;t find an order with that reference.</p>
+        <Link href="/track" className="button button-primary">
+          Track an order
+        </Link>
+      </section>
+    );
+  }
+
+  const timelineStep = ORDER_STATUS_FLOW.indexOf(order.status);
+
+  const copyReference = () => {
+    try {
+      navigator.clipboard?.writeText(order.reference);
+      showToast("Order reference copied", "success");
+    } catch {
+      showToast("Could not copy reference", "error");
+    }
+  };
+
+  return (
+    <section className="success-page">
+      <div className="container success-card" style={{ margin: "80px auto" }}>
+        <span className="success-seal">
+          <Check size={34} />
+        </span>
+        <h1>Order received!</h1>
+        <p>
+          Thank you, {order.customer.name.split(" ")[0]}. Your order has been placed. A member of
+          the farm team will contact you shortly to confirm.
+        </p>
+
+        <div className="order-number-box">
+          <span>Order reference</span>
+          <div>
+            <strong>{order.reference}</strong>
+            <button onClick={copyReference} aria-label="Copy order reference">
+              <Copy size={17} />
+            </button>
+          </div>
+        </div>
+
+        <div className="success-summary">
+          <span>
+            <strong>{money(order.total)}</strong>
+            <small>Total · pay on collection/delivery</small>
+          </span>
+          <span>
+            <strong>{FULFILLMENT_LABELS[order.fulfillment]}</strong>
+            <small>{order.fulfillment === "delivery" ? order.deliveryAddress || "Address confirmed by phone" : "The Branch Farm, Mahlabane"}</small>
+          </span>
+        </div>
+
+        <div className="success-actions">
+          <Link className="button button-primary" href="/track">
+            Track this order <PackageCheck size={18} />
+          </Link>
+          <a
+            className="button button-whatsapp"
+            href={`https://wa.me/26876581804?text=${encodeURIComponent(`Hello, I placed order ${order.reference}.`)}`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            <MessageSquareText size={18} /> WhatsApp the farm
+          </a>
+        </div>
+        <p className="success-whatsapp-note" style={{ marginTop: 12 }}>
+          Keep your reference — you&apos;ll use it to track progress.
+        </p>
+
+        <div className="success-next">
+          <h2>What happens next?</h2>
+          <ol>
+            <li>
+              <span>1</span>
+              <p>
+                <strong>We confirm</strong>
+                <small>A team member calls to confirm your order.</small>
+              </p>
+            </li>
+            <li>
+              <span>2</span>
+              <p>
+                <strong>We prepare</strong>
+                <small>Your items are collected and packed.</small>
+              </p>
+            </li>
+            <li>
+              <span>3</span>
+              <p>
+                <strong>You receive</strong>
+                <small>Collect or get it delivered, then pay.</small>
+              </p>
+            </li>
+          </ol>
+        </div>
+
+        <div className="success-shop-link">
+          <Link className="text-link" href="/shop">
+            Continue shopping <ArrowRight size={15} />
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}

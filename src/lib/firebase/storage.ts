@@ -98,6 +98,35 @@ export async function uploadFarmDocument(
   return uploadToStorage(path, file, onProgress);
 }
 
+/** Product image upload for the storefront. */
+export async function uploadProductImage(
+  file: File,
+  onProgress?: (percent: number) => void,
+) {
+  const path = `product-images/${uniquePrefix()}-${safeName(file.name)}`;
+  return uploadToStorage(path, file, onProgress);
+}
+
+/** Farm video upload for the videos page. */
+export async function uploadFarmVideo(
+  file: File,
+  onProgress?: (percent: number) => void,
+) {
+  const uid = auth.currentUser?.uid || "team";
+  const path = `videos/${uid}/${uniquePrefix()}-${safeName(file.name)}`;
+  return uploadToStorage(path, file, onProgress);
+}
+
+/** Thumbnail/poster image for a farm video. */
+export async function uploadVideoThumbnail(
+  file: File,
+  onProgress?: (percent: number) => void,
+) {
+  const uid = auth.currentUser?.uid || "team";
+  const path = `video-thumbs/${uid}/${uniquePrefix()}-${safeName(file.name)}`;
+  return uploadToStorage(path, file, onProgress);
+}
+
 export async function deleteStorageObject(storagePath?: string) {
   if (!storagePath) return;
   await deleteObject(ref(storage, storagePath));

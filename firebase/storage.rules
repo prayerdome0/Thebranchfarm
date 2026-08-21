@@ -23,6 +23,23 @@ service firebase.storage {
       allow write: if staff() && request.resource.size < 50 * 1024 * 1024;
     }
 
+    // Storefront product images: publicly visible; staff upload.
+    match /product-images/{file} {
+      allow read: if true;
+      allow write: if staff() && safeImage();
+    }
+
+    // Farm videos and their thumbnails: publicly visible; staff upload.
+    match /videos/{uid}/{file} {
+      allow read: if true;
+      allow write: if staff() && request.resource.size < 200 * 1024 * 1024
+        && request.resource.contentType.matches('video/.*');
+    }
+    match /video-thumbs/{uid}/{file} {
+      allow read: if true;
+      allow write: if staff() && safeImage();
+    }
+
     match /{allPaths=**} { allow read, write: if false; }
   }
 }

@@ -2,9 +2,11 @@
 
 A focused farm-management system for **The Branch Farm**, Mahlabane, Eswatini.
 
-The system was simplified around the actual farm operation. There is no marketplace,
-no orders, no quotations and no separate storage vendor — Firebase is the single
-source of truth for identity, data and files.
+The system covers the actual farm operation plus a small public **storefront**: customers
+browse farm produce and livestock, add to a cart and place an order without paying online.
+Firebase is the single source of truth for identity, data and files. Orders are placed
+against Firestore and fulfilled by staff — there is no payment gateway and no separate
+storage vendor.
 
 ## The seven modules
 
@@ -17,6 +19,37 @@ source of truth for identity, data and files.
 | **Farm documents** | Upload PDFs, images, Word and Excel files, videos and other farm files; view/download them. |
 | **Activity** | Feeding, cleaning, inspections and other daily work, logged with who did it and when. |
 | **Settings** | Farm name, slogan, location, contact details and currency. |
+| **Shop** | Public storefront: browse produce and livestock, product details, gallery, cart, checkout and order tracking. |
+| **Orders** | Staff fulfil customer orders — confirm, progress, mark ready/complete, record payment and capture a proof-of-delivery signature. |
+| **Products** | Staff add and edit the catalogue — prices, sale prices, backorder, multiple images, stock levels and visibility; admin removes. |
+| **Videos** | Staff upload farm videos with thumbnails; a public `/videos` page shares them with customers. |
+| **About / Contact / Gallery** | Public pages with the farm story, WhatsApp contact form, and a photo gallery with a lightbox. |
+
+## The storefront
+
+- **Public shop** at `/shop` — browse farm produce and livestock, search, filter by type/category.
+- **Cart** is stored in the browser (`localStorage`) and works for guests — no sign-in to buy.
+- **Checkout** collects name, phone, pickup/delivery and preferred payment method. No online
+  payment: the customer pays by cash, EFT or mobile money on collection or delivery.
+- **Order tracking** at `/track` — look up an order by its `TB-XXXXXX` reference.
+- **Videos** at `/videos` — farm tours, livestock and daily-life clips uploaded by staff/admin
+  (MP4/WebM up to 200 MB, with an optional thumbnail) and played back inline on the public site.
+- **Animations** — scroll-reveal fades and cinematic stills are used across the homepage, shop
+  and videos pages (with `prefers-reduced-motion` respected).
+- **Store settings** — currency, delivery fee, free-delivery threshold, a promo code and the
+  homepage hero product are all configured in **Settings** and read live by the shop.
+- **Promo codes & sales** — set a promo code + percentage in Settings; mark products on sale or
+  allow pre-orders when out of stock.
+- **Order notifications** — a `notifyOrderCreated` Cloud Function posts new orders to a
+  configurable `NOTIFICATION_WEBHOOK_URL` (WhatsApp/email/chat of your choice).
+- **Transactional stock** — order placement atomically checks and decrements stock so an order
+  can never oversell an inventory-tracked product.
+- **PWA** — installable web-app manifest plus a minimal service worker that caches static assets.
+- **SEO** — per-storefront OpenGraph/Twitter metadata, JSON-LD `Farm` schema, `sitemap.xml` and
+  `robots.txt`.
+- **Demo fallback**: when Firestore is unreachable (e.g. a preview without a deployed backend),
+  a sample catalogue is shown and orders are stored locally in the browser. An admin can also
+  seed the sample catalogue into Firestore from **Products → Add sample products**.
 
 ## The core flow
 
@@ -36,9 +69,11 @@ history, not a static profile.
 ## Roles
 
 - **Admin** — add/edit/delete animals, upload animal photos, view everything, add health
-  records, manage staff, manage documents, see activity/history.
+  records, manage staff, manage documents, see activity/history, manage settings, and delete
+  products/videos.
 - **Staff** — view animals, add observations, report animal problems, add health/medical
-  records, upload relevant photos/documents and update records.
+  records, upload relevant photos/documents, update records, add/edit products, upload videos
+  and fulfil customer orders.
 
 There is also a `user` (pending) role: anyone can register an account, but it has no farm
 access until an administrator promotes it to staff or admin.
@@ -50,8 +85,8 @@ access until an administrator promotes it to staff or admin.
 - **Firebase Storage** — `animal-photos/{animalId}/…` for photographs and
   `documents/{uid}/…` for farm files (PDF, images, Word, Excel, videos, other).
 - **Cloud Functions** — a small, focused set: `bootstrapInitialAdmin` (allowlist promotion),
-  `setUserRole`, `setUserStatus` and `createStaffAccount`. Everything else runs directly
-  against Firestore/Storage through the security rules.
+  `setUserRole`, `setUserStatus`, `createStaffAccount` and `notifyOrderCreated` (order
+  webhook notification). Everything else runs directly against Firestore/Storage.
 
 No third-party APIs are used. Firebase alone handles storage, database and authentication.
 
@@ -96,6 +131,9 @@ Open `http://localhost:3000`.
    comma-separated owner allowlist. The Firestore user-created trigger promotes only an
    allowlisted registered account; there is no insecure public bootstrap form.
 
+   Optionally set `NOTIFICATION_WEBHOOK_URL` to a webhook endpoint (WhatsApp/email/chat) to
+   receive a ping whenever a customer places an order.
+
 4. Deploy backend policy and functions:
 
    ```bash
@@ -123,7 +161,8 @@ on `main`, and fails loudly if any callable still answers 404.
 
 ## Important collections
 
-`users`, `animals`, `animalHealth`, `farmDocuments`, `farmActivities`, `settings`.
+`users`, `animals`, `animalHealth`, `farmDocuments`, `farmActivities`, `settings`,
+`products`, `orders`, `videos`.
 
 ## Quality checks
 

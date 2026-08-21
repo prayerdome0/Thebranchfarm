@@ -109,4 +109,56 @@ export const settingsSchema = z.object({
   whatsapp: z.string().trim().max(30).optional(),
   email: z.string().trim().max(200).optional(),
   currency: z.string().trim().min(1, "Enter a currency symbol").max(5),
+  deliveryFee: z.coerce.number().min(0, "Delivery fee cannot be negative").default(0),
+  freeDeliveryThreshold: z.coerce
+    .number()
+    .min(0, "Threshold cannot be negative")
+    .default(0),
+  promoCode: z.string().trim().max(40).optional().default(""),
+  promoDiscountPercent: z.coerce
+    .number()
+    .min(0)
+    .max(100, "Discount must be 0–100")
+    .optional()
+    .default(0),
+  heroProductId: z.string().trim().max(200).optional().default(""),
+});
+
+export const productSchema = z.object({
+  name: z.string().trim().min(2, "Enter the product name").max(120),
+  kind: z.enum(["produce", "livestock"]),
+  category: z.string().trim().min(1, "Choose a category").max(40),
+  description: z.string().trim().min(2, "Add a short description").max(2000),
+  price: z.coerce.number().min(0.01, "Enter a price greater than zero"),
+  salePrice: z.coerce.number().min(0).optional(),
+  unit: z.string().trim().min(1, "Enter a unit (e.g. dozen, kg)").max(30),
+  stock: z.coerce.number().min(0, "Stock cannot be negative").default(0),
+  trackInventory: z.boolean().default(true),
+  allowBackorder: z.boolean().default(false),
+  active: z.boolean().default(true),
+  featured: z.boolean().default(false),
+});
+
+export const checkoutSchema = z.object({
+  name: z.string().trim().min(2, "Enter your full name").max(100),
+  phone: z.string().trim().min(8, "Enter a valid phone number").max(24),
+  email: z.preprocess(
+    (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
+    z
+      .union([
+        z.undefined(),
+        z.preprocess(
+          (value) => (typeof value === "string" ? value.trim().toLowerCase() : value),
+          z.email("Enter a valid email address"),
+        ),
+      ])
+      .optional(),
+  ),
+  fulfillment: z.enum(["pickup", "delivery"]),
+  deliveryAddress: z.string().trim().max(300).optional(),
+  paymentMethod: z.string().trim().max(60).optional(),
+  notes: z.string().trim().max(1000).optional(),
+  agree: z.boolean().refine((value) => value === true, {
+    message: "Please confirm the order details",
+  }),
 });

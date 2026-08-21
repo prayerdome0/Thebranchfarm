@@ -3,6 +3,10 @@ import type {
   AnimalStatus,
   AnimalType,
   HealthRecordType,
+  FulfillmentMethod,
+  OrderStatus,
+  PaymentStatus,
+  ProductKind,
 } from "@/types";
 
 export const BUSINESS = {
@@ -92,6 +96,91 @@ export const ANIMAL_STATUS_LABELS = toLabels(ANIMAL_STATUSES);
 export const HEALTH_STATUS_LABELS = toLabels(HEALTH_STATUSES);
 export const HEALTH_RECORD_TYPE_LABELS = toLabels(HEALTH_RECORD_TYPES);
 
+/* ------------------------------ Storefront ------------------------------ */
+
+export interface ProductCategory {
+  value: string;
+  label: string;
+  kind: ProductKind;
+}
+
+export const PRODUCT_CATEGORIES: ProductCategory[] = [
+  { value: "eggs", label: "Eggs", kind: "produce" },
+  { value: "dairy", label: "Milk & dairy", kind: "produce" },
+  { value: "vegetables", label: "Vegetables", kind: "produce" },
+  { value: "meat", label: "Meat", kind: "produce" },
+  { value: "cattle", label: "Cattle", kind: "livestock" },
+  { value: "pigs", label: "Pigs", kind: "livestock" },
+  { value: "goats", label: "Goats", kind: "livestock" },
+  { value: "sheep", label: "Sheep", kind: "livestock" },
+  { value: "poultry", label: "Poultry", kind: "livestock" },
+  { value: "other", label: "Other", kind: "produce" },
+];
+
+export const PRODUCT_CATEGORY_LABELS: Record<string, string> = PRODUCT_CATEGORIES.reduce(
+  (acc, category) => {
+    acc[category.value] = category.label;
+    return acc;
+  },
+  {} as Record<string, string>,
+);
+
+export const PRODUCT_KIND_LABELS: Record<ProductKind, string> = {
+  produce: "Farm produce",
+  livestock: "Live animals",
+};
+
+export const ORDER_STATUS_FLOW: OrderStatus[] = [
+  "pending",
+  "confirmed",
+  "processing",
+  "ready",
+  "completed",
+];
+
+export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
+  pending: "Placed",
+  confirmed: "Confirmed",
+  processing: "Processing",
+  ready: "Ready",
+  completed: "Completed",
+  cancelled: "Cancelled",
+};
+
+export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
+  unpaid: "Unpaid",
+  paid: "Paid",
+};
+
+export const FULFILLMENT_LABELS: Record<FulfillmentMethod, string> = {
+  pickup: "Pickup at the farm",
+  delivery: "Delivery",
+};
+
+export const PAYMENT_METHODS = [
+  "Cash on collection / delivery",
+  "EFT / bank transfer",
+  "MTN MoMo",
+  "E-Mali",
+] as const;
+
+export const STORE = {
+  currency: "E",
+  deliveryFee: 30,
+  freeDeliveryThreshold: 500,
+  promoCode: "",
+  promoDiscountPercent: 0,
+} as const;
+
+export const VIDEO_CATEGORIES = [
+  "Farm tour",
+  "Livestock",
+  "Produce",
+  "Daily life",
+  "How we work",
+  "Other",
+] as const;
+
 export const STATUS_LABELS: Record<string, string> = {
   ...ANIMAL_TYPE_LABELS,
   ...ANIMAL_STATUS_LABELS,
@@ -111,4 +200,7 @@ export const STATUS_LABELS: Record<string, string> = {
   staff: "Staff",
   user: "Pending approval",
   disabled: "Disabled",
+  ...ORDER_STATUS_LABELS,
+  ...PAYMENT_STATUS_LABELS,
+  ...FULFILLMENT_LABELS,
 };
