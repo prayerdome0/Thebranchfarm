@@ -1,0 +1,18 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() { return request.auth != null; }
+    function userDoc() { return firestore.get(/databases/(default)/documents/users/$(request.auth.uid)); }
+    function staff() { return signedIn() && userDoc().data.status == 'active' && userDoc().data.role in ['staff', 'admin']; }
+    function admin() { return signedIn() && userDoc().data.status == 'active' && userDoc().data.role == 'admin'; }
+    function safeImage() { return request.resource.size < 8 * 1024 * 1024 && request.resource.contentType.matches('image/.*'); }
+
+    match /products/{file} { allow read: if true; allow write: if admin() && safeImage(); }
+    match /gallery/{file} { allow read: if true; allow write: if admin() && safeImage(); }
+    match /animals/{uid}/{file} { allow read: if staff(); allow write: if staff() && safeImage(); }
+    match /profiles/{uid}/{file} { allow read: if true; allow write: if signedIn() && request.auth.uid == uid && safeImage(); }
+    match /signatures/{uid}/{file} { allow read: if staff() || (signedIn() && request.auth.uid == uid); allow write: if false; }
+    match /documents/{uid}/{file} { allow read: if staff() || (signedIn() && request.auth.uid == uid); allow write: if false; }
+    match /{allPaths=**} { allow read, write: if false; }
+  }
+}

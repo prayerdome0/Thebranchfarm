@@ -1,0 +1,8 @@
+{
+  "functions": [{ "source": "functions", "codebase": "default", "ignore": ["node_modules", ".git", "*.log", "lib"] }],
+  "firestore": {
+    "rules": "firebase/firestore.rules",
+    "indexes": "firebase/firestore.indexes.json"
+  },
+  "storage": { "rules": "firebase/storage.rules" }
+}

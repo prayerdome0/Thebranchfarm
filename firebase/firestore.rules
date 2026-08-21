@@ -1,0 +1,177 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function profile() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data; }
+    function active() { return signedIn() && profile().status == 'active'; }
+    function hasRole(role) { return active() && profile().role == role; }
+    function staff() { return hasRole('staff') || hasRole('admin'); }
+    function admin() { return hasRole('admin'); }
+    function own(uid) { return signedIn() && request.auth.uid == uid; }
+    function safeString(value, max) { return value is string && value.size() > 0 && value.size() <= max; }
+    function validFarmCreate() {
+      return staff()
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.updatedBy == request.auth.uid;
+    }
+    function validFarmUpdate() {
+      return staff()
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.updatedBy == request.auth.uid;
+    }
+    function nonNegative(value) { return value is number && value >= 0; }
+    function validAnimal() {
+      return request.resource.data.species in ['cattle', 'pig', 'chicken']
+        && safeString(request.resource.data.animalId, 80)
+        && safeString(request.resource.data.tagNumber, 80)
+        && safeString(request.resource.data.breed, 100)
+        && request.resource.data.sex in ['male', 'female', 'mixed']
+        && request.resource.data.healthStatus in ['healthy', 'sick', 'injured', 'recovering']
+        && request.resource.data.currentStatus in ['active', 'sold', 'deceased', 'transferred']
+        && safeString(request.resource.data.location, 150)
+        && (request.resource.data.weight == null || nonNegative(request.resource.data.weight));
+    }
+    function validMilk() {
+      return safeString(request.resource.data.date, 20)
+        && nonNegative(request.resource.data.morningProduction)
+        && nonNegative(request.resource.data.eveningProduction)
+        && nonNegative(request.resource.data.totalProduction)
+        && nonNegative(request.resource.data.sold)
+        && nonNegative(request.resource.data.wasted)
+        && nonNegative(request.resource.data.remaining)
+        && request.resource.data.totalProduction == request.resource.data.morningProduction + request.resource.data.eveningProduction
+        && request.resource.data.remaining == request.resource.data.totalProduction - request.resource.data.sold - request.resource.data.wasted;
+    }
+    function validEggs() {
+      return safeString(request.resource.data.date, 20)
+        && nonNegative(request.resource.data.eggsCollected)
+        && nonNegative(request.resource.data.eggsSold)
+        && nonNegative(request.resource.data.eggsDamaged)
+        && nonNegative(request.resource.data.eggsRemaining)
+        && request.resource.data.eggsRemaining == request.resource.data.eggsCollected - request.resource.data.eggsSold - request.resource.data.eggsDamaged;
+    }
+    function validInventory() {
+      return safeString(request.resource.data.product, 150)
+        && safeString(request.resource.data.unit, 40)
+        && nonNegative(request.resource.data.quantity)
+        && nonNegative(request.resource.data.lowStockThreshold);
+    }
+    function validInventoryTransaction() {
+      return safeString(request.resource.data.product, 150)
+        && safeString(request.resource.data.unit, 40)
+        && nonNegative(request.resource.data.stockIn)
+        && nonNegative(request.resource.data.stockOut)
+        && nonNegative(request.resource.data.currentBalance)
+        && safeString(request.resource.data.reason, 500);
+    }
+    function validActivity() {
+      return safeString(request.resource.data.activity, 120)
+        && safeString(request.resource.data.date, 20)
+        && safeString(request.resource.data.notes, 2000);
+    }
+
+    match /users/{uid} {
+      allow create: if own(uid)
+        && request.resource.data.uid == uid
+        && request.resource.data.role == 'user'
+        && request.resource.data.status == 'active'
+        && request.resource.data.email == request.auth.token.email
+        && safeString(request.resource.data.fullName, 100)
+        && safeString(request.resource.data.phone, 24);
+      allow read: if own(uid) || admin();
+      allow update: if own(uid)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['fullName', 'phone', 'photoURL', 'updatedAt', 'lastLoginAt'])
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.status == resource.data.status;
+      allow delete: if false;
+    }
+
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if false; // Admin SDK callable function validates and audits changes.
+    }
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /orders/{orderId} {
+      allow read: if staff() || (signedIn() && resource.data.customer.userId == request.auth.uid);
+      allow write: if false; // Price-secure order function only.
+    }
+    match /orderItems/{itemId} {
+      allow read: if staff() || (signedIn() && resource.data.customerId == request.auth.uid);
+      allow write: if false;
+    }
+
+    match /documents/{documentId} {
+      allow read: if staff() || (signedIn() && resource.data.customerId == request.auth.uid);
+      allow write: if false;
+    }
+    match /documentVerifications/{code} {
+      allow read: if true;
+      allow write: if false;
+    }
+    match /signatures/{signatureId} {
+      allow read: if staff() || (signedIn() && resource.data.userId == request.auth.uid);
+      allow write: if false;
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if admin()
+        || (signedIn() && resource.data.userId == request.auth.uid)
+        || (staff() && resource.data.audience in ['staff', 'admin']);
+      allow update: if signedIn()
+        && (resource.data.userId == request.auth.uid || staff())
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+      allow create, delete: if false;
+    }
+
+    // Operational records are readable by staff/admin and are archived rather than deleted.
+    match /animals/{id} { allow read: if staff(); allow create: if validFarmCreate() && validAnimal(); allow update: if validFarmUpdate() && validAnimal(); allow delete: if false; }
+    match /cattle/{id} { allow read: if staff(); allow create: if validFarmCreate(); allow update: if validFarmUpdate(); allow delete: if false; }
+    match /pigs/{id} { allow read: if staff(); allow create: if validFarmCreate(); allow update: if validFarmUpdate(); allow delete: if false; }
+    match /chickens/{id} { allow read: if staff(); allow create: if validFarmCreate(); allow update: if validFarmUpdate(); allow delete: if false; }
+    match /animalHealth/{id} { allow read: if staff(); allow create: if validFarmCreate(); allow update: if validFarmUpdate(); allow delete: if false; }
+    match /animalBreeding/{id} { allow read: if staff(); allow create: if validFarmCreate(); allow update: if validFarmUpdate(); allow delete: if false; }
+    match /animalWeights/{id} { allow read: if staff(); allow create: if validFarmCreate(); allow update: if validFarmUpdate(); allow delete: if false; }
+    match /milkProduction/{id} { allow read: if staff(); allow create: if validFarmCreate() && validMilk(); allow update: if validFarmUpdate() && validMilk(); allow delete: if false; }
+    match /eggProduction/{id} { allow read: if staff(); allow create: if validFarmCreate() && validEggs(); allow update: if validFarmUpdate() && validEggs(); allow delete: if false; }
+    match /inventory/{id} { allow read: if staff(); allow create: if validFarmCreate(); allow update: if validFarmUpdate(); allow delete: if false; }
+    match /inventoryTransactions/{id} { allow read: if staff(); allow create: if validFarmCreate() && validInventoryTransaction(); allow update: if validFarmUpdate() && validInventoryTransaction(); allow delete: if false; }
+    match /farmActivities/{id} { allow read: if staff(); allow create: if validFarmCreate() && validActivity(); allow update: if validFarmUpdate() && validActivity(); allow delete: if false; }
+    match /deliveries/{id} { allow read: if staff(); allow create: if validFarmCreate(); allow update: if validFarmUpdate(); allow delete: if false; }
+
+    match /auditLogs/{logId} {
+      allow read: if admin();
+      allow write: if false;
+    }
+    match /counters/{counterId} { allow read, write: if false; }
+
+    match /settings/{settingId} {
+      allow read: if settingId in ['business', 'website', 'delivery'];
+      allow write: if false;
+    }
+    match /websiteContent/{contentId} {
+      allow read: if true;
+      allow write: if false;
+    }
+    match /gallery/{itemId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /contactMessages/{messageId} {
+      allow create: if safeString(request.resource.data.fullName, 100)
+        && safeString(request.resource.data.phone, 24)
+        && safeString(request.resource.data.message, 1500)
+        && request.resource.data.status == 'new';
+      allow read: if admin();
+      allow update: if admin();
+      allow delete: if false;
+    }
+
+    match /{document=**} { allow read, write: if false; }
+  }
+}
