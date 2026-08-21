@@ -42,42 +42,75 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let stopProfile: (() => void) | undefined;
-    const stopAuth = onAuthStateChanged(auth, (current) => {
-      stopProfile?.();
-      stopProfile = undefined;
-      setFirebaseUser(current);
-      if (!current) {
-        setUser(null);
-        setLoading(false);
-        return;
-      }
+    let timeout: number | undefined;
+    // Safety: never leave UI stuck on "Checking your access…" on Vercel if Firebase is unreachable.
+    timeout = window.setTimeout(() => setLoading(false), 4000) as unknown as number;
 
-      stopProfile = onSnapshot(
-        doc(db, "users", current.uid),
-        (snapshot) => {
-          if (snapshot.exists()) {
-            const profile = { uid: snapshot.id, ...snapshot.data() } as UserProfile;
-            setUser(profile.status === "disabled" ? null : profile);
-          } else {
+    let stopAuth: (() => void) | undefined;
+    try {
+      stopAuth = onAuthStateChanged(
+        auth,
+        (current) => {
+          stopProfile?.();
+          stopProfile = undefined;
+          setFirebaseUser(current);
+          if (!current) {
             setUser(null);
+            setLoading(false);
+            if (timeout) window.clearTimeout(timeout);
+            return;
           }
-          setLoading(false);
+
+          try {
+            stopProfile = onSnapshot(
+              doc(db, "users", current.uid),
+              (snapshot) => {
+                if (snapshot.exists()) {
+                  const profile = { uid: snapshot.id, ...snapshot.data() } as UserProfile;
+                  setUser(profile.status === "disabled" ? null : profile);
+                } else {
+                  setUser(null);
+                }
+                setLoading(false);
+                if (timeout) window.clearTimeout(timeout);
+              },
+              () => {
+                setUser(null);
+                setLoading(false);
+                if (timeout) window.clearTimeout(timeout);
+              }
+            );
+          } catch {
+            setUser(null);
+            setLoading(false);
+            if (timeout) window.clearTimeout(timeout);
+          }
         },
         () => {
           setUser(null);
           setLoading(false);
-        },
+          if (timeout) window.clearTimeout(timeout);
+        }
       );
-    });
+    } catch {
+      setLoading(false);
+      if (timeout) window.clearTimeout(timeout);
+    }
+
     return () => {
-      stopProfile?.();
-      stopAuth();
+      if (timeout) window.clearTimeout(timeout);
+      try { stopProfile?.(); } catch {}
+      try { stopAuth?.(); } catch {}
     };
   }, []);
 
   const refreshToken = useCallback(async () => {
-    if (!auth.currentUser) return null;
-    return auth.currentUser.getIdToken(true);
+    try {
+      if (!auth.currentUser) return null;
+      return await auth.currentUser.getIdToken(true);
+    } catch {
+      return null;
+    }
   }, []);
 
   const value = useMemo<AuthContextValue>(

@@ -25,19 +25,23 @@ export function SoundProvider({ children }: { children: ReactNode }) {
   const ambientRef = useRef<{ noise: AudioBufferSourceNode; timer: number } | null>(null);
 
   const stopAmbient = useCallback(() => {
-    if (ambientRef.current) {
-      ambientRef.current.noise.stop();
-      window.clearInterval(ambientRef.current.timer);
-      ambientRef.current = null;
-    }
-    audioRef.current?.close();
+    try {
+      if (ambientRef.current) {
+        try { ambientRef.current.noise.stop(); } catch {}
+        try { window.clearInterval(ambientRef.current.timer); } catch {}
+        ambientRef.current = null;
+      }
+    } catch {}
+    try { audioRef.current?.close(); } catch {}
     audioRef.current = null;
   }, []);
 
   const startAmbient = useCallback(() => {
-    const AudioContextClass = window.AudioContext ||
-      (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (!AudioContextClass) return;
+    try {
+      if (typeof window === "undefined") return;
+      const AudioContextClass = window.AudioContext ||
+        (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!AudioContextClass) return;
     const context = new AudioContextClass();
     audioRef.current = context;
 
@@ -75,6 +79,7 @@ export function SoundProvider({ children }: { children: ReactNode }) {
     const timer = window.setInterval(bird, 7000);
     window.setTimeout(bird, 900);
     ambientRef.current = { noise, timer };
+    } catch {}
   }, []);
 
   const toggleSound = useCallback(() => {

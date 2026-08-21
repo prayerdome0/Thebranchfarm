@@ -37,7 +37,9 @@ export default function CheckoutPage() {
     const parsed = checkoutSchema.safeParse(form);
     if (!parsed.success) {
       setErrors(Object.fromEntries(parsed.error.issues.map((issue) => [String(issue.path[0]), issue.message])));
-      document.querySelector(".field-error")?.parentElement?.scrollIntoView({ behavior: "smooth", block: "center" });
+      try {
+        document.querySelector(".field-error")?.parentElement?.scrollIntoView({ behavior: "smooth", block: "center" });
+      } catch {}
       return;
     }
     setErrors({}); setServerError(""); setSubmitting(true);
@@ -50,12 +52,14 @@ export default function CheckoutPage() {
         signature: parsed.data.signature,
       });
       const summary = { ...response, customer: parsed.data.fullName, phone: parsed.data.phone, whatsappAvailable: parsed.data.whatsappAvailable, location: parsed.data.location, instructions: parsed.data.instructions, items: items.map(({ product, quantity }) => ({ name: product.name, quantity, price: product.price, unit: product.unit })) };
-      sessionStorage.setItem(`order-success:${response.orderNumber}`, JSON.stringify(summary));
+      try {
+        sessionStorage.setItem(`order-success:${response.orderNumber}`, JSON.stringify(summary));
+      } catch {}
       clearCart();
       router.push(`/order-success/${response.orderNumber}`);
     } catch (error) {
       setServerError(friendlyError(error)); setSubmitting(false);
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      try { window.scrollTo({ top: 0, behavior: "smooth" }); } catch {}
     }
   };
 
