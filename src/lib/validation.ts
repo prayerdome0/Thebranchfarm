@@ -24,8 +24,6 @@ export const checkoutSchema = z.object({
   address: z.string().trim().min(4, "Enter a delivery address or meeting point").max(300),
   instructions: z.string().max(500).optional(),
   whatsappAvailable: z.boolean(),
-  agreementAccepted: z.literal(true, { message: "Please accept the purchase agreement" }),
-  signature: z.string().min(50, "Please sign in the signature box"),
 });
 
 export const contactSchema = z.object({

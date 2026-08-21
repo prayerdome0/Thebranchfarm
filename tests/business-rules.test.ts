@@ -41,7 +41,7 @@ test("currency formatting uses Eswatini E", () => {
   assert.equal(money(null), "To be arranged");
 });
 
-test("checkout requires agreement and a touchscreen signature", () => {
+test("checkout completes without any signature or agreement checkbox", () => {
   const base = {
     fullName: "Nomsa Dlamini",
     phone: "+268 7612 3456",
@@ -50,12 +50,11 @@ test("checkout requires agreement and a touchscreen signature", () => {
     address: "Near the central market",
     instructions: "Please call on arrival",
     whatsappAvailable: false,
-    agreementAccepted: true as const,
-    signature: `data:image/png;base64,${"a".repeat(100)}`,
   };
   assert.equal(checkoutSchema.safeParse(base).success, true);
-  assert.equal(checkoutSchema.safeParse({ ...base, agreementAccepted: false }).success, false);
-  assert.equal(checkoutSchema.safeParse({ ...base, signature: "" }).success, false);
+  // The customer never needs to sign; no signature or agreement fields exist anymore.
+  assert.equal("signature" in checkoutSchema.shape, false);
+  assert.equal("agreementAccepted" in checkoutSchema.shape, false);
 });
 
 test("order status workflow prevents skipping controlled stages", () => {

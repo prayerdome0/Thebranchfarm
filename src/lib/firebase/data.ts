@@ -218,6 +218,37 @@ export async function createDocumentFromOrder(orderId: string, type: import("@/t
   return (await callable({ orderId, type, payment })).data.document;
 }
 
+export async function createQuotation(payload: {
+  customer: { fullName: string; phone: string; email?: string; address?: string };
+  items: Array<{ productName: string; description?: string; quantity: number; unit: string; price: number; discount?: number }>;
+  notes?: string;
+  signature?: string;
+  quoteDate?: string;
+}) {
+  const callable = httpsCallable<typeof payload, { document: import("@/types").BusinessDocument }>(functions, "createQuotation");
+  return (await callable(payload)).data.document;
+}
+
+export async function saveUserSignature(url: string) {
+  const callable = httpsCallable<{ url: string }, { ok: boolean }>(functions, "saveUserSignature");
+  return (await callable({ url })).data;
+}
+
+export async function removeUserSignature() {
+  const callable = httpsCallable<Record<string, never>, { ok: boolean }>(functions, "removeUserSignature");
+  return (await callable({})).data;
+}
+
+export async function saveDocumentPdf(documentId: string, pdfUrl: string) {
+  const callable = httpsCallable<{ documentId: string; pdfUrl: string }, { ok: boolean }>(functions, "saveDocumentPdf");
+  return (await callable({ documentId, pdfUrl })).data;
+}
+
+export async function getUserSignature(uid: string) {
+  const snapshot = await getDoc(doc(db, "signatures", uid));
+  return snapshot.exists() ? String(snapshot.data()?.signature || "") : null;
+}
+
 export async function archiveDocument(documentId: string) {
   const callable = httpsCallable<{ documentId: string }, { ok: boolean }>(functions, "archiveDocument");
   return (await callable({ documentId })).data;

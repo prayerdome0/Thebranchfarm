@@ -83,7 +83,6 @@ export default function HomePage() {
             <span><Volume2 size={18} /></span>
             <span><small>{enabled ? "Playing softly" : "Sound off"}</small><strong>{enabled ? "Farm ambience" : "Hear the farm"}</strong></span>
           </button>
-          <span className="hero-visual-note">AI-created brand illustration · not a photograph of the farm</span>
         </div>
         <div className="hero-scroll-cue"><span /> Scroll to explore</div>
       </section>
@@ -113,15 +112,14 @@ export default function HomePage() {
 
       <section className="section story-section">
         <div className="container story-grid">
-          <div className="motion-story" aria-label="Illustrative stock film of cattle grazing">
-            <div className="motion-shot motion-shot-one"><Image src="/media/cattle.jpg" alt="Conceptual illustration of cattle grazing" fill sizes="(max-width: 900px) 100vw, 55vw" /></div>
+          <div className="motion-story" aria-label="Cattle grazing on the farm">
+            <div className="motion-shot motion-shot-one"><Image src="/media/cattle.jpg" alt="Cattle grazing" fill sizes="(max-width: 900px) 100vw, 55vw" /></div>
             <video className="motion-video" autoPlay muted loop playsInline preload="metadata" poster="/media/cattle.jpg" aria-label="Cattle grazing in a green field">
               <source src="https://videos.pexels.com/video-files/855340/855340-hd_1920_1080_25fps.mp4" type="video/mp4" />
             </video>
             <div className="motion-vignette" />
             <div className="motion-title"><span><Play size={16} fill="currentColor" /></span><p><small>Farm film</small><strong>Rooted in care</strong></p></div>
             <div className="motion-progress"><i /><i /><i /></div>
-            <span className="visual-label visual-label-dark">Illustrative stock film · not The Branch Farm</span>
           </div>
           <div className="story-copy">
             <span className="eyebrow">Our approach</span>
@@ -129,7 +127,7 @@ export default function HomePage() {
             <p>We are building The Branch Farm around quality production, clear records and honest availability. Customers get a simple way to order; our team gets connected tools to run the farm responsibly.</p>
             <ul className="feature-list">
               <li><span><BadgeCheck size={19} /></span><div><strong>Honest availability</strong><p>Only products marked available can be purchased.</p></div></li>
-              <li><span><ShieldCheck size={19} /></span><div><strong>Traceable transactions</strong><p>Orders, signed agreements and documents stay connected.</p></div></li>
+              <li><span><ShieldCheck size={19} /></span><div><strong>Clear records</strong><p>Orders and official documents stay connected and traceable.</p></div></li>
               <li><span><Leaf size={19} /></span><div><strong>Built for growth</strong><p>Dairy today, with more farm products to follow.</p></div></li>
             </ul>
             <Link href="/about" className="button button-secondary">Discover our farm <ArrowRight size={18} /></Link>
@@ -142,7 +140,7 @@ export default function HomePage() {
           <SectionHeading
             eyebrow="More to watch"
             title="A growing farm story, in motion."
-            description="Watch more illustrative films about the dairy, livestock and future product lines we are building toward."
+            description="Watch more films about the dairy, livestock and future product lines we are building toward."
             action={<Link href="/videos" className="text-link">Watch all films <ArrowRight size={17} /></Link>}
           />
           <div className="farm-video-grid farm-video-grid-preview">

@@ -18,7 +18,7 @@ async function imageData(url: string) {
   });
 }
 
-export async function generateBusinessPdf(record: BusinessDocument) {
+async function buildBusinessPdf(record: BusinessDocument) {
   const pdf = new jsPDF({ unit: "mm", format: "a4", compress: true });
   const width = 210;
   const margin = 16;
@@ -80,12 +80,14 @@ export async function generateBusinessPdf(record: BusinessDocument) {
   pdf.setFontSize(9);
   pdf.text(record.customer.phone || "", margin, y + 5);
   if (record.customer.email) pdf.text(record.customer.email, margin, y + 10);
+  if (record.customer.address) pdf.text(record.customer.address, margin, y + 15);
   pdf.text(`Issue date: ${formatDate(record.createdAt)}`, 112, y);
+  if (record.quoteDate) pdf.text(`Quote date: ${formatDate(record.quoteDate as never)}`, 112, y + 5);
   if (record.orderNumber) pdf.text(`Order: ${record.orderNumber}`, 112, y + 5);
   pdf.text(`Status: ${record.status.toUpperCase()}`, 112, y + 10);
   if (record.paymentMethod) pdf.text(`Payment: ${record.paymentMethod}`, 112, y + 15);
   if (record.paymentReference) pdf.text(`Reference: ${record.paymentReference}`, 112, y + 20);
-  y += record.paymentMethod ? 28 : 21;
+  y += record.paymentMethod ? 28 : record.customer.address ? 27 : 21;
 
   // Product table
   const columns = [margin, 102, 126, 156, right];
@@ -147,10 +149,23 @@ export async function generateBusinessPdf(record: BusinessDocument) {
   pdf.text(money(record.total), right, y + 5, { align: "right" });
   y += 18;
 
-  if (y > 235) {
-    pdf.addPage();
-    y = 20;
+  if (record.notes) {
+    if (y > 220) { pdf.addPage(); y = 20; }
+    pdf.setFillColor("#fbfaf6");
+    pdf.roundedRect(margin, y, right - margin, 24, 2, 2, "F");
+    pdf.setTextColor(green);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(9);
+    pdf.text("NOTES / TERMS", margin + 4, y + 6);
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(8.5);
+    pdf.setTextColor(muted);
+    const noteLines = pdf.splitTextToSize(record.notes, right - margin - 8);
+    pdf.text(noteLines, margin + 4, y + 12);
+    y += 24 + Math.max(0, (noteLines.length - 1) * 4);
+    if (y > 235) { pdf.addPage(); y = 20; }
   }
+
   pdf.setFillColor("#f7f8f5");
   pdf.roundedRect(margin, y, right - margin, 38, 2, 2, "F");
   pdf.addImage(qr, "PNG", margin + 4, y + 4, 30, 30);
@@ -166,15 +181,25 @@ export async function generateBusinessPdf(record: BusinessDocument) {
     92,
   );
   pdf.text(verifyText, margin + 40, y + 18);
-  if (record.signature) {
+  if (record.signature || record.preparedBy) {
     pdf.setTextColor(muted);
     pdf.setFontSize(7.5);
-    pdf.text("AUTHORIZED SIGNATURE", 164, y + 9, { align: "center" });
-    try {
-      pdf.addImage(record.signature, "PNG", 145, y + 12, 38, 15);
-      pdf.line(144, y + 29, 184, y + 29);
-    } catch {
-      pdf.text("Digitally signed", 164, y + 21, { align: "center" });
+    pdf.text("PREPARED BY", 164, y + 9, { align: "center" });
+    if (record.signature) {
+      try {
+        pdf.addImage(record.signature, "PNG", 145, y + 12, 38, 15);
+        pdf.line(144, y + 29, 184, y + 29);
+      } catch {
+        pdf.text("Prepared by farm team", 164, y + 21, { align: "center" });
+      }
+    } else {
+      pdf.text("Prepared by farm team", 164, y + 21, { align: "center" });
+    }
+    if (record.preparedBy) {
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(8.5);
+      pdf.setTextColor(ink);
+      pdf.text(record.preparedBy, 164, y + 34, { align: "center" });
     }
   }
 
@@ -188,5 +213,15 @@ export async function generateBusinessPdf(record: BusinessDocument) {
     pdf.text(`Page ${page} of ${pages}`, right, 290, { align: "right" });
   }
 
+  return pdf;
+}
+
+export async function generateBusinessPdf(record: BusinessDocument) {
+  const pdf = await buildBusinessPdf(record);
   pdf.save(`${record.documentNumber}.pdf`);
+}
+
+export async function buildBusinessPdfBlob(record: BusinessDocument): Promise<Blob> {
+  const pdf = await buildBusinessPdf(record);
+  return pdf.output("blob");
 }

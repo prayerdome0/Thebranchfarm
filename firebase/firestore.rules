@@ -141,6 +141,9 @@ service cloud.firestore {
     match /animalHealth/{id} { allow read: if staff(); allow create: if validFarmCreate(); allow update: if validFarmUpdate(); allow delete: if false; }
     match /animalBreeding/{id} { allow read: if staff(); allow create: if validFarmCreate(); allow update: if validFarmUpdate(); allow delete: if false; }
     match /animalWeights/{id} { allow read: if staff(); allow create: if validFarmCreate(); allow update: if validFarmUpdate(); allow delete: if false; }
+    match /crops/{id} { allow read: if staff(); allow create: if validFarmCreate(); allow update: if validFarmUpdate(); allow delete: if false; }
+    match /feed/{id} { allow read: if staff(); allow create: if validFarmCreate(); allow update: if validFarmUpdate(); allow delete: if false; }
+    match /equipment/{id} { allow read: if staff(); allow create: if validFarmCreate(); allow update: if validFarmUpdate(); allow delete: if false; }
     match /milkProduction/{id} { allow read: if staff(); allow create: if validFarmCreate() && validMilk(); allow update: if validFarmUpdate() && validMilk(); allow delete: if false; }
     match /eggProduction/{id} { allow read: if staff(); allow create: if validFarmCreate() && validEggs(); allow update: if validFarmUpdate() && validEggs(); allow delete: if false; }
     match /inventory/{id} { allow read: if staff(); allow create: if validFarmCreate(); allow update: if validFarmUpdate(); allow delete: if false; }

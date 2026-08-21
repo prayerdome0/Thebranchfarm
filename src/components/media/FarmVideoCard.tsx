@@ -21,7 +21,6 @@ export function FarmVideoCard({ video }: { video: FarmVideo }) {
         <div className="farm-video-meta"><span>{video.category}</span><span>Video</span></div>
         <h3>{video.title}</h3>
         <p>{video.description}</p>
-        <small>{video.credit}</small>
       </div>
     </article>
   );

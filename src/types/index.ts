@@ -20,6 +20,8 @@ export interface UserProfile {
   email: string;
   phone: string;
   photoURL?: string;
+  signature?: string;
+  title?: string;
   role: AppRole;
   status: AccountStatus;
   createdAt: TimestampValue;
@@ -54,7 +56,6 @@ export interface FarmVideo {
   category: string;
   src: string;
   poster: string;
-  credit: string;
 }
 
 export interface CartItem {
@@ -111,8 +112,6 @@ export interface CheckoutPayload {
   items: Array<{ productId: string; quantity: number }>;
   customer: Omit<OrderCustomer, "userId">;
   delivery: Omit<OrderDelivery, "fee" | "label">;
-  agreementAccepted: boolean;
-  signature: string;
 }
 
 export interface AppNotification {
@@ -183,11 +182,21 @@ export interface InventoryItem extends FarmRecordBase {
 
 export type DocumentType = "quotation" | "invoice" | "receipt" | "agreement";
 
+export interface QuotationItem {
+  productName: string;
+  description?: string;
+  quantity: number;
+  unit: string;
+  price: number;
+  discount: number;
+  subtotal: number;
+}
+
 export interface BusinessDocument {
   id: string;
   documentNumber: string;
   type: DocumentType;
-  customer: Pick<OrderCustomer, "fullName" | "phone" | "email">;
+  customer: Pick<OrderCustomer, "fullName" | "phone" | "email"> & { address?: string };
   items: OrderItem[];
   subtotal: number;
   discount: number;
@@ -200,6 +209,11 @@ export interface BusinessDocument {
   verificationCode: string;
   version: number;
   signature?: string;
+  preparedBy?: string;
+  issuedAt?: TimestampValue;
+  quoteDate?: string;
+  notes?: string;
+  pdfUrl?: string;
   createdAt: TimestampValue;
   updatedAt: TimestampValue;
 }

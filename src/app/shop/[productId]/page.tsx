@@ -47,7 +47,6 @@ export default function ProductDetailPage() {
           <div className="product-detail-grid">
             <div className="product-detail-image">
               <Image src={product.images[0]} alt={product.name} fill priority sizes="(max-width: 850px) 100vw, 50vw" />
-              <span className="visual-label">AI-created product illustration</span>
             </div>
             <div className="product-detail-copy">
               <div className="product-detail-meta"><span>{product.category}</span><span className={available ? "available" : "coming"}>{available ? "Available now" : "Coming soon"}</span></div>

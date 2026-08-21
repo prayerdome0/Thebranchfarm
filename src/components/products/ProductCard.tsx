@@ -35,7 +35,6 @@ export function ProductCard({ product, priority = false }: { product: Product; p
         <span className={`availability-pill ${available ? "available" : "coming"}`}>
           {available ? "Available now" : product.availability === "coming-soon" ? "Coming soon" : "Unavailable"}
         </span>
-        <span className="visual-label">Brand illustration</span>
       </Link>
       <div className="product-card-body">
         <div className="product-card-meta">
