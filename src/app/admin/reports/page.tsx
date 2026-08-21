@@ -1,0 +1,28 @@
+"use client";
+
+import { BarChart3, Download, Egg, Milk, PackageCheck, TrendingUp } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { getCollection, getOperationalOrders } from "@/lib/firebase/data";
+import { generateReportPdf } from "@/lib/pdf/report";
+import { formatDate, money, toDate } from "@/lib/utils";
+import type { Order } from "@/types";
+
+type Row = Record<string, unknown> & { id: string };
+export default function ReportsPage() {
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [milk, setMilk] = useState<Row[]>([]);
+  const [eggs, setEggs] = useState<Row[]>([]);
+  const [range, setRange] = useState("30");
+  const [exporting, setExporting] = useState(false);
+  useEffect(() => { Promise.all([getOperationalOrders(), getCollection<Row>("milkProduction", 500), getCollection<Row>("eggProduction", 500)]).then(([o, m, e]) => { setOrders(o); setMilk(m); setEggs(e); }).catch(() => {}); }, []);
+  const start = useMemo(() => { if (range === "all") return new Date(0); const date = new Date(); date.setDate(date.getDate() - Number(range)); return date; }, [range]);
+  const filtered = orders.filter((order) => (toDate(order.createdAt)?.getTime() || 0) >= start.getTime());
+  const completed = filtered.filter((order) => ["delivered", "completed"].includes(order.status));
+  const revenue = completed.reduce((sum, order) => sum + order.total, 0);
+  const cancelled = filtered.filter((order) => order.status === "cancelled").length;
+  const maxStatus = Math.max(1, ...["pending", "confirmed", "preparing", "delivered", "completed", "cancelled"].map((status) => filtered.filter((order) => order.status === status).length));
+  const periodMilk = milk.filter((row) => new Date(String(row.dateTime || row.date || 0)) >= start).reduce((sum, row) => sum + Number(row.totalProduction || 0), 0);
+  const periodEggs = eggs.filter((row) => new Date(String(row.dateTime || row.date || 0)) >= start).reduce((sum, row) => sum + Number(row.eggsCollected || 0), 0);
+  const exportPdf = async () => { setExporting(true); try { await generateReportPdf({ title: "Sales and Operations Report", range: range === "all" ? "All recorded time" : `Last ${range} days`, metrics: [{ label: "Revenue", value: money(revenue) }, { label: "Orders", value: String(filtered.length) }, { label: "Milk", value: `${periodMilk}L` }, { label: "Eggs", value: String(periodEggs) }], orders: filtered.map((order) => ({ number: order.orderNumber, date: formatDate(order.createdAt), customer: order.customer.fullName, status: order.status, total: order.total })) }); } finally { setExporting(false); } };
+  return <div className="dashboard-stack"><section className="dashboard-section-title"><div><h2>Reports &amp; analytics</h2><p>Sales, orders and production derived from current Firebase records.</p></div><div className="title-actions"><select value={range} onChange={(e) => setRange(e.target.value)}><option value="7">Last 7 days</option><option value="30">Last 30 days</option><option value="90">Last 90 days</option><option value="365">Last 12 months</option><option value="all">All time</option></select><button className="button button-primary" onClick={exportPdf} disabled={exporting}><Download size={17} /> {exporting ? "Generating…" : "Export PDF"}</button></div></section><section className="stat-grid report-stats"><article><span><TrendingUp size={20} /></span><div><small>Completed revenue</small><strong>{money(revenue)}</strong></div></article><article><span><PackageCheck size={20} /></span><div><small>Orders</small><strong>{filtered.length}</strong></div></article><article><span><Milk size={20} /></span><div><small>Milk production</small><strong>{periodMilk}L</strong></div></article><article><span><Egg size={20} /></span><div><small>Egg production</small><strong>{periodEggs}</strong></div></article></section><div className="dashboard-two-columns report-columns"><section className="dashboard-panel"><div className="panel-head"><div><h2>Orders by status</h2><p>Controlled operational stages.</p></div><BarChart3 size={20} /></div><div className="status-bar-chart">{["pending", "confirmed", "preparing", "delivered", "completed", "cancelled"].map((status) => { const count = filtered.filter((order) => order.status === status).length; return <div key={status}><span>{status}</span><i><b style={{ width: `${(count / maxStatus) * 100}%` }} /></i><strong>{count}</strong></div>; })}</div></section><section className="dashboard-panel"><div className="panel-head"><div><h2>Period health</h2><p>Recorded outcomes only.</p></div></div><dl className="report-health"><div><dt>Completion rate</dt><dd>{filtered.length ? Math.round((completed.length / filtered.length) * 100) : 0}%</dd></div><div><dt>Cancelled orders</dt><dd>{cancelled}</dd></div><div><dt>Average completed order</dt><dd>{money(completed.length ? revenue / completed.length : 0)}</dd></div><div><dt>Production records</dt><dd>{milk.length + eggs.length}</dd></div></dl></section></div><section className="dashboard-panel"><div className="panel-head"><div><h2>Recent transactions in range</h2><p>Useful for reconciliation and export.</p></div></div><div className="report-order-table"><div className="table-head"><span>Order</span><span>Date</span><span>Customer</span><span>Status</span><span>Total</span></div>{filtered.slice(0, 20).map((order) => <article key={order.id}><strong>{order.orderNumber}</strong><span>{formatDate(order.createdAt)}</span><span>{order.customer.fullName}</span><span className="capitalize">{order.status.replaceAll("-", " ")}</span><strong>{money(order.total)}</strong></article>)}{!filtered.length && <p className="panel-empty-copy">No orders recorded in this period.</p>}</div></section></div>;
+}

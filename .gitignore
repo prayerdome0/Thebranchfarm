@@ -1,0 +1,33 @@
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+
+# builds
+/.next
+/out
+/build
+/dist
+/coverage
+
+# local data and secrets
+.env
+.env.*
+!.env.example
+.runtime/
+*.log
+
+# Firebase
+.firebase/
+.firebaserc.local
+functions/lib/
+functions/node_modules/
+
+# editors and OS
+.DS_Store
+.vscode/
+.idea/
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
