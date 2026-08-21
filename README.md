@@ -21,7 +21,8 @@ storage vendor.
 | **Settings** | Farm name, slogan, location, contact details and currency. |
 | **Shop** | Public storefront: browse produce and livestock, product details, cart, checkout and order tracking. |
 | **Orders** | Staff fulfil customer orders — confirm, progress, mark ready/complete and record payment. |
-| **Products** | Admin manages the catalogue: prices, units, stock levels, images and visibility. |
+| **Products** | Staff add and edit the catalogue — prices, units, stock levels, images and visibility; admin removes. |
+| **Videos** | Staff upload farm videos with thumbnails; a public `/videos` page shares them with customers. |
 
 ## The storefront
 
@@ -30,6 +31,10 @@ storage vendor.
 - **Checkout** collects name, phone, pickup/delivery and preferred payment method. No online
   payment: the customer pays by cash, EFT or mobile money on collection or delivery.
 - **Order tracking** at `/track` — look up an order by its `TB-XXXXXX` reference.
+- **Videos** at `/videos` — farm tours, livestock and daily-life clips uploaded by staff/admin
+  (MP4/WebM up to 200 MB, with an optional thumbnail) and played back inline on the public site.
+- **Animations** — scroll-reveal fades and cinematic stills are used across the homepage, shop
+  and videos pages (with `prefers-reduced-motion` respected).
 - **Demo fallback**: when Firestore is unreachable (e.g. a preview without a deployed backend),
   a sample catalogue is shown and orders are stored locally in the browser. An admin can also
   seed the sample catalogue into Firestore from **Products → Add sample products**.
@@ -140,7 +145,7 @@ on `main`, and fails loudly if any callable still answers 404.
 ## Important collections
 
 `users`, `animals`, `animalHealth`, `farmDocuments`, `farmActivities`, `settings`,
-`products`, `orders`.
+`products`, `orders`, `videos`.
 
 ## Quality checks
 

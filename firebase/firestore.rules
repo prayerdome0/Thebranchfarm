@@ -140,11 +140,22 @@ service cloud.firestore {
       allow write: if admin() && settingId == 'farm';
     }
 
-    // Storefront: public read of the catalogue; admin maintains it.
+    // Storefront: public read of the catalogue; staff add and edit, admin removes.
     match /products/{id} {
       allow read: if true;
-      allow create: if admin() && validProduct();
-      allow update: if admin() && validProduct();
+      allow create: if staff() && validProduct();
+      allow update: if staff() && validProduct();
+      allow delete: if admin();
+    }
+
+    // Videos: public on the farm site; staff upload and admin removes.
+    match /videos/{id} {
+      allow read: if true;
+      allow create: if staff() && safeString(request.resource.data.title, 160)
+        && safeString(request.resource.data.category, 60)
+        && request.resource.data.videoUrl is string
+        && request.resource.data.storagePath is string;
+      allow update: if staff();
       allow delete: if admin();
     }
 

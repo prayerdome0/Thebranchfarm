@@ -46,6 +46,7 @@ export function SiteHeader() {
   const nav = [
     { href: "/", label: "Home" },
     { href: "/shop", label: "Shop" },
+    { href: "/videos", label: "Videos" },
     { href: "/track", label: "Track order" },
   ];
 

@@ -7,16 +7,19 @@ import {
   ArrowRight,
   BadgeCheck,
   Beef,
+  Clapperboard,
   Egg,
   Leaf,
   Milk,
   PackageCheck,
+  Play,
   ShieldCheck,
   Sprout,
   Tractor,
   Truck,
 } from "lucide-react";
 import { ProductCard } from "@/components/store/ProductCard";
+import { Reveal } from "@/components/ui/Reveal";
 import { getProducts } from "@/lib/firebase/data";
 import { BUSINESS } from "@/lib/constants";
 import { money } from "@/lib/utils";
@@ -111,65 +114,71 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="service-ribbon">
-        <div className="container service-ribbon-grid">
-          <div>
-            <span>
-              <Egg size={20} />
-            </span>
-            <p>
-              <strong>Fresh produce</strong>
-              <small>Eggs, milk &amp; vegetables daily</small>
-            </p>
+      <Reveal>
+        <section className="service-ribbon">
+          <div className="container service-ribbon-grid">
+            <div>
+              <span>
+                <Egg size={20} />
+              </span>
+              <p>
+                <strong>Fresh produce</strong>
+                <small>Eggs, milk &amp; vegetables daily</small>
+              </p>
+            </div>
+            <div>
+              <span>
+                <Beef size={20} />
+              </span>
+              <p>
+                <strong>Healthy livestock</strong>
+                <small>Cattle, goats &amp; poultry</small>
+              </p>
+            </div>
+            <div>
+              <span>
+                <PackageCheck size={20} />
+              </span>
+              <p>
+                <strong>Traceable records</strong>
+                <small>Every animal &amp; batch logged</small>
+              </p>
+            </div>
+            <div>
+              <span>
+                <Truck size={20} />
+              </span>
+              <p>
+                <strong>Pickup or delivery</strong>
+                <small>Collect free or have it delivered</small>
+              </p>
+            </div>
           </div>
-          <div>
-            <span>
-              <Beef size={20} />
-            </span>
-            <p>
-              <strong>Healthy livestock</strong>
-              <small>Cattle, goats &amp; poultry</small>
-            </p>
-          </div>
-          <div>
-            <span>
-              <PackageCheck size={20} />
-            </span>
-            <p>
-              <strong>Traceable records</strong>
-              <small>Every animal &amp; batch logged</small>
-            </p>
-          </div>
-          <div>
-            <span>
-              <Truck size={20} />
-            </span>
-            <p>
-              <strong>Pickup or delivery</strong>
-              <small>Collect free or have it delivered</small>
-            </p>
-          </div>
-        </div>
-      </section>
+        </section>
+      </Reveal>
 
       <section className="section products-section">
         <div className="container">
-          <div className="section-heading">
-            <div>
-              <span className="eyebrow">From the farm</span>
-              <h2>This week&apos;s picks</h2>
-              <p>Fresh, farm-direct produce and livestock ready to order.</p>
+          <Reveal>
+            <div className="section-heading">
+              <div>
+                <span className="eyebrow">From the farm</span>
+                <h2>This week&apos;s picks</h2>
+                <p>Fresh, farm-direct produce and livestock ready to order.</p>
+              </div>
+              <div className="section-heading-action">
+                <Link className="text-link" href="/shop">
+                  View the full shop <ArrowRight size={15} />
+                </Link>
+              </div>
             </div>
-            <div className="section-heading-action">
-              <Link className="text-link" href="/shop">
-                View the full shop <ArrowRight size={15} />
-              </Link>
-            </div>
-          </div>
+          </Reveal>
 
           <div className="product-grid home-product-grid" style={{ marginTop: 34 }}>
-            {featured.map((product) => (
-              <ProductCard key={product.id} product={product} />
+            {featured.map((product, index) => (
+              <Reveal key={product.id} delay={(index % 4) * 80}>
+                <ProductCard product={product} />
+              </Reveal>
             ))}
           </div>
         </div>
@@ -177,26 +186,28 @@ export default function HomePage() {
 
       <section className="section story-section">
         <div className="container story-grid">
-          <div className="motion-story">
-            <div className="motion-shot">
-              <Image src="/media/farm-sunset.jpg" alt="The Branch Farm at sunset" fill sizes="52vw" />
+          <Reveal className="story-visual-reveal">
+            <div className="motion-story">
+              <div className="motion-shot">
+                <Image src="/media/farm-sunset.jpg" alt="The Branch Farm at sunset" fill sizes="52vw" />
+              </div>
+              <div className="motion-shot motion-shot-two">
+                <Image src="/media/cattle.jpg" alt="Cattle at The Branch Farm" fill sizes="52vw" />
+              </div>
+              <div className="motion-vignette" />
+              <div className="motion-title">
+                <span>
+                  <Tractor size={22} />
+                </span>
+                <p>
+                  <small>{BUSINESS.location}</small>
+                  <strong>The Branch Farm</strong>
+                </p>
+              </div>
             </div>
-            <div className="motion-shot motion-shot-two">
-              <Image src="/media/cattle.jpg" alt="Cattle at The Branch Farm" fill sizes="52vw" />
-            </div>
-            <div className="motion-vignette" />
-            <div className="motion-title">
-              <span>
-                <Tractor size={22} />
-              </span>
-              <p>
-                <small>{BUSINESS.location}</small>
-                <strong>The Branch Farm</strong>
-              </p>
-            </div>
-          </div>
+          </Reveal>
 
-          <div className="story-copy">
+          <Reveal className="story-copy" delay={120}>
             <span className="eyebrow">Our story</span>
             <h2>A working farm, shared directly with you.</h2>
             <p>
@@ -232,7 +243,43 @@ export default function HomePage() {
                 </div>
               </li>
             </ul>
-          </div>
+            <Link className="button button-secondary" href="/videos" style={{ marginTop: 8 }}>
+              <Clapperboard size={17} /> Watch farm videos
+            </Link>
+          </Reveal>
+        </div>
+      </section>
+
+      <section className="section films-section">
+        <div className="container">
+          <Reveal>
+            <div className="section-heading">
+              <div>
+                <span className="eyebrow">In motion</span>
+                <h2>The farm, on film</h2>
+                <p>Short films of daily life, livestock and the work behind your food.</p>
+              </div>
+              <div className="section-heading-action">
+                <Link className="text-link" href="/videos">
+                  Watch all videos <ArrowRight size={15} />
+                </Link>
+              </div>
+            </div>
+          </Reveal>
+          <Reveal delay={90}>
+            <Link href="/videos" className="video-banner" aria-label="Watch farm videos">
+              <span className="video-banner-frame">
+                <Image src="/media/farm-operations.jpg" alt="Farm operations at The Branch Farm" fill sizes="100vw" priority />
+              </span>
+              <span className="video-banner-play">
+                <Play size={26} fill="currentColor" />
+              </span>
+              <span className="video-banner-copy">
+                <small>{BUSINESS.slogan}</small>
+                <strong>Watch life at {BUSINESS.name}</strong>
+              </span>
+            </Link>
+          </Reveal>
         </div>
       </section>
 

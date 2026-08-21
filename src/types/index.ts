@@ -192,3 +192,21 @@ export interface Order {
   updatedBy?: string;
   updatedByName?: string;
 }
+
+export interface FarmVideo {
+  id: string;
+  title: string;
+  description?: string;
+  category: string;
+  /** Public download URL of the uploaded video (Firebase Storage). */
+  videoUrl: string;
+  /** Storage path used to delete/replace the video. */
+  storagePath: string;
+  /** Optional poster/thumbnail image shown before play. */
+  posterUrl?: string;
+  posterPath?: string;
+  createdBy: string;
+  createdByName: string;
+  createdAt: TimestampValue;
+  archived?: boolean;
+}

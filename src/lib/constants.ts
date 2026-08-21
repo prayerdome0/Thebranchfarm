@@ -170,6 +170,15 @@ export const STORE = {
   freeDeliveryThreshold: 500,
 } as const;
 
+export const VIDEO_CATEGORIES = [
+  "Farm tour",
+  "Livestock",
+  "Produce",
+  "Daily life",
+  "How we work",
+  "Other",
+] as const;
+
 export const STATUS_LABELS: Record<string, string> = {
   ...ANIMAL_TYPE_LABELS,
   ...ANIMAL_STATUS_LABELS,

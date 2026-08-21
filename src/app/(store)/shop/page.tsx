@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState, Suspense } from "react";
 import { Leaf, PackageSearch, Search, ShoppingBag } from "lucide-react";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Loading } from "@/components/ui/Loading";
+import { Reveal } from "@/components/ui/Reveal";
 import { ProductCard } from "@/components/store/ProductCard";
 import { PRODUCT_CATEGORIES, PRODUCT_KIND_LABELS } from "@/lib/constants";
 import { watchProducts } from "@/lib/firebase/data";
@@ -136,8 +137,10 @@ function ShopCatalog() {
             <Loading label="Loading the farm shop…" />
           ) : visible.length ? (
             <div className="product-grid">
-              {visible.map((product) => (
-                <ProductCard key={product.id} product={product} />
+              {visible.map((product, index) => (
+                <Reveal key={product.id} delay={(index % 3) * 70}>
+                  <ProductCard product={product} />
+                </Reveal>
               ))}
             </div>
           ) : (

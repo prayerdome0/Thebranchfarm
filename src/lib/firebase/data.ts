@@ -28,6 +28,7 @@ import type {
   Animal,
   FarmDocument,
   FarmSettings,
+  FarmVideo,
   HealthRecord,
   Order,
   OrderItem,
@@ -498,6 +499,44 @@ export async function updateOrder(
     demoOrders.update(id, { ...patch, updatedAt: new Date() });
     return true;
   }
+}
+
+/* -------------------------------- Videos ------------------------------- */
+
+export async function getVideos(): Promise<FarmVideo[]> {
+  try {
+    const snapshot = await getDocs(
+      query(collection(db, "videos"), orderBy("createdAt", "desc"), limit(200)),
+    );
+    return snapshot.docs.map((item) => mapped<FarmVideo>(item));
+  } catch {
+    return [];
+  }
+}
+
+export function watchVideos(callback: (videos: FarmVideo[]) => void): Unsubscribe {
+  try {
+    return onSnapshot(
+      query(collection(db, "videos"), orderBy("createdAt", "desc"), limit(200)),
+      (snapshot) => callback(snapshot.docs.map((item) => mapped<FarmVideo>(item))),
+      () => callback([]),
+    );
+  } catch {
+    callback([]);
+    return () => {};
+  }
+}
+
+export async function createVideo(values: Omit<FarmVideo, "id" | keyof ReturnType<typeof stamp>>) {
+  return addDoc(collection(db, "videos"), { ...values, ...stamp() });
+}
+
+export async function deleteVideo(id: string) {
+  const snapshot = await getDoc(doc(db, "videos", id));
+  const data = snapshot.exists() ? (snapshot.data() as FarmVideo) : null;
+  if (data?.storagePath) await deleteStorageObject(data.storagePath).catch(() => {});
+  if (data?.posterPath) await deleteStorageObject(data.posterPath).catch(() => {});
+  return deleteDoc(doc(db, "videos", id));
 }
 
 /* ------------------------------ Helpers ------------------------------ */
