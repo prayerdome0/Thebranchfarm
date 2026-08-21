@@ -30,7 +30,7 @@ export function useCloudinaryUpload() {
       if (!response.ok) throw new Error("The media service rejected the upload.");
       setProgress(100);
       return { url: result.secure_url as string, publicId: result.public_id as string };
-    } finally { setUploading(false); window.setTimeout(() => setProgress(0), 500); }
+    } finally { setUploading(false); try { window.setTimeout(() => setProgress(0), 500); } catch {} }
   };
   return { upload, uploading, progress };
 }

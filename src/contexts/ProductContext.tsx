@@ -20,16 +20,37 @@ export function ProductProvider({ children }: { children: ReactNode }) {
   const [usingInitialCatalog, setUsingInitialCatalog] = useState(true);
 
   useEffect(() => {
-    const stop = watchProducts((incoming) => {
-      setProducts(incoming);
-      setUsingInitialCatalog(incoming === INITIAL_PRODUCTS || incoming.every((item) => INITIAL_PRODUCTS.some((seed) => seed.id === item.id)));
+    let cancelled = false;
+    let timeout: number | undefined;
+    try {
+      const stop = watchProducts((incoming) => {
+        if (cancelled) return;
+        setProducts(incoming);
+        setUsingInitialCatalog(
+          incoming === INITIAL_PRODUCTS ||
+            incoming.every((item) => INITIAL_PRODUCTS.some((seed) => seed.id === item.id))
+        );
+        setLoading(false);
+      });
+      timeout = window.setTimeout(() => {
+        if (!cancelled) setLoading(false);
+      }, 3000) as unknown as number;
+      return () => {
+        cancelled = true;
+        try {
+          stop();
+        } catch {}
+        if (timeout) window.clearTimeout(timeout);
+      };
+    } catch {
       setLoading(false);
-    });
-    const timeout = window.setTimeout(() => setLoading(false), 3000);
-    return () => {
-      stop();
-      window.clearTimeout(timeout);
-    };
+      return () => {
+        cancelled = true;
+        if (timeout) {
+          try { window.clearTimeout(timeout); } catch {}
+        }
+      };
+    }
   }, []);
 
   const value = useMemo(
@@ -37,7 +58,8 @@ export function ProductProvider({ children }: { children: ReactNode }) {
       products,
       loading,
       usingInitialCatalog,
-      findProduct: (idOrSlug: string) => products.find((item) => item.id === idOrSlug || item.slug === idOrSlug),
+      findProduct: (idOrSlug: string) =>
+        products.find((item) => item.id === idOrSlug || item.slug === idOrSlug),
     }),
     [products, loading, usingInitialCatalog],
   );

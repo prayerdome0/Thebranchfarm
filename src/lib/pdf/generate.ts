@@ -28,7 +28,11 @@ export async function generateBusinessPdf(record: BusinessDocument) {
   const ink = "#17241e";
   const muted = "#647168";
   const pale = "#f3f0e7";
-  const verifyUrl = `${window.location.origin}/verify/${record.verificationCode}`;
+  const origin =
+    typeof window !== "undefined" && window.location?.origin
+      ? window.location.origin
+      : "https://thebranchfarm.com";
+  const verifyUrl = `${origin}/verify/${record.verificationCode}`;
   const [logo, qr] = await Promise.all([
     imageData("/logo.png").catch(() => ""),
     QRCode.toDataURL(verifyUrl, { margin: 1, width: 340, color: { dark: green, light: "#ffffff" } }),

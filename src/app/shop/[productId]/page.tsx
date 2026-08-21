@@ -14,13 +14,20 @@ import { useToast } from "@/contexts/ToastContext";
 import { money } from "@/lib/utils";
 
 export default function ProductDetailPage() {
-  const params = useParams<{ productId: string }>();
+  const params = useParams<{ productId?: string }>();
   const router = useRouter();
   const { products, findProduct } = useProducts();
   const { addItem } = useCart();
   const { showToast } = useToast();
   const [quantity, setQuantity] = useState(1);
-  const product = findProduct(decodeURIComponent(params.productId));
+  const rawId = (params?.productId as string) || "";
+  let decodedId = rawId;
+  try {
+    decodedId = rawId ? decodeURIComponent(rawId) : "";
+  } catch {
+    decodedId = rawId;
+  }
+  const product = decodedId ? findProduct(decodedId) : undefined;
 
   if (!product) return <section className="page-shell not-found-panel"><span>404</span><h1>Product not found</h1><p>This product may have moved or is no longer listed.</p><Link href="/shop" className="button button-primary"><ArrowLeft size={18} /> Back to shop</Link></section>;
   const available = product.availability === "available";

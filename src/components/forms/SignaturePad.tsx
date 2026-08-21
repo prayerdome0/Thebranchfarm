@@ -17,7 +17,7 @@ export function SignaturePad({ value, onChange, disabled = false }: {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
-    const ratio = Math.min(window.devicePixelRatio || 1, 2);
+    const ratio = Math.min((typeof window !== "undefined" ? window.devicePixelRatio : 1) || 1, 2);
     const saved = value || (hasInk ? canvas.toDataURL("image/png") : "");
     canvas.width = Math.round(rect.width * ratio);
     canvas.height = Math.round(rect.height * ratio);
@@ -38,8 +38,8 @@ export function SignaturePad({ value, onChange, disabled = false }: {
   useEffect(() => {
     configureCanvas();
     const listener = () => configureCanvas();
-    window.addEventListener("resize", listener);
-    return () => window.removeEventListener("resize", listener);
+    try { window.addEventListener("resize", listener); } catch {}
+    return () => { try { window.removeEventListener("resize", listener); } catch {} };
   }, [configureCanvas]);
 
   const point = (event: React.PointerEvent<HTMLCanvasElement>) => {

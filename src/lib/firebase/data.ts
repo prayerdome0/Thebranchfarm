@@ -37,11 +37,23 @@ export async function getProducts(): Promise<Product[]> {
 }
 
 export function watchProducts(callback: (products: Product[]) => void): Unsubscribe {
-  return onSnapshot(
-    query(collection(db, "products"), limit(100)),
-    (snapshot) => callback(snapshot.empty ? INITIAL_PRODUCTS : snapshot.docs.map((item) => mapped<Product>(item))),
-    () => callback(INITIAL_PRODUCTS),
-  );
+  try {
+    return onSnapshot(
+      query(collection(db, "products"), limit(100)),
+      (snapshot) => {
+        try {
+          callback(snapshot.empty ? INITIAL_PRODUCTS : snapshot.docs.map((item) => mapped<Product>(item)));
+        } catch {
+          callback(INITIAL_PRODUCTS);
+        }
+      },
+      () => callback(INITIAL_PRODUCTS),
+    );
+  } catch {
+    // Vercel preview without Firestore access — immediately fallback so page paints.
+    callback(INITIAL_PRODUCTS);
+    return () => {};
+  }
 }
 
 export async function getProduct(id: string): Promise<Product | null> {

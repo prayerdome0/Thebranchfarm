@@ -37,11 +37,23 @@ const Context = createContext<PublicBusinessSettings>(defaults);
 
 export function BusinessSettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState(defaults);
-  useEffect(() => onSnapshot(doc(db, "settings", "business"), (snapshot) => {
-    if (snapshot.exists()) setSettings((current) => ({ ...current, ...snapshot.data() }));
-  }, () => {}), []);
+  useEffect(() => {
+    try {
+      return onSnapshot(
+        doc(db, "settings", "business"),
+        (snapshot) => {
+          if (snapshot.exists()) setSettings((current) => ({ ...current, ...snapshot.data() }));
+        },
+        () => {}
+      );
+    } catch {
+      return () => {};
+    }
+  }, []);
   const value = useMemo(() => settings, [settings]);
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }
 
-export function useBusinessSettings() { return useContext(Context); }
+export function useBusinessSettings() {
+  return useContext(Context);
+}

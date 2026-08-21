@@ -31,20 +31,27 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     try {
+      if (typeof window === "undefined") {
+        setHydrated(true);
+        return;
+      }
       const saved = window.localStorage.getItem(CART_KEY);
       if (saved) {
         const parsed = JSON.parse(saved) as CartItem[];
         setItems(parsed.filter((item) => item?.product?.id && item.quantity > 0));
       }
     } catch {
-      window.localStorage.removeItem(CART_KEY);
+      try { window.localStorage.removeItem(CART_KEY); } catch {}
     } finally {
       setHydrated(true);
     }
   }, []);
 
   useEffect(() => {
-    if (hydrated) window.localStorage.setItem(CART_KEY, JSON.stringify(items));
+    if (!hydrated) return;
+    try {
+      if (typeof window !== "undefined") window.localStorage.setItem(CART_KEY, JSON.stringify(items));
+    } catch {}
   }, [items, hydrated]);
 
   const addItem = useCallback((product: Product, quantity = 1) => {

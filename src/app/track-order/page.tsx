@@ -20,8 +20,11 @@ export default function TrackOrderPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const linkedOrder = new URLSearchParams(window.location.search).get("order");
-    if (linkedOrder) setOrderNumber(linkedOrder.toUpperCase());
+    try {
+      if (typeof window === "undefined") return;
+      const linkedOrder = new URLSearchParams(window.location.search).get("order");
+      if (linkedOrder) setOrderNumber(linkedOrder.toUpperCase());
+    } catch {}
   }, []);
 
   const submit = async (event: React.FormEvent) => {
