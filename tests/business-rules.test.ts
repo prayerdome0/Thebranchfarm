@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { BUSINESS, INITIAL_PRODUCTS, ORDER_TRANSITIONS } from "../src/lib/constants";
 import { checkoutSchema, registerSchema } from "../src/lib/validation";
-import { deliveryDetails, money } from "../src/lib/utils";
+import { deliveryDetails, friendlyError, money } from "../src/lib/utils";
 
 test("official launch catalogue has exactly the declared active products and prices", () => {
   const active = INITIAL_PRODUCTS.filter((product) => product.availability === "available");
@@ -76,6 +76,15 @@ test("registration trims profile fields and canonicalizes email", () => {
   assert.equal(result.fullName, "Customer User");
   assert.equal(result.email, "customer@example.com");
   assert.equal(result.phone, "+268 7900 0000");
+});
+
+test("auth errors show a real sign-in message instead of a generic form warning", () => {
+  const asFirebase = (code: string) => Object.assign(new Error(`Firebase: Error (${code})`), { code });
+  assert.equal(friendlyError(asFirebase("auth/invalid-credential")), "The email or password is incorrect.");
+  assert.equal(friendlyError(asFirebase("auth/email-already-in-use")), "An account already exists for this email address. Try signing in instead.");
+  assert.equal(friendlyError(asFirebase("auth/weak-password")), "Use a stronger password with at least 8 characters.");
+  assert.equal(friendlyError(asFirebase("auth/user-disabled")), "This account has been disabled. Please contact the farm team.");
+  assert.notEqual(friendlyError(asFirebase("auth/invalid-credential")), "Please review the information and try again.");
 });
 
 test("public registration cannot select a privileged role", () => {

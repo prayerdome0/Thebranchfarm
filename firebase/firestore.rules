@@ -76,9 +76,14 @@ service cloud.firestore {
         && request.resource.data.uid == uid
         && request.resource.data.role == 'user'
         && request.resource.data.status == 'active'
-        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.email is string
+        && request.resource.data.email.size() > 3
+        && request.resource.data.email.size() <= 200
+        && (request.auth.token.email == null
+            || request.resource.data.email.lower() == request.auth.token.email.lower())
         && safeString(request.resource.data.fullName, 100)
-        && safeString(request.resource.data.phone, 24);
+        && request.resource.data.phone is string
+        && request.resource.data.phone.size() <= 24;
       allow read: if own(uid) || admin();
       allow update: if own(uid)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['fullName', 'phone', 'photoURL', 'updatedAt', 'lastLoginAt'])

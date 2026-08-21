@@ -1,11 +1,18 @@
 import { getApp, getApps, initializeApp, type FirebaseApp } from "firebase/app";
-import { getAuth, type Auth } from "firebase/auth";
+import {
+  browserLocalPersistence,
+  getAuth,
+  indexedDBLocalPersistence,
+  initializeAuth,
+  type Auth,
+} from "firebase/auth";
 import { getFirestore, type Firestore } from "firebase/firestore";
 import { getFunctions, type Functions } from "firebase/functions";
 
-// Firebase web identifiers are intentionally client-visible. Authorization is enforced by
-// Auth, Firestore Rules and callable functions — never by keeping this object secret.
-// Fallback values keep Vercel previews and local builds working when env vars are missing.
+// Firebase web identifiers are intentionally client-visible. Authorization is
+// enforced by Auth, Firestore Rules and callable functions — never by keeping
+// this object secret. Fallbacks keep local/preview builds working when env vars
+// are missing; production should still set NEXT_PUBLIC_FIREBASE_*.
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyBKPQDWy2wXKZL0Ffzk2zMbORxmIv_dKq0",
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "thebranchfarm.firebaseapp.com",
@@ -19,75 +26,54 @@ const firebaseConfig = {
 
 export const firebaseConfigured = Boolean(firebaseConfig.apiKey && firebaseConfig.projectId);
 
-// Initialize once — safe for both client and server (prerender) and for Vercel's edge bundling.
-let app: FirebaseApp;
-try {
-  app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-} catch {
-  // If initialization fails (e.g. duplicate init in edge runtime), reuse existing app.
-  app = getApps()[0] ?? initializeApp(firebaseConfig);
+let appInstance: FirebaseApp | undefined;
+let authInstance: Auth | undefined;
+let dbInstance: Firestore | undefined;
+let functionsInstance: Functions | undefined;
+
+export function getFirebaseApp(): FirebaseApp {
+  if (appInstance) return appInstance;
+  appInstance = getApps().length ? getApp() : initializeApp(firebaseConfig);
+  return appInstance;
 }
 
-// Lazily create Auth/Firestore/Functions so a misconfigured env never crashes SSR or Vercel's build.
-// On the server during prerender these are inert; on the client they become live after hydration.
-let _auth: Auth | null = null;
-let _db: Firestore | null = null;
-let _functions: Functions | null = null;
-
-function getAuthSafe(): Auth {
-  if (_auth) return _auth;
-  try {
-    _auth = getAuth(app);
-  } catch {
-    // Fallback dummy — callers must handle permission errors via friendlyError.
-    _auth = null as unknown as Auth;
+export function getFirebaseAuth(): Auth {
+  if (authInstance) return authInstance;
+  const firebaseApp = getFirebaseApp();
+  if (typeof window === "undefined") {
+    authInstance = getAuth(firebaseApp);
+    return authInstance;
   }
-  return _auth as Auth;
-}
-
-function getDbSafe(): Firestore {
-  if (_db) return _db;
   try {
-    _db = getFirestore(app);
+    authInstance = initializeAuth(firebaseApp, {
+      persistence: [indexedDBLocalPersistence, browserLocalPersistence],
+    });
   } catch {
-    _db = null as unknown as Firestore;
+    // HMR / Fast Refresh can re-evaluate this module after Auth is already live.
+    authInstance = getAuth(firebaseApp);
   }
-  return _db as Firestore;
+  return authInstance;
 }
 
-function getFunctionsSafe(): Functions {
-  if (_functions) return _functions;
-  try {
-    _functions = getFunctions(
-      app,
-      process.env.NEXT_PUBLIC_FIREBASE_FUNCTIONS_REGION || "us-central1"
-    );
-  } catch {
-    _functions = null as unknown as Functions;
-  }
-  return _functions as Functions;
+export function getFirebaseDb(): Firestore {
+  if (dbInstance) return dbInstance;
+  dbInstance = getFirestore(getFirebaseApp());
+  return dbInstance;
 }
 
-export { app };
-export const auth: Auth = new Proxy({} as Auth, {
-  get(_target, prop) {
-    const real = getAuthSafe();
-    // Allow `auth.currentUser` etc to be accessed even before init.
-    const value = (real as unknown as Record<string, unknown>)[prop as string];
-    return typeof value === "function" ? (value as Function).bind(real) : value;
-  },
-}) ;
-export const db: Firestore = new Proxy({} as Firestore, {
-  get(_target, prop) {
-    const real = getDbSafe();
-    const value = (real as unknown as Record<string, unknown>)[prop as string];
-    return typeof value === "function" ? (value as Function).bind(real) : value;
-  },
-});
-export const functions: Functions = new Proxy({} as Functions, {
-  get(_target, prop) {
-    const real = getFunctionsSafe();
-    const value = (real as unknown as Record<string, unknown>)[prop as string];
-    return typeof value === "function" ? (value as Function).bind(real) : value;
-  },
-});
+export function getFirebaseFunctions(): Functions {
+  if (functionsInstance) return functionsInstance;
+  functionsInstance = getFunctions(
+    getFirebaseApp(),
+    process.env.NEXT_PUBLIC_FIREBASE_FUNCTIONS_REGION || "us-central1",
+  );
+  return functionsInstance;
+}
+
+// Real SDK instances. Do not wrap these in a Proxy — Firebase uses
+// `instanceof Auth/Firestore/Functions` and a Proxy throws `invalid-argument`,
+// which the UI mapped to "Please review the information and try again."
+export const app = getFirebaseApp();
+export const auth = getFirebaseAuth();
+export const db = getFirebaseDb();
+export const functions = getFirebaseFunctions();
