@@ -51,7 +51,7 @@ export default function GlobalError({
               The farm site hit a snag.
             </h1>
             <p style={{ margin: "12px 0 26px", color: "#68736c" }}>
-              Please reload. If it persists, open the homepage — your orders are still safe in
+              Please reload. If it persists, open the homepage — your farm records are still safe in
               Firebase.
             </p>
             <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>

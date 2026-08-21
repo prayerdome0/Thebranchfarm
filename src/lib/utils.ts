@@ -1,4 +1,4 @@
-import { BUSINESS, FREE_DELIVERY_NORMALIZED } from "@/lib/constants";
+import { BUSINESS } from "@/lib/constants";
 import type { TimestampValue } from "@/types";
 
 export function cn(...classes: Array<string | false | null | undefined>) {
@@ -6,24 +6,11 @@ export function cn(...classes: Array<string | false | null | undefined>) {
 }
 
 export function money(value: number | null | undefined) {
-  if (value == null) return "To be arranged";
+  if (value == null || Number.isNaN(value)) return "—";
   return `${BUSINESS.currency}${value.toLocaleString("en-SZ", {
     minimumFractionDigits: Number.isInteger(value) ? 0 : 2,
     maximumFractionDigits: 2,
   })}`;
-}
-
-export function isFreeDelivery(location: string) {
-  const normalized = location.trim().toLowerCase();
-  return [...FREE_DELIVERY_NORMALIZED].some(
-    (area) => normalized === area || normalized.includes(area),
-  );
-}
-
-export function deliveryDetails(location: string) {
-  return isFreeDelivery(location)
-    ? { fee: 0, label: "FREE delivery" }
-    : { fee: null, label: "To be arranged" };
 }
 
 export function toDate(value: TimestampValue | undefined): Date | null {
@@ -48,6 +35,39 @@ export function formatDate(value: TimestampValue | undefined, includeTime = fals
     year: "numeric",
     ...(includeTime ? { hour: "2-digit", minute: "2-digit" } : {}),
   }).format(date);
+}
+
+export function formatDisplayDate(isoDate?: string | null) {
+  if (!isoDate) return "—";
+  const date = new Date(`${isoDate}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return isoDate;
+  return new Intl.DateTimeFormat("en-SZ", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+}
+
+export function ageFromDateOfBirth(isoDate?: string | null) {
+  if (!isoDate) return null;
+  const dob = new Date(`${isoDate}T12:00:00`);
+  if (Number.isNaN(dob.getTime())) return null;
+  const now = new Date();
+  const months =
+    (now.getFullYear() - dob.getFullYear()) * 12 + (now.getMonth() - dob.getMonth());
+  if (months < 0) return null;
+  if (months < 12) return `${months} month${months === 1 ? "" : "s"}`;
+  const years = Math.floor(months / 12);
+  const remainder = months % 12;
+  if (!remainder) return `${years} year${years === 1 ? "" : "s"}`;
+  return `${years} year${years === 1 ? "" : "s"} ${remainder} month${remainder === 1 ? "" : "s"}`;
+}
+
+export function formatBytes(bytes?: number | null) {
+  if (bytes == null || Number.isNaN(bytes)) return "—";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 export function phoneHref(phone?: string) {
@@ -88,9 +108,9 @@ export function friendlyError(error: unknown) {
       : typeof error === "object" && error && "message" in error
         ? String((error as { message: string }).message)
         : "";
-  const fromMessage = message.match(/\((auth\/[a-z0-9-]+)\)/i)?.[1] || "";
+  const fromMessage = message.match(/\((auth|functions|firestore|storage)\/[a-z0-9-]+\)/i)?.[1] || "";
   const code = rawCode || fromMessage;
-  const normalized = code.replace(/^(auth|functions|firestore)\//, "");
+  const normalized = code.replace(/^(auth|functions|firestore|storage)\//, "");
   const messages: Record<string, string> = {
     "auth/email-already-in-use": "An account already exists for this email address. Try signing in instead.",
     "email-already-in-use": "An account already exists for this email address. Try signing in instead.",
@@ -108,10 +128,10 @@ export function friendlyError(error: unknown) {
     "missing-password": "Enter your password.",
     "auth/missing-email": "Enter your email address.",
     "missing-email": "Enter your email address.",
-    "auth/user-disabled": "This account has been disabled. Please contact the farm team.",
-    "user-disabled": "This account has been disabled. Please contact the farm team.",
-    "auth/operation-not-allowed": "Email sign-in is not enabled yet. Please contact the farm team.",
-    "operation-not-allowed": "Email sign-in is not enabled yet. Please contact the farm team.",
+    "auth/user-disabled": "This account has been disabled. Please contact the farm administrator.",
+    "user-disabled": "This account has been disabled. Please contact the farm administrator.",
+    "auth/operation-not-allowed": "Email sign-in is not enabled yet. Please contact the farm administrator.",
+    "operation-not-allowed": "Email sign-in is not enabled yet. Please contact the farm administrator.",
     "auth/weak-password": "Use a stronger password with at least 8 characters.",
     "weak-password": "Use a stronger password with at least 8 characters.",
     "auth/too-many-requests": "Too many attempts. Please wait and try again.",
@@ -120,26 +140,22 @@ export function friendlyError(error: unknown) {
     "network-request-failed": "We could not reach the service. Check your connection and try again.",
     "auth/invalid-api-key": "The sign-in service is not configured correctly. Please try again later.",
     "invalid-api-key": "The sign-in service is not configured correctly. Please try again later.",
-    "auth/unauthorized-domain": "This website is not authorized for sign-in yet. Please contact the farm team.",
-    "unauthorized-domain": "This website is not authorized for sign-in yet. Please contact the farm team.",
+    "auth/unauthorized-domain": "This website is not authorized for sign-in yet. Please contact the farm administrator.",
+    "unauthorized-domain": "This website is not authorized for sign-in yet. Please contact the farm administrator.",
     "auth/configuration-not-found": "Firebase Authentication is not fully configured yet. Please try again later.",
     "configuration-not-found": "Firebase Authentication is not fully configured yet. Please try again later.",
-    "auth/invalid-app-credential": "Sign-in is temporarily unavailable. Please try again shortly.",
-    "invalid-app-credential": "Sign-in is temporarily unavailable. Please try again shortly.",
-    "auth/argument-error": "Please check your email and password and try again.",
-    "argument-error": "Please check your email and password and try again.",
     "permission-denied": "You do not have permission to complete that action.",
     unauthenticated: "Please sign in and try again.",
     unavailable: "The service is temporarily unavailable. Please try again.",
     "failed-precondition": "That action is not valid in the current state. Refresh and try again.",
     "invalid-argument": "Please review the information and try again.",
-    // Callable/back-office service problems (reached when the backend cannot answer).
-    "functions/not-found": "The ordering service is still being set up. Please try again shortly or reach the farm on WhatsApp.",
-    "not-found": "That service or record is not available yet. Please try again shortly.",
-    internal: "The service hit an unexpected problem. Please try again, or reach the farm on WhatsApp if it continues.",
-    unimplemented: "This feature is still being set up. Please try again shortly.",
+    "not-found": "That record or service is not available yet. Please try again shortly.",
+    internal: "The service hit an unexpected problem. Please try again.",
     "deadline-exceeded": "The service took too long to respond. Check your connection and try again.",
     "resource-exhausted": "The service is busy right now. Please try again in a moment.",
+    "storage/unauthorized": "You do not have permission to upload that file.",
+    "storage/quota-exceeded": "The file is too large to upload.",
+    "storage/canceled": "The upload was interrupted. Please try again.",
     cancelled: "The request was interrupted. Please try again.",
     aborted: "The request was interrupted. Please try again.",
   };
@@ -151,10 +167,32 @@ export function friendlyError(error: unknown) {
   );
 }
 
-export function generateVerificationCode() {
-  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let value = "VER-";
-  const bytes = crypto.getRandomValues(new Uint8Array(8));
-  for (const byte of bytes) value += alphabet[byte % alphabet.length];
-  return value;
+export function todayIso() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+export function documentCategory(fileName: string, mimeType: string) {
+  const type = mimeType.toLowerCase();
+  const name = fileName.toLowerCase();
+  if (type.startsWith("image/")) return "image";
+  if (type === "application/pdf" || name.endsWith(".pdf")) return "pdf";
+  if (type.startsWith("video/")) return "video";
+  if (
+    type.includes("word") ||
+    name.endsWith(".doc") ||
+    name.endsWith(".docx") ||
+    name.endsWith(".rtf")
+  ) {
+    return "word";
+  }
+  if (
+    type.includes("excel") ||
+    type.includes("spreadsheet") ||
+    name.endsWith(".xls") ||
+    name.endsWith(".xlsx") ||
+    name.endsWith(".csv")
+  ) {
+    return "excel";
+  }
+  return "other";
 }

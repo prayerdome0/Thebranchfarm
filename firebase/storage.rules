@@ -7,12 +7,22 @@ service firebase.storage {
     function admin() { return signedIn() && userDoc().data.status == 'active' && userDoc().data.role == 'admin'; }
     function safeImage() { return request.resource.size < 8 * 1024 * 1024 && request.resource.contentType.matches('image/.*'); }
 
-    match /products/{file} { allow read: if true; allow write: if admin() && safeImage(); }
-    match /gallery/{file} { allow read: if true; allow write: if admin() && safeImage(); }
-    match /animals/{uid}/{file} { allow read: if staff(); allow write: if staff() && safeImage(); }
-    match /profiles/{uid}/{file} { allow read: if true; allow write: if signedIn() && request.auth.uid == uid && safeImage(); }
-    match /signatures/{uid}/{file} { allow read: if staff() || (signedIn() && request.auth.uid == uid); allow write: if false; }
-    match /documents/{uid}/{file} { allow read: if staff() || (signedIn() && request.auth.uid == uid); allow write: if false; }
+    // Cattle / animal photographs.
+    match /animal-photos/{animalId}/{file} {
+      allow read: if staff();
+      allow write: if staff() && safeImage();
+    }
+    match /animal-photos/{animalId}/health/{file} {
+      allow read: if staff();
+      allow write: if staff() && safeImage();
+    }
+
+    // Farm documents: PDFs, images, Word, Excel, videos and other farm files.
+    match /documents/{uid}/{file} {
+      allow read: if staff();
+      allow write: if staff() && request.resource.size < 50 * 1024 * 1024;
+    }
+
     match /{allPaths=**} { allow read, write: if false; }
   }
 }

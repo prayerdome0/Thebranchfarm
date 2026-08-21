@@ -1,203 +1,114 @@
-import type { FarmVideo, Product, ProductCategory } from "@/types";
+import type {
+  AnimalHealthStatus,
+  AnimalStatus,
+  AnimalType,
+  HealthRecordType,
+} from "@/types";
 
 export const BUSINESS = {
   name: "The Branch Farm",
   slogan: "Nayi Plug",
   established: 2026,
   location: "GG67+P95 Mahlabane, Eswatini",
-  milkLocation: "Ngculwini",
   phoneDisplay: "+268 79777668",
   phoneLink: "+26879777668",
   whatsappDisplay: "+268 76581804",
   whatsappLink: "26876581804",
   currency: "E",
-  freeDeliveryAreas: ["Manzini", "Matsapha"],
-  deliveryNote: "Other locations can be arranged upon request.",
 } as const;
 
-export const INITIAL_PRODUCTS: Product[] = [
-  {
-    id: "raw-fresh-full-fat-milk",
-    slug: "raw-fresh-full-fat-milk",
-    name: "Raw Fresh Full-Fat Milk",
-    category: "dairy",
-    description: "Naturally rich, raw full-fat milk — fresh from the farm.",
-    longDescription:
-      "Fresh raw full-fat milk supplied from Ngculwini. Keep refrigerated and boil or pasteurise before consumption in line with your household's food-safety practice.",
-    price: 16,
-    unit: "litre",
-    priceLabel: "E16/L",
-    availability: "available",
-    stock: null,
-    trackStock: false,
-    images: ["/media/raw-milk.jpg"],
-    location: "Ngculwini",
-    featured: true,
-  },
-  {
-    id: "sour-milk-latsambile",
-    slug: "sour-milk-latsambile",
-    name: "Sour Milk — Latsambile",
-    category: "dairy",
-    description: "Traditional sour milk in the Latsambile size.",
-    longDescription:
-      "Creamy traditional sour milk, carefully prepared and chilled. Ask our team about current collection and delivery availability.",
-    price: 20,
-    unit: "Latsambile",
-    priceLabel: "E20",
-    availability: "available",
-    stock: null,
-    trackStock: false,
-    images: ["/media/latsambile.jpg"],
-    location: "Ngculwini",
-    featured: true,
-  },
-  {
-    id: "sour-milk-lashubile",
-    slug: "sour-milk-lashubile",
-    name: "Sour Milk — Lashubile",
-    category: "dairy",
-    description: "Traditional sour milk in the larger Lashubile size.",
-    longDescription:
-      "A generous serving of creamy traditional sour milk, carefully prepared and chilled for family sharing.",
-    price: 35,
-    unit: "Lashubile",
-    priceLabel: "E35",
-    availability: "available",
-    stock: null,
-    trackStock: false,
-    images: ["/media/lashubile.jpg"],
-    location: "Ngculwini",
-    featured: true,
-  },
-  {
-    id: "farm-eggs",
-    slug: "farm-eggs",
-    name: "Farm Eggs",
-    category: "eggs",
-    description: "Fresh farm eggs are part of our growing product range.",
-    price: 0,
-    unit: "tray",
-    availability: "coming-soon",
-    images: ["/media/eggs.jpg"],
-    featured: true,
-  },
-  {
-    id: "farm-beef",
-    slug: "farm-beef",
-    name: "Farm Beef",
-    category: "beef",
-    description: "Quality farm beef is planned for a future release.",
-    price: 0,
-    unit: "kg",
-    availability: "coming-soon",
-    images: ["/media/cattle.jpg"],
-  },
-  {
-    id: "farm-pork",
-    slug: "farm-pork",
-    name: "Farm Pork",
-    category: "pork",
-    description: "Farm pork is planned for a future release.",
-    price: 0,
-    unit: "kg",
-    availability: "coming-soon",
-    images: ["/media/farm-operations.jpg"],
-  },
-  {
-    id: "farm-chicken",
-    slug: "farm-chicken",
-    name: "Farm Chicken",
-    category: "chicken",
-    description: "Farm chicken is planned for a future release.",
-    price: 0,
-    unit: "bird",
-    availability: "coming-soon",
-    images: ["/media/poultry.jpg"],
-  },
+export interface SelectOption<T extends string = string> {
+  value: T;
+  label: string;
+}
+
+export const ANIMAL_TYPES: SelectOption<AnimalType>[] = [
+  { value: "cattle", label: "Cattle" },
+  { value: "pig", label: "Pig" },
+  { value: "chicken", label: "Chicken / flock" },
+  { value: "goat", label: "Goat" },
+  { value: "sheep", label: "Sheep" },
+  { value: "other", label: "Other" },
 ];
 
-export const PRODUCT_FALLBACK_IMAGES: Record<ProductCategory, string> = {
-  dairy: "/media/raw-milk.jpg",
-  eggs: "/media/eggs.jpg",
-  beef: "/media/cattle.jpg",
-  pork: "/media/farm-operations.jpg",
-  chicken: "/media/poultry.jpg",
-  other: "/media/farm-hero.jpg",
-};
-
-/**
- * Films shown on the farm story pages. Posters are local so the story still
- * looks complete when a remote video is unavailable or a visitor is offline.
- */
-export const FARM_VIDEOS: FarmVideo[] = [
-  {
-    id: "cattle-grazing",
-    title: "Rooted in care",
-    description: "A calm look at cattle, pasture and the patient work behind good dairy.",
-    category: "Livestock",
-    src: "https://videos.pexels.com/video-files/855340/855340-hd_1920_1080_25fps.mp4",
-    poster: "/media/cattle.jpg",
-  },
-  {
-    id: "dairy-morning",
-    title: "The dairy rhythm",
-    description: "Traditional milking in motion — a visual note on the care behind fresh milk.",
-    category: "Dairy",
-    src: "https://videos.pexels.com/video-files/8064118/8064118-hd_1920_1080_24fps.mp4",
-    poster: "/media/raw-milk.jpg",
-  },
-  {
-    id: "poultry-growing",
-    title: "A range that is growing",
-    description: "Poultry is part of our future range and will launch when the farm is ready.",
-    category: "Poultry",
-    src: "https://videos.pexels.com/video-files/4458054/4458054-uhd_2560_1440_24fps.mp4",
-    poster: "/media/poultry.jpg",
-  },
-  {
-    id: "farm-eggs",
-    title: "Gathered with intention",
-    description: "A closer look at eggs as we prepare a future product line for local customers.",
-    category: "Future products",
-    src: "https://videos.pexels.com/video-files/7033772/7033772-uhd_2560_1440_25fps.mp4",
-    poster: "/media/eggs.jpg",
-  },
+export const ANIMAL_STATUSES: SelectOption<AnimalStatus>[] = [
+  { value: "active", label: "Active" },
+  { value: "sold", label: "Sold" },
+  { value: "deceased", label: "Deceased" },
+  { value: "transferred", label: "Transferred" },
 ];
 
-export const ORDER_STATUSES = [
-  "pending",
-  "confirmed",
-  "preparing",
-  "ready",
-  "out-for-delivery",
-  "delivered",
-  "completed",
-  "cancelled",
+export const HEALTH_STATUSES: SelectOption<AnimalHealthStatus>[] = [
+  { value: "healthy", label: "Healthy" },
+  { value: "under-observation", label: "Under observation" },
+  { value: "sick", label: "Sick" },
+  { value: "injured", label: "Injured" },
+  { value: "recovering", label: "Recovering" },
+];
+
+export const HEALTH_RECORD_TYPES: SelectOption<HealthRecordType>[] = [
+  { value: "observation", label: "Observation" },
+  { value: "problem", label: "Problem" },
+  { value: "vaccination", label: "Vaccination" },
+  { value: "treatment", label: "Treatment" },
+  { value: "examination", label: "Examination" },
+  { value: "other", label: "Other" },
+];
+
+export const ACTIVITY_TYPES = [
+  "Feeding",
+  "Cleaning",
+  "Vaccination",
+  "Animal inspection",
+  "Milk collection",
+  "Egg collection",
+  "Stock arrival",
+  "Stock usage",
+  "Repairs",
+  "General activity",
 ] as const;
 
-export const ORDER_TRANSITIONS: Record<string, readonly string[]> = {
-  pending: ["confirmed", "cancelled"],
-  confirmed: ["preparing", "cancelled"],
-  preparing: ["ready", "cancelled"],
-  ready: ["out-for-delivery", "delivered", "cancelled"],
-  "out-for-delivery": ["delivered", "cancelled"],
-  delivered: ["completed"],
-  completed: [],
-  cancelled: [],
+export const DOCUMENT_CATEGORY_LABELS: Record<string, string> = {
+  pdf: "PDF",
+  image: "Image",
+  word: "Word document",
+  excel: "Spreadsheet",
+  video: "Video",
+  other: "Other file",
 };
+
+function toLabels<T extends string>(options: SelectOption<T>[]): Record<T, string> {
+  return options.reduce(
+    (acc, option) => {
+      acc[option.value] = option.label;
+      return acc;
+    },
+    {} as Record<T, string>,
+  );
+}
+
+export const ANIMAL_TYPE_LABELS = toLabels(ANIMAL_TYPES);
+export const ANIMAL_STATUS_LABELS = toLabels(ANIMAL_STATUSES);
+export const HEALTH_STATUS_LABELS = toLabels(HEALTH_STATUSES);
+export const HEALTH_RECORD_TYPE_LABELS = toLabels(HEALTH_RECORD_TYPES);
 
 export const STATUS_LABELS: Record<string, string> = {
-  pending: "Order received",
-  confirmed: "Confirmed",
-  preparing: "Preparing",
-  ready: "Ready",
-  "out-for-delivery": "Out for delivery",
-  delivered: "Delivered",
-  completed: "Completed",
-  cancelled: "Cancelled",
+  ...ANIMAL_TYPE_LABELS,
+  ...ANIMAL_STATUS_LABELS,
+  ...HEALTH_STATUS_LABELS,
+  ...HEALTH_RECORD_TYPE_LABELS,
+  ...DOCUMENT_CATEGORY_LABELS,
+  active: "Active",
+  healthy: "Healthy",
+  "under-observation": "Under observation",
+  sick: "Sick",
+  injured: "Injured",
+  recovering: "Recovering",
+  sold: "Sold",
+  deceased: "Deceased",
+  transferred: "Transferred",
+  admin: "Administrator",
+  staff: "Staff",
+  user: "Pending approval",
+  disabled: "Disabled",
 };
-
-export const FREE_DELIVERY_NORMALIZED = new Set(
-  BUSINESS.freeDeliveryAreas.map((area) => area.toLowerCase()),
-);

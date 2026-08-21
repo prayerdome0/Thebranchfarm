@@ -1354,36 +1354,121 @@
   }
 }
 
-  /* Quotation creation */
-  .quotation-form { display: grid; gap: 18px; }
-  .quotation-line { padding: 15px; border: 1px solid var(--line); border-radius: 12px; margin-top: 12px; background: #fbfcf9; }
-  .quotation-line-foot { margin-top: 10px; display: flex; justify-content: space-between; align-items: center; color: var(--green-800); font-family: var(--serif); }
-  .quotation-totals { margin-top: 18px; margin-left: auto; width: min(300px, 100%); display: grid; gap: 6px; padding: 15px; background: var(--green-50); border-radius: 11px; }
-  .quotation-totals p, .quotation-totals div { display: flex; justify-content: space-between; }
-  .quotation-totals div { padding-top: 10px; border-top: 1px solid var(--line); }
-  .quotation-totals strong { font-family: var(--serif); }
-  .quotation-totals div strong { color: var(--green-800); font-size: 1.15rem; }
-  .quotation-prepared { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; }
-  .prepared-copy h3 { margin-bottom: 4px; }
-  .prepared-signature { margin: 10px 0; padding: 10px 14px; background: #f7f8f5; border-radius: 10px; display: inline-block; }
-  .prepared-signature img { display: block; max-height: 70px; width: auto; }
-  .prepared-note { color: var(--muted); font-size: .78rem; margin: 6px 0; }
-  .prepared-legal { color: var(--muted); font-size: .72rem; max-width: 420px; }
-  .quotation-logo { border-radius: 12px; }
-  .quotation-submit { justify-content: space-between; }
-  .quotation-success { text-align: center; padding: 42px 24px; }
-  .quotation-success h2 { color: var(--green-800); font-family: var(--serif); font-size: 1.7rem; margin-bottom: 6px; }
-  .quotation-actions { margin: 22px 0; display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; }
-  .quotation-stored { color: var(--green-800); display: flex; align-items: center; justify-content: center; gap: 6px; font-size: .78rem; margin-top: 8px; }
-  .production-summary article.warning { border-color: #e7c96a; background: #fff8e8; }
+/* ============================================================
+   Farm management workspace (simplified core system)
+   ============================================================ */
 
-  /* Profile signature management */
-  .profile-signature-section { grid-column: 1 / -1; }
-  .profile-signature-preview { margin: 12px 0; padding: 12px 16px; background: #f7f8f5; border-radius: 10px; display: inline-block; }
-  .profile-signature-preview img { display: block; max-height: 70px; width: auto; }
-  .signature-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+/* Status tones for animals, health and document categories */
+.status-active, .status-healthy, .status-recovering, .status-pdf, .status-vaccination { color: #1f6942; background: #dff3e7; }
+.status-sold, .status-transferred, .status-observation, .status-word, .status-treatment { color: #1d5f7a; background: #e1f2fb; }
+.status-deceased { color: #8c3831; background: #f9e2df; }
+.status-sick, .status-problem { color: #8c3831; background: #fbe4e1; }
+.status-injured { color: #8a3d14; background: #fbe7d3; }
+.status-under-observation { color: #7a561d; background: #fff1d5; }
+.status-examination, .status-other, .status-excel { color: #5f4a8d; background: #eee9fb; }
+.status-image, .status-video { color: #7a4d1d; background: #fbeed8; }
 
-  @media (max-width: 720px) {
-    .quotation-prepared { flex-direction: column; }
-    .quotation-logo { max-width: 120px; }
-  }
+/* Stats grid for the dashboard */
+.farm-stats { grid-template-columns: repeat(4, 1fr); }
+@media (max-width: 1100px) { .farm-stats { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 600px) { .farm-stats { grid-template-columns: 1fr; } }
+
+/* Toolbar (search + filter) */
+.farm-toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.farm-toolbar .search-field { flex: 1 1 260px; }
+
+/* Animal cards */
+.animal-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px; }
+.animal-card { overflow: hidden; background: #fff; border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow-sm); transition: .2s; }
+.animal-card:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+.animal-card-photo { position: relative; height: 165px; background: var(--green-50); overflow: hidden; }
+.animal-card-photo img { width: 100%; height: 100%; object-fit: cover; }
+.animal-card-photo .placeholder { width: 100%; height: 100%; display: grid; place-items: center; color: #9fb2a6; }
+.animal-card-photo .status-badge { position: absolute; top: 10px; left: 10px; }
+.animal-card-body { padding: 15px 16px 16px; }
+.animal-card-body h3 { font-family: var(--sans); font-size: .98rem; }
+.animal-card-body .sub { margin-top: 2px; color: var(--green-700); font-size: .72rem; font-weight: 700; }
+.animal-card-meta { margin-top: 11px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.animal-card-meta span { display: grid; }
+.animal-card-meta small { color: var(--muted); font-size: .55rem; text-transform: uppercase; }
+.animal-card-meta strong { font-size: .72rem; font-weight: 700; text-transform: capitalize; }
+
+/* Animal detail page */
+.animal-detail-hero { overflow: hidden; display: grid; grid-template-columns: 300px 1fr; background: #fff; border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow-sm); }
+.animal-detail-photo { position: relative; min-height: 260px; background: var(--green-50); }
+.animal-detail-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.animal-detail-photo .placeholder { position: absolute; inset: 0; display: grid; place-items: center; color: #9fb2a6; }
+.animal-detail-head { padding: 24px 26px; display: flex; flex-direction: column; justify-content: space-between; gap: 16px; }
+.animal-detail-head .kicker { color: var(--green-600); font-size: .68rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.animal-detail-head h1 { margin-top: 5px; font-size: 2rem; }
+.animal-detail-head .name { color: var(--green-800); font-family: var(--serif); font-size: 1.25rem; }
+.animal-detail-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+@media (max-width: 760px) { .animal-detail-hero { grid-template-columns: 1fr; } .animal-detail-photo { min-height: 220px; } }
+
+/* Detail grid for profile fields */
+.detail-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 16px 20px; }
+.detail-item { display: grid; gap: 3px; }
+.detail-item small { color: var(--muted); font-size: .6rem; text-transform: uppercase; letter-spacing: .04em; }
+.detail-item strong { font-size: .82rem; font-weight: 700; }
+
+/* Health records */
+.health-record-list { display: grid; gap: 12px; }
+.health-record-card { padding: 16px 18px; background: #fbfcf9; border: 1px solid var(--line); border-radius: 12px; }
+.health-record-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.health-record-head h4 { margin: 0; font-family: var(--sans); font-size: .9rem; }
+.health-record-body { margin-top: 10px; display: grid; gap: 6px; }
+.health-record-body p { margin: 0; font-size: .72rem; }
+.health-record-body p strong { color: var(--ink); font-weight: 750; }
+.health-record-foot { margin-top: 12px; padding-top: 10px; border-top: 1px solid #edf0ed; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; color: var(--muted); font-size: .62rem; }
+.health-record-foot strong { color: var(--green-800); font-weight: 700; }
+.health-record-photo { margin-top: 12px; max-height: 220px; border-radius: 10px; overflow: hidden; }
+.health-record-photo img { width: 100%; height: 100%; max-height: 220px; object-fit: cover; }
+
+/* Document cards */
+.document-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+.document-card { padding: 18px; background: #fff; border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow-sm); }
+.document-card-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.document-icon { width: 42px; height: 42px; display: grid; place-items: center; color: var(--green-600); background: var(--green-50); border-radius: 10px; }
+.document-card h4 { margin: 13px 0 2px; font-family: var(--sans); font-size: .88rem; overflow-wrap: anywhere; }
+.document-card p { margin: 0; font-size: .68rem; }
+.document-card-meta { margin-top: 12px; padding-top: 11px; border-top: 1px solid #edf0ed; display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--muted); font-size: .6rem; }
+.document-card-actions { margin-top: 13px; display: flex; gap: 8px; }
+
+/* Photo upload field */
+.photo-field { display: grid; gap: 8px; }
+.photo-field .label { font-size: .72rem; font-weight: 700; color: var(--ink); }
+.photo-preview { position: relative; width: 100%; height: 190px; overflow: hidden; background: var(--green-50); border: 1px dashed #c4d2c7; border-radius: 12px; }
+.photo-preview img { width: 100%; height: 100%; object-fit: cover; }
+.photo-preview.empty { display: grid; place-items: center; color: #9fb2a6; font-size: .72rem; }
+.photo-preview button.remove { position: absolute; top: 8px; right: 8px; }
+
+/* Inline action links */
+.action-link { display: inline-flex; align-items: center; gap: 6px; color: var(--green-700); font-size: .72rem; font-weight: 750; }
+.action-link:hover { color: var(--green-950); }
+.action-link.danger { color: var(--danger); }
+
+/* Temporary-password notice */
+.secret-notice { padding: 18px 20px; background: #fff7e6; border: 1px solid #ead7a8; border-radius: 12px; }
+.secret-notice strong { font-family: var(--serif); font-size: 1.3rem; letter-spacing: .05em; }
+.secret-notice p { margin: 6px 0 0; font-size: .72rem; }
+
+/* Section title with small action */
+.section-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.section-row h2 { font-family: var(--sans); font-size: 1.05rem; }
+.section-row p { font-size: .68rem; }
+
+/* Landing page */
+.landing { position: relative; min-height: 100vh; display: grid; place-items: center; padding: 40px 20px; }
+.landing-visual { position: fixed; inset: 0; z-index: -1; }
+.landing-visual img { object-fit: cover; }
+.landing-shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(8, 30, 20, .55), rgba(8, 30, 20, .72)); }
+.landing-card { width: min(560px, 100%); padding: 46px 44px; background: #fff; border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); }
+.landing-card .brand-mark { margin-bottom: 26px; }
+.landing-card h1 { margin-top: 6px; color: var(--green-950); font-size: clamp(2rem, 5vw, 2.7rem); }
+.landing-card p { margin-top: 14px; font-size: .95rem; }
+.landing-actions { margin-top: 26px; display: flex; gap: 12px; flex-wrap: wrap; }
+.landing-note { margin-top: 26px; display: inline-flex; align-items: center; gap: 7px; color: var(--green-700); font-size: .72rem; font-weight: 700; }
+
+/* Sign out */
+.dashboard-sign-out { width: 100%; margin-top: 12px; padding: 12px 15px; display: flex; align-items: center; gap: 9px; color: var(--muted); background: transparent; border-radius: 10px; font-size: .74rem; font-weight: 700; }
+.dashboard-sign-out:hover { color: var(--danger); background: #fbeceb; }

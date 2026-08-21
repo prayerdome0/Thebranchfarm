@@ -13,7 +13,7 @@ import type { UserProfile } from "@/types";
 function profileFromAuth(user: User, extras?: Partial<UserProfile>): UserProfile {
   return {
     uid: user.uid,
-    fullName: extras?.fullName || user.displayName || "Customer",
+    fullName: extras?.fullName || user.displayName || "Member",
     email: (extras?.email || user.email || "").trim().toLowerCase(),
     phone: extras?.phone || "",
     role: extras?.role || "user",
@@ -74,13 +74,12 @@ export async function registerUser(input: {
   try {
     await writeUserProfile(credential.user, { fullName, email, phone });
   } catch {
-    // Keep the Firebase Auth account even if the first profile write fails
-    // (rules propagation, brief network blip). Sign-in recovers the document.
+    // Keep the Firebase Auth account even if the first profile write fails.
     try {
       await ensureIdToken(credential.user);
       await writeUserProfile(credential.user, { fullName, email, phone });
     } catch {
-      // Registration still succeeded: the customer can sign in with this email.
+      // Registration still succeeded: the member can sign in with this email.
     }
   }
 
@@ -99,7 +98,7 @@ export async function loginUser(email: string, password: string): Promise<UserPr
       await ensureIdToken(user);
       await setDoc(profileRef, {
         uid: user.uid,
-        fullName: user.displayName || "Customer",
+        fullName: user.displayName || "Member",
         email: (user.email || normalizedEmail).toLowerCase(),
         phone: "",
         role: "user",
@@ -123,7 +122,7 @@ export async function loginUser(email: string, password: string): Promise<UserPr
       const profile = { uid: snapshot.id, ...snapshot.data() } as UserProfile;
       if (profile.status === "disabled") {
         await signOut(auth);
-        const disabled = new Error("This account has been disabled. Please contact the farm team.");
+        const disabled = new Error("This account has been disabled. Please contact the farm administrator.");
         (disabled as Error & { code: string }).code = "auth/user-disabled";
         throw disabled;
       }
