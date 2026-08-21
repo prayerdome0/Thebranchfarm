@@ -122,3 +122,73 @@ export interface FarmSettings {
   updatedBy?: string;
   updatedByName?: string;
 }
+
+/* ------------------------------ Storefront ------------------------------ */
+
+export type ProductKind = "produce" | "livestock";
+export type FulfillmentMethod = "pickup" | "delivery";
+export type OrderStatus =
+  | "pending"
+  | "confirmed"
+  | "processing"
+  | "ready"
+  | "completed"
+  | "cancelled";
+export type PaymentStatus = "unpaid" | "paid";
+
+export interface Product {
+  id: string;
+  name: string;
+  /** produce | livestock */
+  kind: ProductKind;
+  category: string;
+  description: string;
+  price: number;
+  /** Human unit label, e.g. "dozen", "kg", "litre", "each". */
+  unit: string;
+  stock: number;
+  /** When true, stock is decremented on orders and shown to customers. */
+  trackInventory: boolean;
+  image?: string;
+  imagePath?: string;
+  active: boolean;
+  featured?: boolean;
+  createdBy?: string;
+  createdByName?: string;
+  createdAt?: TimestampValue;
+  updatedAt?: TimestampValue;
+  archived?: boolean;
+}
+
+export interface OrderItem {
+  productId: string;
+  name: string;
+  unit: string;
+  price: number;
+  quantity: number;
+  image?: string;
+}
+
+export interface Order {
+  id: string;
+  reference: string;
+  items: OrderItem[];
+  subtotal: number;
+  deliveryFee: number;
+  total: number;
+  customer: {
+    name: string;
+    phone: string;
+    email?: string;
+  };
+  fulfillment: FulfillmentMethod;
+  deliveryAddress?: string;
+  notes?: string;
+  paymentMethod?: string;
+  status: OrderStatus;
+  paymentStatus: PaymentStatus;
+  createdAt: TimestampValue;
+  updatedAt?: TimestampValue;
+  updatedBy?: string;
+  updatedByName?: string;
+}

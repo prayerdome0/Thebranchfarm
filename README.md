@@ -2,9 +2,11 @@
 
 A focused farm-management system for **The Branch Farm**, Mahlabane, Eswatini.
 
-The system was simplified around the actual farm operation. There is no marketplace,
-no orders, no quotations and no separate storage vendor — Firebase is the single
-source of truth for identity, data and files.
+The system covers the actual farm operation plus a small public **storefront**: customers
+browse farm produce and livestock, add to a cart and place an order without paying online.
+Firebase is the single source of truth for identity, data and files. Orders are placed
+against Firestore and fulfilled by staff — there is no payment gateway and no separate
+storage vendor.
 
 ## The seven modules
 
@@ -17,6 +19,20 @@ source of truth for identity, data and files.
 | **Farm documents** | Upload PDFs, images, Word and Excel files, videos and other farm files; view/download them. |
 | **Activity** | Feeding, cleaning, inspections and other daily work, logged with who did it and when. |
 | **Settings** | Farm name, slogan, location, contact details and currency. |
+| **Shop** | Public storefront: browse produce and livestock, product details, cart, checkout and order tracking. |
+| **Orders** | Staff fulfil customer orders — confirm, progress, mark ready/complete and record payment. |
+| **Products** | Admin manages the catalogue: prices, units, stock levels, images and visibility. |
+
+## The storefront
+
+- **Public shop** at `/shop` — browse farm produce and livestock, search, filter by type/category.
+- **Cart** is stored in the browser (`localStorage`) and works for guests — no sign-in to buy.
+- **Checkout** collects name, phone, pickup/delivery and preferred payment method. No online
+  payment: the customer pays by cash, EFT or mobile money on collection or delivery.
+- **Order tracking** at `/track` — look up an order by its `TB-XXXXXX` reference.
+- **Demo fallback**: when Firestore is unreachable (e.g. a preview without a deployed backend),
+  a sample catalogue is shown and orders are stored locally in the browser. An admin can also
+  seed the sample catalogue into Firestore from **Products → Add sample products**.
 
 ## The core flow
 
@@ -123,7 +139,8 @@ on `main`, and fails loudly if any callable still answers 404.
 
 ## Important collections
 
-`users`, `animals`, `animalHealth`, `farmDocuments`, `farmActivities`, `settings`.
+`users`, `animals`, `animalHealth`, `farmDocuments`, `farmActivities`, `settings`,
+`products`, `orders`.
 
 ## Quality checks
 

@@ -55,6 +55,32 @@ service cloud.firestore {
         && safeString(request.resource.data.date, 20)
         && safeString(request.resource.data.notes, 2000);
     }
+    function validProduct() {
+      return safeString(request.resource.data.name, 120)
+        && request.resource.data.kind in ['produce', 'livestock']
+        && safeString(request.resource.data.category, 40)
+        && safeString(request.resource.data.description, 2000)
+        && request.resource.data.price is number
+        && request.resource.data.price > 0
+        && safeString(request.resource.data.unit, 30)
+        && nonNegative(request.resource.data.stock)
+        && request.resource.data.active is bool
+        && request.resource.data.trackInventory is bool;
+    }
+    function validOrder() {
+      return safeString(request.resource.data.reference, 30)
+        && request.resource.data.status in ['pending', 'confirmed', 'processing', 'ready', 'completed', 'cancelled']
+        && request.resource.data.paymentStatus in ['unpaid', 'paid']
+        && request.resource.data.fulfillment in ['pickup', 'delivery']
+        && request.resource.data.customer is map
+        && request.resource.data.customer.name is string
+        && request.resource.data.customer.phone is string
+        && request.resource.data.items is list
+        && request.resource.data.items.size() > 0
+        && request.resource.data.subtotal is number
+        && request.resource.data.total is number
+        && request.resource.data.deliveryFee is number;
+    }
 
     match /users/{uid} {
       allow create: if own(uid)
@@ -112,6 +138,22 @@ service cloud.firestore {
     match /settings/{settingId} {
       allow read: if staff() && settingId == 'farm';
       allow write: if admin() && settingId == 'farm';
+    }
+
+    // Storefront: public read of the catalogue; admin maintains it.
+    match /products/{id} {
+      allow read: if true;
+      allow create: if admin() && validProduct();
+      allow update: if admin() && validProduct();
+      allow delete: if admin();
+    }
+
+    // Orders: guests place orders (no sign-in); only staff can list/update.
+    match /orders/{id} {
+      allow read: if staff();
+      allow create: if true && validOrder();
+      allow update: if staff();
+      allow delete: if admin();
     }
 
     match /{document=**} { allow read, write: if false; }

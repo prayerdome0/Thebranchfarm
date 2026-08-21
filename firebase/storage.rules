@@ -23,6 +23,12 @@ service firebase.storage {
       allow write: if staff() && request.resource.size < 50 * 1024 * 1024;
     }
 
+    // Storefront product images: publicly visible; only admins upload.
+    match /product-images/{file} {
+      allow read: if true;
+      allow write: if admin() && safeImage();
+    }
+
     match /{allPaths=**} { allow read, write: if false; }
   }
 }

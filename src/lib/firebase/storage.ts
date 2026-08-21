@@ -98,6 +98,15 @@ export async function uploadFarmDocument(
   return uploadToStorage(path, file, onProgress);
 }
 
+/** Product image upload for the storefront. */
+export async function uploadProductImage(
+  file: File,
+  onProgress?: (percent: number) => void,
+) {
+  const path = `product-images/${uniquePrefix()}-${safeName(file.name)}`;
+  return uploadToStorage(path, file, onProgress);
+}
+
 export async function deleteStorageObject(storagePath?: string) {
   if (!storagePath) return;
   await deleteObject(ref(storage, storagePath));

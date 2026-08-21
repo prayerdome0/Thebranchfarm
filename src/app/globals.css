@@ -1367,6 +1367,11 @@
 .status-under-observation { color: #7a561d; background: #fff1d5; }
 .status-examination, .status-other, .status-excel { color: #5f4a8d; background: #eee9fb; }
 .status-image, .status-video { color: #7a4d1d; background: #fbeed8; }
+.status-pending, .status-unpaid { color: #7a561d; background: #fff1d5; }
+.status-confirmed, .status-paid { color: #1d5f7a; background: #e1f2fb; }
+.status-processing { color: #5f4a8d; background: #eee9fb; }
+.status-ready, .status-completed { color: #1f6942; background: #dff3e7; }
+.status-cancelled { color: #8c3831; background: #f9e2df; }
 
 /* Stats grid for the dashboard */
 .farm-stats { grid-template-columns: repeat(4, 1fr); }
