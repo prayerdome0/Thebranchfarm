@@ -1,4 +1,4 @@
-import { ApiError, errorResponse, getAdmin, requireStaff } from "@/lib/server/admin";
+import { ApiError, errorResponse, requireStaff } from "@/lib/server/admin";
 
 export const dynamic = "force-dynamic";
 

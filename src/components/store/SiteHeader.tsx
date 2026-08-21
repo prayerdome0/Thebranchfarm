@@ -22,6 +22,10 @@ import { cn, initials } from "@/lib/utils";
 
 export function SiteHeader() {
   const pathname = usePathname();
+  return <SiteHeaderContent key={pathname} pathname={pathname} />;
+}
+
+function SiteHeaderContent({ pathname }: { pathname: string }) {
   const router = useRouter();
   const { user, logout } = useAuth();
   const { count } = useCart();
@@ -36,11 +40,6 @@ export function SiteHeader() {
     router.push(term ? `/shop?q=${encodeURIComponent(term)}` : "/shop");
     setMenuOpen(false);
   };
-
-  useEffect(() => {
-    setMenuOpen(false);
-    setAccountOpen(false);
-  }, [pathname]);
 
   useEffect(() => {
     function onClick(event: MouseEvent) {

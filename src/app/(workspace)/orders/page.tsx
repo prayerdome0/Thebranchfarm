@@ -8,7 +8,6 @@ import { Loading } from "@/components/ui/Loading";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import {
   FULFILLMENT_LABELS,
-  ORDER_STATUS_LABELS,
   PAYMENT_STATUS_LABELS,
 } from "@/lib/constants";
 import { watchOrders } from "@/lib/firebase/data";

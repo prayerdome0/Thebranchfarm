@@ -1,5 +1,5 @@
 import { BUSINESS, STORE } from "@/lib/constants";
-import { errorResponse, getAdmin } from "@/lib/server/admin";
+import { getAdmin } from "@/lib/server/admin";
 
 export const dynamic = "force-dynamic";
 

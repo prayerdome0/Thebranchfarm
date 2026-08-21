@@ -6,7 +6,6 @@ import { PhotoField } from "@/components/farm/PhotoField";
 import { VIDEO_CATEGORIES } from "@/lib/constants";
 import { uploadFarmVideo, uploadVideoThumbnail } from "@/lib/firebase/storage";
 import { friendlyError } from "@/lib/utils";
-import type { FarmVideo } from "@/types";
 
 export type VideoFormValues = {
   title: string;

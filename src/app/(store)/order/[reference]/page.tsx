@@ -3,12 +3,12 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ArrowRight, Check, Copy, MessageSquareText, PackageCheck, Receipt, Truck } from "lucide-react";
+import { ArrowRight, Check, Copy, MessageSquareText, PackageCheck, Receipt } from "lucide-react";
 import { Loading } from "@/components/ui/Loading";
 import { useToast } from "@/contexts/ToastContext";
-import { FULFILLMENT_LABELS, ORDER_STATUS_FLOW, ORDER_STATUS_LABELS } from "@/lib/constants";
+import { FULFILLMENT_LABELS } from "@/lib/constants";
 import { getOrderByReference } from "@/lib/firebase/data";
-import { formatDate, money } from "@/lib/utils";
+import { money } from "@/lib/utils";
 import type { Order } from "@/types";
 
 export default function OrderSuccessPage() {
@@ -45,7 +45,6 @@ export default function OrderSuccessPage() {
     );
   }
 
-  const timelineStep = ORDER_STATUS_FLOW.indexOf(order.status);
 
   const copyReference = () => {
     try {
