@@ -118,6 +118,15 @@ export interface FarmSettings {
   whatsapp: string;
   email: string;
   currency: string;
+  /** Store delivery fee (0 = free delivery). */
+  deliveryFee: number;
+  /** Cart subtotal above which delivery is free. */
+  freeDeliveryThreshold: number;
+  /** Optional promo code and its percentage discount (0–100). */
+  promoCode?: string;
+  promoDiscountPercent?: number;
+  /** Product id pinned to the homepage hero (falls back to first featured). */
+  heroProductId?: string;
   updatedAt?: TimestampValue;
   updatedBy?: string;
   updatedByName?: string;
@@ -144,13 +153,21 @@ export interface Product {
   category: string;
   description: string;
   price: number;
+  /** Optional discounted price (shown with the original struck through). */
+  salePrice?: number | null;
   /** Human unit label, e.g. "dozen", "kg", "litre", "each". */
   unit: string;
   stock: number;
   /** When true, stock is decremented on orders and shown to customers. */
   trackInventory: boolean;
+  /** When true, customers may still order after stock reaches zero (pre-order). */
+  allowBackorder?: boolean;
+  /** Primary image. */
   image?: string;
   imagePath?: string;
+  /** Additional gallery images (public URLs). */
+  images?: string[];
+  imagePaths?: string[];
   active: boolean;
   featured?: boolean;
   createdBy?: string;
@@ -191,6 +208,10 @@ export interface Order {
   updatedAt?: TimestampValue;
   updatedBy?: string;
   updatedByName?: string;
+  /** Proof-of-delivery e-signature (data URL) captured on completion. */
+  signature?: string;
+  signedByName?: string;
+  signedAt?: TimestampValue;
 }
 
 export interface FarmVideo {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CircleAlert } from "lucide-react";
+import { CircleAlert, CloudUpload, Trash2 } from "lucide-react";
 import { PhotoField } from "@/components/farm/PhotoField";
 import { PRODUCT_CATEGORIES, PRODUCT_KIND_LABELS } from "@/lib/constants";
 import { uploadProductImage } from "@/lib/firebase/storage";
@@ -28,13 +28,17 @@ export function ProductForm({
     category: initial?.category || PRODUCT_CATEGORIES[0].value,
     description: initial?.description || "",
     price: initial?.price ?? 0,
+    salePrice: initial?.salePrice ?? undefined,
     unit: initial?.unit || "",
     stock: initial?.stock ?? 0,
     trackInventory: initial?.trackInventory ?? true,
+    allowBackorder: initial?.allowBackorder ?? false,
     active: initial?.active ?? true,
     featured: initial?.featured ?? false,
     image: initial?.image,
     imagePath: initial?.imagePath,
+    images: initial?.images || [],
+    imagePaths: initial?.imagePaths || [],
   }));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [serverError, setServerError] = useState("");
@@ -54,17 +58,37 @@ export function ProductForm({
     setServerError("");
     setSaving(true);
     try {
+      const salePrice = parsed.data.salePrice != null && parsed.data.salePrice > 0 ? parsed.data.salePrice : null;
       await onSubmit({
         ...parsed.data,
+        salePrice,
         price: Number(parsed.data.price),
         stock: Number(parsed.data.stock),
         image: form.image,
         imagePath: form.imagePath,
+        images: form.images,
+        imagePaths: form.imagePaths,
       });
     } catch (cause) {
       setServerError(friendlyError(cause));
       setSaving(false);
     }
+  };
+
+  const addImage = async (file?: File) => {
+    if (!file) return;
+    try {
+      const result = await uploadProductImage(file);
+      update("images", [...(form.images || []), result.downloadUrl]);
+      update("imagePaths", [...(form.imagePaths || []), result.storagePath]);
+    } catch (cause) {
+      setServerError(friendlyError(cause));
+    }
+  };
+
+  const removeImage = (index: number) => {
+    update("images", (form.images || []).filter((_, i) => i !== index));
+    update("imagePaths", (form.imagePaths || []).filter((_, i) => i !== index));
   };
 
   const categories = PRODUCT_CATEGORIES.filter((item) => item.kind === form.kind);
@@ -152,6 +176,21 @@ export function ProductForm({
             {errors.price && <small className="field-error">{errors.price}</small>}
           </label>
           <label className="field">
+            <span>
+              Sale price (E) <em>optional</em>
+            </span>
+            <input
+              type="number"
+              min={0}
+              step="0.01"
+              value={form.salePrice || ""}
+              onChange={(e) => update("salePrice", e.target.value === "" ? undefined : Number(e.target.value))}
+            />
+          </label>
+        </div>
+
+        <div className="auth-field-grid">
+          <label className="field">
             <span>Stock on hand</span>
             <input
               type="number"
@@ -172,6 +211,16 @@ export function ProductForm({
             />
             <span>
               <i>✓</i> Track inventory (decrement on orders)
+            </span>
+          </label>
+          <label className="check-field" style={{ marginTop: 0 }}>
+            <input
+              type="checkbox"
+              checked={form.allowBackorder}
+              onChange={(e) => update("allowBackorder", e.target.checked)}
+            />
+            <span>
+              <i>✓</i> Allow pre-order when out of stock
             </span>
           </label>
           <label className="check-field" style={{ marginTop: 0 }}>
@@ -198,7 +247,7 @@ export function ProductForm({
       </section>
 
       <section className="dashboard-panel" style={{ display: "grid", gap: 16 }}>
-        <h2 style={{ fontFamily: "var(--sans)", fontSize: "1.05rem" }}>Image</h2>
+        <h2 style={{ fontFamily: "var(--sans)", fontSize: "1.05rem" }}>Images</h2>
         <PhotoField
           value={form.image}
           path={form.imagePath}
@@ -210,8 +259,28 @@ export function ProductForm({
             update("image", result.url);
             update("imagePath", result.path);
           }}
-          hint="Stored in Firebase Storage. JPG, PNG or WebP up to 8 MB."
+          hint="Main image shown in listings. JPG, PNG or WebP up to 8 MB."
         />
+
+        <div>
+          <span style={{ fontSize: ".76rem", fontWeight: 750 }}>Additional gallery images</span>
+          <div className="product-gallery-editor">
+            {(form.images || []).map((url, index) => (
+              <span className="gallery-editor-thumb" key={url}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={url} alt="" />
+                <button type="button" onClick={() => removeImage(index)} aria-label="Remove image">
+                  <Trash2 size={13} />
+                </button>
+              </span>
+            ))}
+            <label className="gallery-editor-add">
+              <CloudUpload size={18} />
+              <span>Add</span>
+              <input type="file" accept="image/*" onChange={(e) => addImage(e.target.files?.[0])} />
+            </label>
+          </div>
+        </div>
       </section>
 
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>

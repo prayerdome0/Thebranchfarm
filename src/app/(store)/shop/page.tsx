@@ -25,7 +25,7 @@ function ShopCatalog() {
   const [loading, setLoading] = useState(true);
   const [kind, setKind] = useState(initialKind);
   const [category, setCategory] = useState("all");
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(search.get("q") || "");
 
   useEffect(() => {
     const stop = watchProducts((list) => {
@@ -37,6 +37,7 @@ function ShopCatalog() {
 
   useEffect(() => {
     setKind(search.get("kind") || "all");
+    setQuery(search.get("q") || "");
   }, [search]);
 
   const visible = useMemo(() => {

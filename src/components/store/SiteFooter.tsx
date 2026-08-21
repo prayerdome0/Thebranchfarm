@@ -1,10 +1,13 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 import { Mail, MapPin, Phone, MessageCircle, Truck } from "lucide-react";
-import { BUSINESS, STORE } from "@/lib/constants";
-import { money } from "@/lib/utils";
+import { BUSINESS } from "@/lib/constants";
+import { useStoreConfig } from "@/contexts/StoreConfigContext";
 
 export function SiteFooter() {
+  const { deliveryFee, freeDeliveryThreshold, formatMoney } = useStoreConfig();
   return (
     <footer className="site-footer">
       <div className="footer-grain" />
@@ -32,6 +35,15 @@ export function SiteFooter() {
             </li>
             <li>
               <Link href="/shop?kind=livestock">Live animals</Link>
+            </li>
+            <li>
+              <Link href="/videos">Videos</Link>
+            </li>
+            <li>
+              <Link href="/about">About</Link>
+            </li>
+            <li>
+              <Link href="/contact">Contact</Link>
             </li>
             <li>
               <Link href="/cart">Cart</Link>
@@ -64,9 +76,9 @@ export function SiteFooter() {
           <h3>Delivery</h3>
           <div className="delivery-footer-card">
             <span>
-              <Truck size={15} /> Delivery from {money(STORE.deliveryFee)}
+              <Truck size={15} /> Delivery from {formatMoney(deliveryFee)}
             </span>
-            <strong>Free over {money(STORE.freeDeliveryThreshold)}</strong>
+            <strong>Free over {formatMoney(freeDeliveryThreshold)}</strong>
           </div>
           <div className="footer-small">
             <span>Pickup at the farm is free.</span>

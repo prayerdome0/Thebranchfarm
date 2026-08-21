@@ -168,6 +168,8 @@ export const STORE = {
   currency: "E",
   deliveryFee: 30,
   freeDeliveryThreshold: 500,
+  promoCode: "",
+  promoDiscountPercent: 0,
 } as const;
 
 export const VIDEO_CATEGORIES = [

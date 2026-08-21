@@ -9,6 +9,7 @@ import {
   LogOut,
   Menu,
   PackageSearch,
+  Search,
   ShoppingBag,
   Truck,
   UserRound,
@@ -26,7 +27,15 @@ export function SiteHeader() {
   const { count } = useCart();
   const [menuOpen, setMenuOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [query, setQuery] = useState("");
   const accountRef = useRef<HTMLDivElement>(null);
+
+  const submitSearch = (event: React.FormEvent) => {
+    event.preventDefault();
+    const term = query.trim();
+    router.push(term ? `/shop?q=${encodeURIComponent(term)}` : "/shop");
+    setMenuOpen(false);
+  };
 
   useEffect(() => {
     setMenuOpen(false);
@@ -47,6 +56,9 @@ export function SiteHeader() {
     { href: "/", label: "Home" },
     { href: "/shop", label: "Shop" },
     { href: "/videos", label: "Videos" },
+    { href: "/gallery", label: "Gallery" },
+    { href: "/about", label: "About" },
+    { href: "/contact", label: "Contact" },
     { href: "/track", label: "Track order" },
   ];
 
@@ -84,6 +96,16 @@ export function SiteHeader() {
               </Link>
             ))}
           </nav>
+
+          <form className="header-search" onSubmit={submitSearch} role="search">
+            <Search size={16} />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search products…"
+              aria-label="Search products"
+            />
+          </form>
 
           <div className="nav-actions">
             <button

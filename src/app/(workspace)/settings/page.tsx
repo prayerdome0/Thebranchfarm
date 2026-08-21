@@ -1,23 +1,25 @@
 "use client";
 
-import { CircleAlert, Save } from "lucide-react";
+import { CircleAlert, Save, Store } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { Loading } from "@/components/ui/Loading";
 import { useToast } from "@/contexts/ToastContext";
-import { getFarmSettings, saveFarmSettings } from "@/lib/firebase/data";
+import { getAllProducts, getFarmSettings, saveFarmSettings } from "@/lib/firebase/data";
 import { settingsSchema } from "@/lib/validation";
 import { friendlyError } from "@/lib/utils";
-import type { FarmSettings } from "@/types";
+import type { FarmSettings, Product } from "@/types";
 
 export default function SettingsPage() {
   const { showToast } = useToast();
   const [form, setForm] = useState<FarmSettings | null>(null);
+  const [products, setProducts] = useState<Product[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
     getFarmSettings().then(setForm);
+    getAllProducts().then(setProducts);
   }, []);
 
   const update = (key: keyof FarmSettings, value: string) =>
@@ -27,15 +29,7 @@ export default function SettingsPage() {
     event.preventDefault();
     if (!form) return;
     setError("");
-    const parsed = settingsSchema.safeParse({
-      farmName: form.farmName,
-      slogan: form.slogan,
-      location: form.location,
-      phone: form.phone,
-      whatsapp: form.whatsapp,
-      email: form.email,
-      currency: form.currency,
-    });
+    const parsed = settingsSchema.safeParse(form);
     if (!parsed.success) {
       setError(parsed.error.issues[0]?.message || "Please review the information.");
       return;
@@ -50,6 +44,11 @@ export default function SettingsPage() {
         whatsapp: parsed.data.whatsapp || "",
         email: parsed.data.email || "",
         currency: parsed.data.currency,
+        deliveryFee: parsed.data.deliveryFee,
+        freeDeliveryThreshold: parsed.data.freeDeliveryThreshold,
+        promoCode: parsed.data.promoCode,
+        promoDiscountPercent: parsed.data.promoDiscountPercent,
+        heroProductId: parsed.data.heroProductId,
       });
       showToast("Settings saved.", "success");
     } catch (cause) {
@@ -65,15 +64,24 @@ export default function SettingsPage() {
         <section className="dashboard-section-title">
           <div>
             <h2>Settings</h2>
-            <p>Farm details shown across the workspace.</p>
+            <p>Farm details and store configuration.</p>
           </div>
         </section>
 
         {!form ? (
           <Loading label="Loading settings…" />
         ) : (
-          <section className="dashboard-panel">
-            <form onSubmit={submit} className="settings-form">
+          <form onSubmit={submit} className="settings-form">
+            <section className="dashboard-panel">
+              <div className="settings-section-head">
+                <span>
+                  <Store size={19} />
+                </span>
+                <div>
+                  <h3>Farm details</h3>
+                  <p>Shown across the website and workspace.</p>
+                </div>
+              </div>
               <div className="form-grid">
                 <label className="field">
                   <span>Farm name *</span>
@@ -104,26 +112,92 @@ export default function SettingsPage() {
                   <input value={form.currency} onChange={(e) => update("currency", e.target.value)} required />
                 </label>
               </div>
-              {error && (
-                <div className="form-alert error">
-                  <CircleAlert size={17} /> {error}
+            </section>
+
+            <section className="dashboard-panel">
+              <div className="settings-section-head">
+                <span>
+                  <Store size={19} />
+                </span>
+                <div>
+                  <h3>Online shop</h3>
+                  <p>Delivery pricing, promotions and the homepage hero.</p>
                 </div>
-              )}
-              <div className="settings-save-bar">
-                <button className="button button-primary" disabled={saving}>
-                  {saving ? (
-                    <>
-                      <i className="button-spinner" /> Saving…
-                    </>
-                  ) : (
-                    <>
-                      <Save size={17} /> Save settings
-                    </>
-                  )}
-                </button>
               </div>
-            </form>
-          </section>
+              <div className="form-grid">
+                <label className="field">
+                  <span>Delivery fee ({form.currency || "E"})</span>
+                  <input
+                    type="number"
+                    min={0}
+                    value={form.deliveryFee}
+                    onChange={(e) => update("deliveryFee", e.target.value)}
+                  />
+                </label>
+                <label className="field">
+                  <span>Free delivery above ({form.currency || "E"})</span>
+                  <input
+                    type="number"
+                    min={0}
+                    value={form.freeDeliveryThreshold}
+                    onChange={(e) => update("freeDeliveryThreshold", e.target.value)}
+                  />
+                </label>
+                <label className="field">
+                  <span>Promo code</span>
+                  <input
+                    value={form.promoCode || ""}
+                    onChange={(e) => update("promoCode", e.target.value)}
+                    placeholder="e.g. FARM5 (leave blank to disable)"
+                  />
+                </label>
+                <label className="field">
+                  <span>Promo discount (%)</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={form.promoDiscountPercent ?? 0}
+                    onChange={(e) => update("promoDiscountPercent", e.target.value)}
+                  />
+                </label>
+                <label className="field field-full">
+                  <span>Homepage hero product</span>
+                  <select
+                    value={form.heroProductId || ""}
+                    onChange={(e) => update("heroProductId", e.target.value)}
+                  >
+                    <option value="">First featured product</option>
+                    {products.map((product) => (
+                      <option key={product.id} value={product.id}>
+                        {product.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            </section>
+
+            {error && (
+              <div className="form-alert error">
+                <CircleAlert size={17} /> {error}
+              </div>
+            )}
+            <div className="settings-save-bar">
+              <p>Changes apply to the public shop immediately.</p>
+              <button className="button button-primary" disabled={saving}>
+                {saving ? (
+                  <>
+                    <i className="button-spinner" /> Saving…
+                  </>
+                ) : (
+                  <>
+                    <Save size={17} /> Save settings
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
         )}
       </div>
     </ProtectedRoute>

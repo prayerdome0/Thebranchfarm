@@ -3,9 +3,11 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ArrowLeft, MapPin, MessageSquareText, Phone, ShoppingBag } from "lucide-react";
+import { ArrowLeft, Check, MapPin, MessageSquareText, Phone, ShoppingBag } from "lucide-react";
 import { Loading } from "@/components/ui/Loading";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { SignaturePad } from "@/components/store/SignaturePad";
+import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/contexts/ToastContext";
 import {
   FULFILLMENT_LABELS,
@@ -20,6 +22,7 @@ import type { Order, OrderStatus } from "@/types";
 export default function OrderDetailPage() {
   const params = useParams<{ id: string }>();
   const { showToast } = useToast();
+  const { user } = useAuth();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -54,6 +57,28 @@ export default function OrderDetailPage() {
   }
 
   const currentIndex = ORDER_STATUS_FLOW.indexOf(order.status);
+
+  const notifyCustomer = () => {
+    const message = `Hello ${order.customer.name.split(" ")[0] || "there"}, your order ${order.reference} is now ${ORDER_STATUS_LABELS[order.status].toLowerCase()}. — The Branch Farm`;
+    window.open(whatsappHref("26876581804", message), "_blank");
+  };
+
+  const saveSignature = async (signature: string) => {
+    setSaving(true);
+    await updateOrder(order.id, {
+      signature,
+      signedByName: user?.fullName || "Team member",
+      signedAt: new Date().toISOString(),
+    });
+    setOrder({
+      ...order,
+      signature,
+      signedByName: user?.fullName || "Team member",
+      signedAt: new Date().toISOString(),
+    });
+    setSaving(false);
+    showToast("Signature saved", "success");
+  };
 
   const changeStatus = async (status: OrderStatus) => {
     setSaving(true);
@@ -190,7 +215,7 @@ export default function OrderDetailPage() {
             )}
           </div>
 
-          <div style={{ marginTop: 18, display: "flex", gap: 8 }}>
+          <div style={{ marginTop: 18, display: "flex", gap: 8, flexWrap: "wrap" }}>
             <a className="button button-secondary button-small" href={phoneHref(order.customer.phone)}>
               <Phone size={15} /> Call
             </a>
@@ -202,6 +227,9 @@ export default function OrderDetailPage() {
             >
               <MessageSquareText size={15} /> WhatsApp
             </a>
+            <button className="button button-secondary button-small" onClick={notifyCustomer}>
+              <MessageSquareText size={15} /> Notify status
+            </button>
           </div>
         </div>
       </div>
@@ -245,6 +273,29 @@ export default function OrderDetailPage() {
             {order.paymentStatus === "paid" ? "Mark as unpaid" : "Mark as paid"}
           </button>
         </div>
+      </section>
+
+      <section className="dashboard-panel">
+        <h2 style={{ fontFamily: "var(--sans)", fontSize: "1.05rem", marginBottom: 16 }}>
+          Proof of delivery
+        </h2>
+        {order.signature ? (
+          <div style={{ display: "grid", gap: 10 }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={order.signature}
+              alt="Customer signature"
+              style={{ maxWidth: 320, background: "#fff", border: "1px solid var(--line)", borderRadius: 10 }}
+            />
+            <p style={{ fontSize: ".72rem", color: "var(--muted)" }}>
+              <Check size={14} style={{ verticalAlign: "-2px", color: "var(--success)" }} /> Signed
+              by {order.signedByName || "customer"}
+              {order.signedAt ? ` on ${formatDate(order.signedAt, true)}` : ""}
+            </p>
+          </div>
+        ) : (
+          <SignaturePad onSave={saveSignature} />
+        )}
       </section>
     </div>
   );

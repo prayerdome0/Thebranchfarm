@@ -136,7 +136,8 @@ service cloud.firestore {
     }
 
     match /settings/{settingId} {
-      allow read: if staff() && settingId == 'farm';
+      // Public so the storefront can show currency/delivery; only admins edit.
+      allow read: if settingId == 'farm';
       allow write: if admin() && settingId == 'farm';
     }
 

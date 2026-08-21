@@ -26,9 +26,7 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
     ...(isAdmin ? [{ href: "/staff", label: "Staff", icon: UsersRound }] : []),
     { href: "/documents", label: "Farm documents", icon: FileText },
     { href: "/activity", label: "Activity", icon: ActivityIcon },
-    ...(isAdmin
-      ? [{ href: "/orders", label: "Orders", icon: ShoppingBag }]
-      : []),
+    { href: "/orders", label: "Orders", icon: ShoppingBag },
     { href: "/products", label: "Products", icon: Package },
     { href: "/videos/manage", label: "Videos", icon: Clapperboard },
     ...(isAdmin ? [{ href: "/settings", label: "Settings", icon: Settings }] : []),

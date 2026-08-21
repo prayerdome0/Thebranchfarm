@@ -167,6 +167,9 @@
   .nav-link:hover, .nav-link-active { color: var(--green-900); }
   .nav-link-active::after { opacity: 1; transform: translateX(-50%) scale(1); }
   .nav-actions { display: flex; align-items: center; gap: 8px; }
+  .header-search { min-width: 190px; min-height: 40px; display: flex; align-items: center; gap: 8px; padding: 0 12px; color: #77817a; background: #f3f6f2; border: 1px solid var(--line); border-radius: 999px; }
+  .header-search:focus-within { border-color: var(--green-600); background: #fff; }
+  .header-search input { width: 100%; min-width: 0; color: var(--ink); background: transparent; border: 0; outline: 0; font-size: .8rem; }
   .cart-count { position: absolute; top: -3px; right: -4px; min-width: 18px; height: 18px; padding: 0 4px; display: grid; place-items: center; color: #fff; background: var(--gold); border: 2px solid #fff; border-radius: 999px; font-size: .58rem; font-weight: 850; }
   .account-menu-wrap { position: relative; }
   .account-trigger { min-height: 43px; display: flex; align-items: center; gap: 8px; padding: 4px 11px 4px 4px; color: var(--green-950); background: #f3f6f2; border: 1px solid var(--line); border-radius: 999px; font-size: .8rem; font-weight: 750; }
@@ -287,6 +290,15 @@
   .coming-copy { display: flex; align-items: center; gap: 6px; color: #8c6726; font-size: .71rem; font-weight: 700; }
   .product-actions { display: flex; gap: 6px; }
   .add-button-mobile-icon { display: none; }
+  .testimonials-section { background: var(--paper); }
+  .testimonial-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 30px; }
+  .testimonial-card { height: 100%; margin: 0; padding: 26px; background: #fafbf8; border: 1px solid var(--line); border-radius: 16px; }
+  .testimonial-card blockquote { margin: 0; color: var(--ink); font-family: var(--serif); font-size: 1.05rem; line-height: 1.5; }
+  .testimonial-card figcaption { margin-top: 18px; display: grid; }
+  .testimonial-card strong { color: var(--green-800); font-size: .78rem; }
+  .testimonial-card span { color: var(--muted); font-size: .68rem; }
+  @media (max-width: 780px) { .testimonial-grid { grid-template-columns: 1fr; } }
+
   .story-section { background: var(--cream); }
   .story-grid { display: grid; grid-template-columns: 1.12fr .88fr; align-items: center; gap: 75px; }
   .motion-story { position: relative; height: 590px; overflow: hidden; background: var(--green-950); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); }
@@ -445,6 +457,18 @@
   .coming-detail { margin: 25px 0; padding: 18px; display: flex; gap: 12px; color: #775a26; background: #fff4d8; border: 1px solid #ead7a8; border-radius: 12px; }
   .coming-detail div { display: grid; }
   .coming-detail span { color: #846d43; font-size: .75rem; }
+  .product-thumbs { margin-top: 12px; display: flex; gap: 9px; overflow-x: auto; scrollbar-width: none; }
+  .product-thumbs::-webkit-scrollbar { display: none; }
+  .product-thumbs button { width: 74px; height: 62px; flex: 0 0 auto; overflow: hidden; padding: 0; border: 2px solid transparent; border-radius: 10px; background: var(--cream); }
+  .product-thumbs button img { width: 100%; height: 100%; object-fit: cover; }
+  .product-thumbs button.active { border-color: var(--green-600); }
+  .product-gallery-editor { margin-top: 10px; display: flex; gap: 10px; flex-wrap: wrap; }
+  .gallery-editor-thumb { position: relative; width: 84px; height: 68px; overflow: hidden; border-radius: 9px; background: var(--cream); }
+  .gallery-editor-thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .gallery-editor-thumb button { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; display: grid; place-items: center; color: #fff; background: rgba(0,0,0,.5); border-radius: 50%; }
+  .gallery-editor-add { position: relative; width: 84px; height: 68px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: var(--green-600); background: #f7faf6; border: 1px dashed #aebdb1; border-radius: 9px; cursor: pointer; }
+  .gallery-editor-add span { font-size: .6rem; font-weight: 750; }
+  .gallery-editor-add input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
   .related-section { padding-top: 70px; background: var(--cream); }
   .related-heading { margin-bottom: 28px; display: flex; justify-content: space-between; align-items: center; }
   .related-heading h2 { font-size: 2rem; }
@@ -1151,6 +1175,9 @@
     .operations-stats { grid-template-columns: repeat(3, 1fr); }
     .admin-stats { grid-template-columns: repeat(4, 1fr); }
     .quick-management > div:last-child { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 1120px) {
+    .header-search { display: none; }
   }
   @media (max-width: 960px) {
     .desktop-nav, .desktop-auth { display: none; }

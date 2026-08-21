@@ -7,34 +7,51 @@ import {
   HeartPulse,
   PawPrint,
   Plus,
+  ShoppingBag,
   Stethoscope,
   UsersRound,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import {
+  getAllProducts,
   getActivities,
   getAnimals,
   getFarmDocuments,
   getHealthRecords,
+  getOrders,
   getUsers,
 } from "@/lib/firebase/data";
 import { formatDisplayDate } from "@/lib/utils";
-import type { ActivityRecord, Animal, FarmDocument, HealthRecord, UserProfile } from "@/types";
+import type {
+  ActivityRecord,
+  Animal,
+  FarmDocument,
+  HealthRecord,
+  Order,
+  Product,
+  UserProfile,
+} from "@/types";
 
 export default function DashboardPage() {
   const { user, isAdmin } = useAuth();
+  const { formatMoney } = useStoreConfig();
   const [animals, setAnimals] = useState<Animal[]>([]);
   const [health, setHealth] = useState<HealthRecord[]>([]);
   const [documents, setDocuments] = useState<FarmDocument[]>([]);
   const [activities, setActivities] = useState<ActivityRecord[]>([]);
   const [staff, setStaff] = useState<UserProfile[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
 
   useEffect(() => {
     getAnimals().then(setAnimals);
     getHealthRecords().then(setHealth);
     getFarmDocuments().then(setDocuments);
     getActivities().then(setActivities);
+    getOrders().then(setOrders);
+    getAllProducts().then(setProducts);
     if (isAdmin) getUsers().then(setStaff);
   }, [isAdmin]);
 
@@ -46,12 +63,23 @@ export default function DashboardPage() {
     (member) => (member.role === "staff" || member.role === "admin") && member.status === "active",
   ).length;
 
+  const openOrders = orders.filter((order) => !["completed", "cancelled"].includes(order.status));
+  const pendingOrders = orders.filter((order) => order.status === "pending");
+  const revenue = orders
+    .filter((order) => order.status !== "cancelled")
+    .reduce((sum, order) => sum + order.total, 0);
+  const lowStock = products.filter(
+    (product) => product.trackInventory && product.stock <= 5 && product.active,
+  );
+
   const stats = [
     { label: "Animals", value: animals.length, icon: PawPrint, href: "/animals" },
     { label: "Active animals", value: activeCount, icon: PawPrint, href: "/animals" },
     { label: "Need attention", value: attentionCount, icon: HeartPulse, href: "/health", warning: attentionCount > 0 },
     { label: "Health records", value: health.length, icon: Stethoscope, href: "/health" },
     { label: "Documents", value: documents.length, icon: FileText, href: "/documents" },
+    { label: "Open orders", value: openOrders.length, icon: ShoppingBag, href: "/orders", warning: pendingOrders.length > 0 },
+    { label: "Revenue", value: formatMoney(revenue), icon: ShoppingBag, href: "/orders" },
     ...(isAdmin ? [{ label: "Staff", value: staffCount, icon: UsersRound, href: "/staff" }] : []),
   ];
 
@@ -158,6 +186,71 @@ export default function DashboardPage() {
             <p style={{ marginTop: 14, fontSize: ".75rem" }}>
               No activity recorded yet. Log feeding, cleaning, inspections and more.
             </p>
+          )}
+        </div>
+      </section>
+
+      <section className="dashboard-two-columns">
+        <div className="dashboard-panel">
+          <div className="section-row">
+            <div>
+              <h2>Recent orders</h2>
+              <p>Latest orders from the online shop.</p>
+            </div>
+            <Link className="text-link" href="/orders">
+              View all
+            </Link>
+          </div>
+          {orders.length ? (
+            <div className="staff-order-list">
+              {orders.slice(0, 5).map((order) => (
+                <Link href={`/orders/${order.id}`} key={order.id}>
+                  <span>
+                    <ShoppingBag size={16} />
+                  </span>
+                  <div>
+                    <strong>{order.reference}</strong>
+                    <small>{order.customer.name}</small>
+                  </div>
+                  <strong style={{ fontSize: ".72rem" }}>{formatMoney(order.total)}</strong>
+                  <small style={{ color: "var(--muted)" }}>{order.status}</small>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <p style={{ marginTop: 14, fontSize: ".75rem" }}>No orders yet.</p>
+          )}
+        </div>
+
+        <div className="dashboard-panel">
+          <div className="section-row">
+            <div>
+              <h2>Low stock</h2>
+              <p>Products with five or fewer units left.</p>
+            </div>
+            <Link className="text-link" href="/products">
+              Manage
+            </Link>
+          </div>
+          {lowStock.length ? (
+            <div className="staff-order-list">
+              {lowStock.slice(0, 6).map((product) => (
+                <Link href={`/products/${product.id}/edit`} key={product.id}>
+                  <span>
+                    <ShoppingBag size={16} />
+                  </span>
+                  <div>
+                    <strong>{product.name}</strong>
+                    <small>{product.kind}</small>
+                  </div>
+                  <strong style={{ fontSize: ".72rem", color: "var(--warning)" }}>
+                    {product.stock} left
+                  </strong>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <p style={{ marginTop: 14, fontSize: ".75rem" }}>All products are well stocked.</p>
           )}
         </div>
       </section>

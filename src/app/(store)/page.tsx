@@ -20,20 +20,25 @@ import {
 } from "lucide-react";
 import { ProductCard } from "@/components/store/ProductCard";
 import { Reveal } from "@/components/ui/Reveal";
+import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { getProducts } from "@/lib/firebase/data";
 import { BUSINESS } from "@/lib/constants";
-import { money } from "@/lib/utils";
 import type { Product } from "@/types";
 
 export default function HomePage() {
   const [products, setProducts] = useState<Product[]>([]);
+  const { formatMoney, freeDeliveryThreshold, settings } = useStoreConfig();
 
   useEffect(() => {
-    getProducts().then((list) => setProducts(list.slice(0, 4)));
+    getProducts().then((list) => setProducts(list.slice(0, 8)));
   }, []);
 
-  const featured = products.length ? products : [];
-  const heroProduct = featured[0];
+  const featured = products.filter((product) => product.featured).slice(0, 4);
+  const fallback = products.slice(0, 4);
+  const picks = featured.length ? featured : fallback;
+  const heroProduct =
+    (settings.heroProductId && products.find((product) => product.id === settings.heroProductId)) ||
+    picks[0];
 
   return (
     <>
@@ -82,7 +87,7 @@ export default function HomePage() {
                 <BadgeCheck size={15} /> Farm-direct
               </span>
               <span>
-                <Truck size={15} /> Free delivery over {money(500)}
+                <Truck size={15} /> Free delivery over {formatMoney(freeDeliveryThreshold)}
               </span>
               <span>
                 <ShieldCheck size={15} /> Order without paying online
@@ -102,7 +107,13 @@ export default function HomePage() {
                 </span>
               </div>
               <div className="hero-price">
-                <strong>{heroProduct.price.toLocaleString()}</strong>
+                <strong>
+                  {formatMoney(
+                    heroProduct.salePrice != null && heroProduct.salePrice > 0
+                      ? heroProduct.salePrice
+                      : heroProduct.price,
+                  )}
+                </strong>
                 <span>/ {heroProduct.unit}</span>
               </div>
               <p>Fresh from the farm, ready to order.</p>
@@ -175,9 +186,36 @@ export default function HomePage() {
           </Reveal>
 
           <div className="product-grid home-product-grid" style={{ marginTop: 34 }}>
-            {featured.map((product, index) => (
+            {picks.map((product, index) => (
               <Reveal key={product.id} delay={(index % 4) * 80}>
                 <ProductCard product={product} />
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="section testimonials-section">
+        <div className="container">
+          <Reveal>
+            <div className="section-heading section-heading-center">
+              <div>
+                <span className="eyebrow">Kind words</span>
+                <h2>What our customers say</h2>
+                <p>Fresh food and healthy livestock, straight from the farm.</p>
+              </div>
+            </div>
+          </Reveal>
+          <div className="testimonial-grid">
+            {TESTIMONIALS.map((item, index) => (
+              <Reveal key={item.name} delay={index * 90}>
+                <figure className="testimonial-card">
+                  <blockquote>“{item.quote}”</blockquote>
+                  <figcaption>
+                    <strong>{item.name}</strong>
+                    <span>{item.role}</span>
+                  </figcaption>
+                </figure>
               </Reveal>
             ))}
           </div>
@@ -311,6 +349,24 @@ export default function HomePage() {
     </>
   );
 }
+
+const TESTIMONIALS = [
+  {
+    quote: "The eggs are always fresh and the order was ready the moment I arrived. Easy and reliable.",
+    name: "Nomsa D.",
+    role: "Regular customer, Mahlabane",
+  },
+  {
+    quote: "Bought a healthy heifer and could see her full history. That traceability gave me confidence.",
+    name: "Sibusiso M.",
+    role: "Livestock buyer",
+  },
+  {
+    quote: "Ordered online without paying upfront, then settled on delivery. Exactly how shopping here should work.",
+    name: "Temalangeni K.",
+    role: "Home cook, Eswatini",
+  },
+];
 
 function MessageCircleIcon() {
   return (

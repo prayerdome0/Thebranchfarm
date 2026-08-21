@@ -10,6 +10,7 @@ import {
   onSnapshot,
   orderBy,
   query,
+  runTransaction,
   serverTimestamp,
   setDoc,
   updateDoc,
@@ -23,6 +24,7 @@ import { auth, db, functions } from "./config";
 import { BUSINESS } from "@/lib/constants";
 import { deleteStorageObject } from "./storage";
 import { DEMO_PRODUCTS, demoOrders, generateOrderReference } from "@/lib/store";
+import { STORE } from "@/lib/constants";
 import type {
   ActivityRecord,
   Animal,
@@ -282,6 +284,11 @@ export function defaultSettings(): FarmSettings {
     whatsapp: BUSINESS.whatsappDisplay,
     email: "",
     currency: BUSINESS.currency,
+    deliveryFee: STORE.deliveryFee,
+    freeDeliveryThreshold: STORE.freeDeliveryThreshold,
+    promoCode: "",
+    promoDiscountPercent: 0,
+    heroProductId: "",
   };
 }
 
@@ -420,18 +427,37 @@ export async function createOrder(values: {
   };
 
   try {
-    const ref = await addDoc(collection(db, "orders"), order);
-
-    // Best-effort stock decrement for inventory-tracked products.
-    for (const item of values.items) {
-      if (!item.productId || item.productId.startsWith("demo-")) continue;
-      updateDoc(doc(db, "products", item.productId), {
-        stock: increment(-item.quantity),
-      }).catch(() => {});
-    }
+    // Atomically check stock and decrement it together with creating the order,
+    // so an order can never oversell an inventory-tracked product.
+    const ref = await runTransaction(db, async (transaction) => {
+      for (const item of values.items) {
+        if (!item.productId || item.productId.startsWith("demo-")) continue;
+        const productRef = doc(db, "products", item.productId);
+        const snapshot = await transaction.get(productRef);
+        if (!snapshot.exists()) continue;
+        const product = snapshot.data() as Product;
+        if (product.trackInventory && !product.allowBackorder) {
+          const remaining = (product.stock ?? 0) - item.quantity;
+          if (remaining < 0) {
+            throw new Error(`insufficient-stock:${product.name}`);
+          }
+        }
+        if (product.trackInventory) {
+          transaction.update(productRef, { stock: increment(-item.quantity) });
+        }
+      }
+      const orderRef = doc(collection(db, "orders"));
+      transaction.set(orderRef, order);
+      return orderRef;
+    });
 
     return { ...order, id: ref.id };
-  } catch {
+  } catch (cause) {
+    const message = cause instanceof Error ? cause.message : "";
+    if (message.startsWith("insufficient-stock:")) {
+      throw new Error(`Insufficient stock for "${message.slice("insufficient-stock:".length)}". Please reduce the quantity.`);
+    }
+    // Firestore unreachable (e.g. preview without a backend) → store locally.
     const fallback: Order = {
       ...order,
       id: `local-${Date.now()}`,
@@ -490,7 +516,7 @@ export async function getOrderByReference(reference: string): Promise<Order | nu
 
 export async function updateOrder(
   id: string,
-  patch: Partial<Pick<Order, "status" | "paymentStatus" | "notes">>,
+  patch: Partial<Pick<Order, "status" | "paymentStatus" | "notes" | "signature" | "signedByName" | "signedAt">>,
 ) {
   try {
     await updateDoc(doc(db, "orders", id), { ...patch, ...updateStamp() });

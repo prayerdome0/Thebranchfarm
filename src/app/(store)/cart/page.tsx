@@ -5,11 +5,11 @@ import { ArrowRight, ShoppingBag, Trash2, Truck } from "lucide-react";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { QuantityStepper } from "@/components/store/ProductCard";
 import { useCart } from "@/contexts/CartContext";
-import { STORE } from "@/lib/constants";
-import { money } from "@/lib/utils";
+import { useStoreConfig } from "@/contexts/StoreConfigContext";
 
 export default function CartPage() {
   const { lines, subtotal, setQuantity, remove } = useCart();
+  const { deliveryFee, freeDeliveryThreshold, formatMoney } = useStoreConfig();
 
   if (!lines.length) {
     return (
@@ -28,7 +28,7 @@ export default function CartPage() {
     );
   }
 
-  const freeDelivery = subtotal >= STORE.freeDeliveryThreshold;
+  const freeDelivery = subtotal >= freeDeliveryThreshold;
 
   return (
     <section className="section cart-section">
@@ -76,7 +76,7 @@ export default function CartPage() {
                   <div>
                     <small>per {line.unit}</small>
                     <Link href={`/shop/${line.productId}`}>{line.name}</Link>
-                    <span>{money(line.price)} each</span>
+                    <span>{formatMoney(line.price)} each</span>
                   </div>
                 </div>
                 <div className="cart-item-quantity">
@@ -89,7 +89,7 @@ export default function CartPage() {
                     <Trash2 size={13} /> Remove
                   </button>
                 </div>
-                <div className="cart-line-total">{money(line.price * line.quantity)}</div>
+                <div className="cart-line-total">{formatMoney(line.price * line.quantity)}</div>
               </div>
             ))}
           </div>
@@ -98,25 +98,25 @@ export default function CartPage() {
             <h2>Order summary</h2>
             <div className="summary-line">
               <span>Subtotal</span>
-              <strong>{money(subtotal)}</strong>
+              <strong>{formatMoney(subtotal)}</strong>
             </div>
             <div className="summary-line">
               <span>Delivery</span>
-              <strong>{freeDelivery ? "Free" : `from ${money(STORE.deliveryFee)}`}</strong>
+              <strong>{freeDelivery ? "Free" : `from ${formatMoney(deliveryFee)}`}</strong>
             </div>
             <div className="delivery-policy">
               <Truck size={17} />
               <div>
                 <strong>Pickup is free at the farm</strong>
                 <p>
-                  Delivery {money(STORE.deliveryFee)}, free over {money(STORE.freeDeliveryThreshold)}.
+                  Delivery {formatMoney(deliveryFee)}, free over {formatMoney(freeDeliveryThreshold)}.
                   Final fee confirmed at checkout.
                 </p>
               </div>
             </div>
             <div className="summary-total">
               <span>Total</span>
-              <strong>{money(subtotal + (freeDelivery ? 0 : STORE.deliveryFee))}</strong>
+              <strong>{formatMoney(subtotal + (freeDelivery ? 0 : deliveryFee))}</strong>
             </div>
             <Link className="button button-primary button-large button-full" href="/checkout">
               Continue to checkout <ArrowRight size={18} />

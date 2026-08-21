@@ -109,6 +109,19 @@ export const settingsSchema = z.object({
   whatsapp: z.string().trim().max(30).optional(),
   email: z.string().trim().max(200).optional(),
   currency: z.string().trim().min(1, "Enter a currency symbol").max(5),
+  deliveryFee: z.coerce.number().min(0, "Delivery fee cannot be negative").default(0),
+  freeDeliveryThreshold: z.coerce
+    .number()
+    .min(0, "Threshold cannot be negative")
+    .default(0),
+  promoCode: z.string().trim().max(40).optional().default(""),
+  promoDiscountPercent: z.coerce
+    .number()
+    .min(0)
+    .max(100, "Discount must be 0–100")
+    .optional()
+    .default(0),
+  heroProductId: z.string().trim().max(200).optional().default(""),
 });
 
 export const productSchema = z.object({
@@ -117,9 +130,11 @@ export const productSchema = z.object({
   category: z.string().trim().min(1, "Choose a category").max(40),
   description: z.string().trim().min(2, "Add a short description").max(2000),
   price: z.coerce.number().min(0.01, "Enter a price greater than zero"),
+  salePrice: z.coerce.number().min(0).optional(),
   unit: z.string().trim().min(1, "Enter a unit (e.g. dozen, kg)").max(30),
   stock: z.coerce.number().min(0, "Stock cannot be negative").default(0),
   trackInventory: z.boolean().default(true),
+  allowBackorder: z.boolean().default(false),
   active: z.boolean().default(true),
   featured: z.boolean().default(false),
 });

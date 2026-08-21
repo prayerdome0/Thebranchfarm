@@ -15,18 +15,19 @@ import {
   Truck,
 } from "lucide-react";
 import { ProductCard } from "@/components/store/ProductCard";
-import { EmptyState } from "@/components/ui/EmptyState";
 import { Loading } from "@/components/ui/Loading";
 import { useCart } from "@/contexts/CartContext";
+import { useStoreConfig } from "@/contexts/StoreConfigContext";
+import { BLUR_PLACEHOLDER } from "@/lib/blur";
 import { BUSINESS, PRODUCT_CATEGORY_LABELS, PRODUCT_KIND_LABELS } from "@/lib/constants";
 import { getProduct, getProducts } from "@/lib/firebase/data";
-import { money } from "@/lib/utils";
 import type { Product } from "@/types";
 
 export default function ProductDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const { add } = useCart();
+  const { formatMoney, deliveryFee } = useStoreConfig();
   const [product, setProduct] = useState<Product | null>(null);
   const [related, setRelated] = useState<Product[]>([]);
   const [quantity, setQuantity] = useState(1);
@@ -55,24 +56,38 @@ export default function ProductDetailPage() {
     });
   }, [product]);
 
-  const outOfStock = product ? product.trackInventory && product.stock <= 0 : false;
-  const lineTotal = product ? product.price * quantity : 0;
+  const gallery = useMemo(() => {
+    if (!product) return [];
+    const primary = product.image ? [product.image] : [];
+    const rest = product.images || [];
+    return [...primary, ...rest.filter((url) => url && url !== product.image)];
+  }, [product]);
 
-  const content = useMemo(() => {
-    if (loading) return <Loading label="Loading product…" />;
-    if (!product) {
-      return (
-        <section className="page-shell not-found-panel">
-          <span>404</span>
-          <h1>Product not found.</h1>
-          <p>This product may have been removed from the shop.</p>
-          <Link href="/shop" className="button button-primary">
-            <ArrowLeft size={18} /> Back to the shop
-          </Link>
-        </section>
-      );
-    }
+  const [activeImage, setActiveImage] = useState(0);
+  useEffect(() => setActiveImage(0), [params.id]);
+
+  if (loading) return <Loading label="Loading product…" />;
+
+  if (!product) {
     return (
+      <section className="page-shell not-found-panel">
+        <span>404</span>
+        <h1>Product not found.</h1>
+        <p>This product may have been removed from the shop.</p>
+        <Link href="/shop" className="button button-primary">
+          <ArrowLeft size={18} /> Back to the shop
+        </Link>
+      </section>
+    );
+  }
+
+  const soldOut = product.trackInventory && product.stock <= 0;
+  const preOrder = soldOut && product.allowBackorder;
+  const price = product.salePrice != null && product.salePrice > 0 ? product.salePrice : product.price;
+  const lineTotal = price * quantity;
+
+  return (
+    <>
       <section className="section product-detail-section">
         <div className="container">
           <Link href="/shop" className="text-link" style={{ marginBottom: 22 }}>
@@ -80,22 +95,48 @@ export default function ProductDetailPage() {
           </Link>
 
           <div className="product-detail-grid">
-            <div className="product-detail-image">
-              {product.image ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={product.image} alt={product.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              ) : (
-                <span
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    display: "grid",
-                    placeItems: "center",
-                    color: "#9fb2a6",
-                  }}
-                >
-                  <ShoppingBag size={56} />
-                </span>
+            <div>
+              <div className="product-detail-image">
+                {gallery.length ? (
+                  <Image
+                    src={gallery[activeImage]}
+                    alt={product.name}
+                    fill
+                    sizes="50vw"
+                    priority
+                    placeholder="blur"
+                    blurDataURL={BLUR_PLACEHOLDER}
+                    style={{ objectFit: "cover" }}
+                  />
+                ) : (
+                  <span
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      display: "grid",
+                      placeItems: "center",
+                      color: "#9fb2a6",
+                    }}
+                  >
+                    <ShoppingBag size={56} />
+                  </span>
+                )}
+              </div>
+              {gallery.length > 1 && (
+                <div className="product-thumbs">
+                  {gallery.map((url, index) => (
+                    <button
+                      key={url}
+                      type="button"
+                      className={index === activeImage ? "active" : ""}
+                      onClick={() => setActiveImage(index)}
+                      aria-label={`View image ${index + 1}`}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={url} alt="" />
+                    </button>
+                  ))}
+                </div>
               )}
             </div>
 
@@ -104,20 +145,33 @@ export default function ProductDetailPage() {
                 {PRODUCT_KIND_LABELS[product.kind]}
                 <span>·</span>
                 {PRODUCT_CATEGORY_LABELS[product.category] || product.category}
-                <span className={outOfStock ? "coming" : "available"}>
-                  {outOfStock ? "Out of stock" : "In stock"}
+                <span className={soldOut && !preOrder ? "coming" : "available"}>
+                  {soldOut ? (preOrder ? "Pre-order" : "Out of stock") : "In stock"}
                 </span>
               </div>
               <h1>{product.name}</h1>
               <p className="product-lede">{product.description}</p>
 
               <div className="product-detail-price">
-                <strong>{money(product.price)}</strong>
+                <strong>{formatMoney(price)}</strong>
+                {product.salePrice != null && product.salePrice > 0 && (
+                  <span style={{ textDecoration: "line-through" }}>{formatMoney(product.price)}</span>
+                )}
                 <span>/ {product.unit}</span>
               </div>
               <div className="product-location">
                 <MapPin size={15} /> Farm location: <strong>{BUSINESS.location}</strong>
               </div>
+
+              {preOrder && (
+                <div className="coming-detail" style={{ marginTop: 18 }}>
+                  <Truck size={20} />
+                  <div>
+                    <strong>Available on pre-order</strong>
+                    <span>Currently out of stock — order now and we&apos;ll reserve the next batch.</span>
+                  </div>
+                </div>
+              )}
 
               <div className="detail-order-box">
                 <label>
@@ -135,9 +189,7 @@ export default function ProductDetailPage() {
                     type="number"
                     min={1}
                     value={quantity}
-                    onChange={(event) =>
-                      setQuantity(Math.max(1, Number(event.target.value) || 1))
-                    }
+                    onChange={(event) => setQuantity(Math.max(1, Number(event.target.value) || 1))}
                     aria-label="Quantity"
                   />
                   <button type="button" onClick={() => setQuantity((value) => value + 1)} aria-label="Increase quantity">
@@ -146,12 +198,12 @@ export default function ProductDetailPage() {
                 </div>
                 <div className="detail-total">
                   <span>Total</span>
-                  <strong>{money(lineTotal)}</strong>
+                  <strong>{formatMoney(lineTotal)}</strong>
                 </div>
                 <div className="detail-buttons">
                   <button
                     className="button button-primary"
-                    disabled={outOfStock}
+                    disabled={soldOut && !preOrder}
                     onClick={() => {
                       add(product, quantity);
                       router.push("/cart");
@@ -169,7 +221,7 @@ export default function ProductDetailPage() {
                 <span>
                   <Truck size={19} />
                   <small>Delivery</small>
-                  <strong>Pickup free · delivery from {money(30)}</strong>
+                  <strong>Pickup free · delivery from {formatMoney(deliveryFee)}</strong>
                 </span>
                 <span>
                   <ShieldCheck size={19} />
@@ -186,12 +238,7 @@ export default function ProductDetailPage() {
           </div>
         </div>
       </section>
-    );
-  }, [loading, product, outOfStock, lineTotal, quantity, add, router]);
 
-  return (
-    <>
-      {content}
       {related.length > 0 && (
         <section className="section related-section">
           <div className="container">

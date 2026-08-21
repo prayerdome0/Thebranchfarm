@@ -10,6 +10,7 @@ import { z } from "zod";
 if (!getApps().length) initializeApp();
 const db = getFirestore();
 const initialAdminEmails = defineString("INITIAL_ADMIN_EMAILS", { default: "" });
+const notificationWebhook = defineString("NOTIFICATION_WEBHOOK_URL", { default: "" });
 const REGION = "us-central1";
 const VALID_ROLES = ["user", "staff", "admin"] as const;
 
@@ -55,6 +56,46 @@ export const bootstrapInitialAdmin = onDocumentCreated(
       snapshot.ref.update({ role: "admin", updatedAt: FieldValue.serverTimestamp() }),
       getAuth().setCustomUserClaims(uid, { role: "admin" }),
     ]);
+  },
+);
+
+/**
+ * Notifies the farm team whenever a customer places an order.
+ *
+ * The notification is delivered to a configurable webhook (WhatsApp / email /
+ * chat service of your choice) by setting `NOTIFICATION_WEBHOOK_URL`. When the
+ * value is empty the function is a no-op, so nothing breaks out of the box.
+ */
+export const notifyOrderCreated = onDocumentCreated(
+  { document: "orders/{orderId}", region: REGION },
+  async (event) => {
+    const webhook = notificationWebhook.value().trim();
+    if (!webhook) return;
+    const snapshot = event.data;
+    if (!snapshot) return;
+    const order = snapshot.data();
+    const items = Array.isArray(order.items)
+      ? order.items
+          .map((item: { name?: string; quantity?: number }) => `${item.quantity ?? 1} × ${item.name ?? "item"}`)
+          .join(", ")
+      : "";
+    const payload = {
+      event: "order.created",
+      reference: order.reference,
+      customer: order.customer?.name || "Guest",
+      phone: order.customer?.phone || "",
+      total: order.total,
+      fulfillment: order.fulfillment,
+      items,
+      trackingUrl: `/track`,
+    };
+    await fetch(webhook, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }).catch(() => {
+      /* notification delivery is best-effort */
+    });
   },
 );
 

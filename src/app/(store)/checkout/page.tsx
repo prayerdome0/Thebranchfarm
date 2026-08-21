@@ -10,6 +10,7 @@ import {
   MapPin,
   PackageCheck,
   ShoppingBag,
+  Tag,
   Truck,
   UserRound,
   Phone,
@@ -17,14 +18,17 @@ import {
   MessageSquareText,
 } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
-import { PAYMENT_METHODS, STORE } from "@/lib/constants";
+import { useStoreConfig } from "@/contexts/StoreConfigContext";
+import { PAYMENT_METHODS } from "@/lib/constants";
 import { createOrder } from "@/lib/firebase/data";
 import { checkoutSchema } from "@/lib/validation";
-import { friendlyError, money } from "@/lib/utils";
+import { friendlyError } from "@/lib/utils";
 
 export default function CheckoutPage() {
   const router = useRouter();
   const { lines, subtotal, clear } = useCart();
+  const { deliveryFee, freeDeliveryThreshold, formatMoney, promoCode, promoDiscountPercent } =
+    useStoreConfig();
 
   const [form, setForm] = useState({
     name: "",
@@ -34,6 +38,7 @@ export default function CheckoutPage() {
     deliveryAddress: "",
     paymentMethod: PAYMENT_METHODS[0],
     notes: "",
+    promo: "",
     agree: false,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -55,9 +60,14 @@ export default function CheckoutPage() {
   const update = (key: keyof typeof form, value: string | boolean) =>
     setForm((current) => ({ ...current, [key]: value }));
 
-  const freeDelivery = subtotal >= STORE.freeDeliveryThreshold;
-  const deliveryFee = form.fulfillment === "delivery" ? (freeDelivery ? 0 : STORE.deliveryFee) : 0;
-  const total = subtotal + deliveryFee;
+  const freeDelivery = subtotal >= freeDeliveryThreshold;
+  const deliveryTotal = form.fulfillment === "delivery" ? (freeDelivery ? 0 : deliveryFee) : 0;
+
+  const promoApplied =
+    Boolean(promoCode) &&
+    form.promo.trim().toLowerCase() === promoCode.toLowerCase();
+  const discount = promoApplied ? (subtotal * promoDiscountPercent) / 100 : 0;
+  const total = subtotal - discount + deliveryTotal;
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -79,8 +89,8 @@ export default function CheckoutPage() {
           quantity: line.quantity,
           image: line.image,
         })),
-        subtotal,
-        deliveryFee,
+        subtotal: subtotal - discount,
+        deliveryFee: deliveryTotal,
         total,
         customer: {
           name: parsed.data.name,
@@ -95,7 +105,8 @@ export default function CheckoutPage() {
       clear();
       router.replace(`/order/${order.reference}`);
     } catch (cause) {
-      setServerError(friendlyError(cause));
+      const message = cause instanceof Error ? cause.message : "";
+      setServerError(/stock/i.test(message) ? message : friendlyError(cause));
       setSubmitting(false);
     }
   };
@@ -212,7 +223,7 @@ export default function CheckoutPage() {
                   <span>
                     <Truck size={20} />
                     <strong>Delivery</strong>
-                    <small>{freeDelivery ? "Free over " + money(STORE.freeDeliveryThreshold) : money(STORE.deliveryFee) + " delivery fee"}</small>
+                    <small>{freeDelivery ? "Free over " + formatMoney(freeDeliveryThreshold) : formatMoney(deliveryFee) + " delivery fee"}</small>
                   </span>
                 </label>
               </fieldset>
@@ -238,7 +249,7 @@ export default function CheckoutPage() {
                       <p>
                         {freeDelivery
                           ? "Your order qualifies for free delivery."
-                          : `Delivery is ${money(STORE.deliveryFee)}. We'll confirm the address when we call.`}
+                          : `Delivery is ${formatMoney(deliveryFee)}. We'll confirm the address when we call.`}
                       </p>
                     </div>
                   </div>
@@ -273,6 +284,27 @@ export default function CheckoutPage() {
                   ))}
                 </select>
               </label>
+
+              {Boolean(promoCode) && (
+                <label className="field" style={{ marginTop: 16 }}>
+                  <span>
+                    Promo code <em>(optional)</em>
+                  </span>
+                  <div className="input-with-icon">
+                    <Tag size={18} />
+                    <input
+                      value={form.promo}
+                      onChange={(e) => update("promo", e.target.value)}
+                      placeholder="Enter a promo code"
+                    />
+                  </div>
+                  {promoApplied && (
+                    <small style={{ color: "var(--success)" }}>
+                      Code applied — {promoDiscountPercent}% off.
+                    </small>
+                  )}
+                </label>
+              )}
 
               <label className="field" style={{ marginTop: 16 }}>
                 <span>
@@ -329,25 +361,31 @@ export default function CheckoutPage() {
                   <p>
                     <strong>{line.name}</strong>
                     <small>
-                      {money(line.price)} × {line.quantity}
+                      {formatMoney(line.price)} × {line.quantity}
                     </small>
                   </p>
-                  <strong>{money(line.price * line.quantity)}</strong>
+                  <strong>{formatMoney(line.price * line.quantity)}</strong>
                 </div>
               ))}
             </div>
             <div className="checkout-totals">
               <p>
                 <span>Subtotal</span>
-                <span>{money(subtotal)}</span>
+                <span>{formatMoney(subtotal)}</span>
               </p>
+              {promoApplied && (
+                <p>
+                  <span>Discount ({promoDiscountPercent}%)</span>
+                  <span>-{formatMoney(discount)}</span>
+                </p>
+              )}
               <p>
                 <span>Delivery</span>
-                <span>{deliveryFee === 0 ? "Free" : money(deliveryFee)}</span>
+                <span>{deliveryTotal === 0 ? "Free" : formatMoney(deliveryTotal)}</span>
               </p>
               <div>
                 <span>Total</span>
-                <strong>{money(total)}</strong>
+                <strong>{formatMoney(total)}</strong>
               </div>
               <small>Pay on collection or delivery — no online payment.</small>
             </div>
