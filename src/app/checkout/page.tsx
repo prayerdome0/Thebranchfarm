@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/contexts/CartContext";
 import { createOrder } from "@/lib/firebase/data";
 import { checkoutSchema } from "@/lib/validation";
+import { BUSINESS } from "@/lib/constants";
 import { deliveryDetails, friendlyError, money } from "@/lib/utils";
 
 const initialForm = { fullName: "", phone: "", email: "", location: "", address: "", instructions: "", whatsappAvailable: true };
@@ -55,14 +56,18 @@ export default function CheckoutPage() {
       clearCart();
       router.push(`/order-success/${response.orderNumber}`);
     } catch (error) {
+      console.error("Order placement failed:", error);
       setServerError(friendlyError(error)); setSubmitting(false);
       try { window.scrollTo({ top: 0, behavior: "smooth" }); } catch {}
     }
   };
+  const whatsappFallback = `https://wa.me/${BUSINESS.whatsappLink}?text=${encodeURIComponent(
+    `Hello ${BUSINESS.name}, the website could not place my order. Please help me order: ${items.map(({ product, quantity }) => `${product.name} × ${quantity}`).join(", ")}. Total: ${money(total)}.${form.fullName ? ` My name is ${form.fullName}.` : ""}${form.phone ? ` My number is ${form.phone}.` : ""}`,
+  )}`;
 
   return (
     <section className="checkout-section"><div className="container checkout-container"><div className="checkout-top"><Link href="/cart"><ArrowLeft size={17} /> Back to cart</Link><div className="secure-checkout"><LockKeyhole size={16} /> Secure checkout</div></div><div className="checkout-title"><span className="eyebrow">Almost there</span><h1>Delivery details</h1><p>Official prices are checked again by the secure order service before your order is recorded.</p></div>
-      {serverError && <div className="checkout-server-error"><CircleAlert size={22} /><div><strong>We couldn&apos;t place the order</strong><p>{serverError} Your cart has been kept safely.</p></div></div>}
+      {serverError && <div className="checkout-server-error"><CircleAlert size={22} /><div><strong>We couldn&apos;t place the order</strong><p>{serverError} Your cart has been kept safely — nothing was charged.</p><a className="checkout-error-whatsapp" href={whatsappFallback} target="_blank" rel="noopener noreferrer"><MessageCircle size={15} /> Send this order on WhatsApp instead</a></div></div>}
       <form onSubmit={submit} className="checkout-layout" noValidate><div className="checkout-form-column">
         <section className="checkout-card"><div className="checkout-card-head"><span>1</span><div><h2>Your details</h2><p>How should our team contact you?</p></div></div><div className="form-grid"><label className="field field-full"><span>Full name *</span><div className="input-with-icon"><UserRound size={18} /><input value={form.fullName} onChange={(e) => update("fullName", e.target.value)} autoComplete="name" /></div>{errors.fullName && <small className="field-error">{errors.fullName}</small>}</label><label className="field"><span>Phone *</span><input value={form.phone} onChange={(e) => update("phone", e.target.value)} inputMode="tel" autoComplete="tel" placeholder="+268 …" />{errors.phone && <small className="field-error">{errors.phone}</small>}</label><label className="field"><span>Email <em>optional</em></span><input value={form.email} onChange={(e) => update("email", e.target.value)} type="email" autoComplete="email" />{errors.email && <small className="field-error">{errors.email}</small>}</label></div><fieldset className="whatsapp-choice"><legend>Do you use WhatsApp on this number?</legend><label><input type="radio" checked={form.whatsappAvailable} onChange={() => update("whatsappAvailable", true)} /><span><MessageCircle size={18} /><strong>Yes</strong><small>Show a WhatsApp option after saving</small></span></label><label><input type="radio" checked={!form.whatsappAvailable} onChange={() => update("whatsappAvailable", false)} /><span><UserRound size={18} /><strong>No</strong><small>Call or email me instead</small></span></label></fieldset><p className="choice-note">WhatsApp is optional and never blocks an order.</p></section>
         <section className="checkout-card"><div className="checkout-card-head"><span>2</span><div><h2>Delivery</h2><p>Tell us where this order should go.</p></div></div><div className="form-grid"><label className="field"><span>Town / location *</span><select value={form.location} onChange={(e) => update("location", e.target.value)}><option value="">Select location</option><option>Manzini</option><option>Matsapha</option><option>Ngculwini</option><option value="Other location">Other location</option></select>{errors.location && <small className="field-error">{errors.location}</small>}</label><label className="field"><span>Address / meeting point *</span><input value={form.address} onChange={(e) => update("address", e.target.value)} placeholder="Area, landmark or collection point" />{errors.address && <small className="field-error">{errors.address}</small>}</label><label className="field field-full"><span>Delivery instructions <em>optional</em></span><textarea value={form.instructions} onChange={(e) => update("instructions", e.target.value)} rows={3} placeholder="Anything our delivery team should know?" /></label></div>{form.location && <div className={`delivery-result ${delivery.fee === 0 ? "free" : "arrange"}`}><Truck size={20} /><div><strong>{delivery.label}</strong><p>{delivery.fee === 0 ? `Current free delivery applies around ${form.location}.` : "Our team will contact you to arrange delivery. No fee has been added."}</p></div></div>}</section>

@@ -1,0 +1,85 @@
+name: Deploy Firebase backend
+
+# The storefront auto-deploys from main (Vercel / Firebase App Hosting), but
+# checkout, order tracking, quotations and every staff/admin action depend on
+# the callable Cloud Functions and Firestore rules in this repository.
+#
+# If the backend is not deployed, every callable URL answers HTTP 404 and the
+# storefront shows "Something went wrong. Please try again." (functions/not-found).
+# This workflow keeps the production backend in sync with main so packing code
+# can never again ship without its backend.
+#
+# One-time setup: add a FIREBASE_SERVICE_ACCOUNT repository secret containing
+# the JSON key of a service account with the "Firebase Admin" role on the
+# thebranchfarm project (Firebase console → Project settings → Service
+# accounts → Generate new private key), then run this workflow once from the
+# Actions tab ("Run workflow").
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "functions/**"
+      - "firebase/**"
+      - "firebase.json"
+      - ".firebaserc"
+      - ".github/workflows/firebase-deploy.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: firebase-backend
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy rules, indexes, storage rules and functions
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check credentials are configured
+        run: |
+          if [ -z "${{ secrets.FIREBASE_SERVICE_ACCOUNT }}" ]; then
+            echo "::error title=Missing secret::Add the FIREBASE_SERVICE_ACCOUNT repository secret (service account JSON), then re-run this workflow."
+            exit 1
+          fi
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: functions/package-lock.json
+
+      - name: Install and compile Cloud Functions
+        working-directory: functions
+        run: |
+          npm ci
+          npm run build
+
+      - name: Write Firebase credentials
+        run: echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > "$RUNNER_TEMP/firebase-service-account.json"
+
+      - name: Deploy Firestore rules, indexes, storage rules and callable functions
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-service-account.json
+        run: >-
+          npx --yes firebase-tools@latest deploy
+          --only firestore:rules,firestore:indexes,storage,functions
+          --project thebranchfarm
+          --non-interactive
+
+      - name: Verify callable functions respond
+        run: |
+          set -e
+          for fn in createOrder trackOrder createQuotation; do
+            status=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
+              "https://us-central1-thebranchfarm.cloudfunctions.net/${fn}" \
+              -H "content-type: application/json" -d '{"data":{}}')
+            if [ "$status" = "404" ]; then
+              echo "::error::${fn} still answers 404 after deployment"
+              exit 1
+            fi
+            echo "${fn} responded with HTTP ${status} (expected 400 for an empty payload)"
+          done
