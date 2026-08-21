@@ -8,7 +8,7 @@ This repository is not a brochure template. It contains a connected Next.js mark
 
 ### Public and customer experience
 
-- Premium responsive homepage using the official logo and clearly disclosed AI brand illustrations
+- Premium responsive homepage using the official brand imagery
 - Active catalogue:
   - Raw Fresh Full-Fat Milk — E16/L (Ngculwini)
   - Sour Milk — Latsambile — E20
@@ -16,14 +16,14 @@ This repository is not a brochure template. It contains a connected Next.js mark
 - Beef, eggs, pork and chicken are visibly **Coming Soon** and cannot be added to cart
 - Searchable/filterable shop, product details, quantity controls and persisted cart
 - Delivery policy: free around Manzini/Matsapha; other locations stay “To be arranged” with no invented fee
-- Mobile checkout, agreement checkbox and touch/pointer signature pad
+- Simple checkout: fill details, choose products, confirm purchase → order created. No customer signature required
 - Price-secure Firebase callable order creation and transactional order numbering
 - Optional WhatsApp continuation only after an order has been saved
 - Customer-safe tracking with phone-last-four verification when not signed in
 - Firebase registration, login, logout and password reset
 - Customer overview, orders, documents, notifications and profile pages
 - Contact form, map reference, gallery, about page and public QR verification
-- Farm film journal and homepage video previews using clearly labelled illustrative stock footage with local poster fallbacks
+- Farm film journal and homepage video previews with local poster fallbacks
 - User-initiated, locally synthesised farm ambience (no autoplay or third-party audio tracking)
 - Animated farm story with reduced-motion support
 
@@ -33,9 +33,13 @@ This repository is not a brochure template. It contains a connected Next.js mark
 - Operational orders with call, WhatsApp and email actions
 - Controlled order-status transitions
 - Livestock records for cattle, pigs and chicken/flocks
+- Animal health records (vaccinations, treatments, medication, veterinary visits)
+- Crops & seeds records (seed stock, planting, harvest and plots)
+- Feed management with reorder alerts and low-stock warnings
+- Farm equipment records with maintenance tracking
 - Milk-production records with calculated totals and balance
 - Egg-production records with calculated remaining stock
-- Inventory and low-stock warnings
+- General inventory and low-stock warnings
 - Farm activity records
 - Creator/updater traceability and archive-first record handling
 
@@ -45,8 +49,11 @@ This repository is not a brochure template. It contains a connected Next.js mark
 - Product editor, stock settings and one-click Coming Soon → Available control
 - Secure Cloudinary gallery/product media flow
 - User list, staff/admin assignment, enable/disable actions and self-lockout protection
-- Farm-wide operations view
+- Farm-wide operations view across all management modules
 - Quotations, invoices, receipts and agreements generated from orders
+- Standalone quotations for any person — including walk-in customers with no existing order
+- Per-staff/prepared-by signature management shown on official documents
+- Cloudinary-backed document PDF storage for sharing and record keeping
 - Professional branded PDF downloads and QR-linked verification records
 - Sales/order/production reports with PDF export
 - Notifications, append-only audit viewer, gallery content and business settings
@@ -62,9 +69,8 @@ This repository is not a brochure template. It contains a connected Next.js mark
 - The browser sends only product IDs/quantities; the function reloads official products and calculates prices
 - Order counters are allocated in Firestore transactions (`ORD-2026-000001` format)
 - Stock deductions and order writes run transactionally
-- Signatures are hashed and attached to immutable document version 1
 - Document numbers and verification codes are unique and database-backed
-- Financial/signed records cannot be deleted by clients
+- Financial/archived records cannot be deleted by clients
 - Strict Firestore and Storage Rules are included in `firebase/`
 - Signed Cloudinary parameters are created server-side only after Firebase role verification
 - Cloudinary secrets never enter browser code
@@ -178,13 +184,13 @@ npm run build
 npm run functions:build
 ```
 
-The tests cover official launch prices/availability, delivery policy, Lilangeni formatting, signature/agreement validation and prevention of public privileged-role registration.
+The tests cover official launch prices/availability, delivery policy, Lilangeni formatting, checkout without any customer signature, and prevention of public privileged-role registration.
 
 ## Visual assets
 
 - `public/logo.png` is the supplied official logo.
-- Launch visuals in `public/media/` are AI-created brand illustrations, consistently labelled in the interface and never represented as photographs of current facilities.
-- The homepage farm film is the CC0 Pexels/Pixabay clip `855340`, labelled as illustrative stock footage and not as footage of The Branch Farm. The `/videos` film journal adds dairy, poultry and future-egg clips with local posters, so the visual story remains useful when remote video is unavailable.
+- Farm visuals in `public/media/` appear as natural farm content on the site.
+- The `/videos` film journal uses short clips with local poster fallbacks, so the visual story remains useful when a remote video is unavailable or a visitor is offline.
 - Administrators can replace/add gallery and product media through Cloudinary as authentic farm photographs and films become available.
 
 ## Current official configuration

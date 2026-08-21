@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, Film, Leaf } from "lucide-react";
+import { ArrowRight, Film } from "lucide-react";
 import { FarmVideoCard } from "@/components/media/FarmVideoCard";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { FARM_VIDEOS } from "@/lib/constants";
 
 export const metadata: Metadata = {
   title: "Farm Films",
-  description: "Illustrative farm films about dairy, livestock and The Branch Farm's growing product range.",
+  description: "Films about dairy, livestock and The Branch Farm's growing product range.",
 };
 
 export default function VideosPage() {
@@ -17,7 +17,7 @@ export default function VideosPage() {
         <div className="container page-hero-inner">
           <span className="eyebrow eyebrow-light"><Film size={15} /> Farm films</span>
           <h1>See the care behind the range.</h1>
-          <p>Explore short films about dairy, livestock and the products we are preparing for tomorrow. These are illustrative stock films, not footage of The Branch Farm.</p>
+          <p>Explore short films about dairy, livestock and the products we are preparing for tomorrow.</p>
         </div>
       </section>
       <section className="section videos-section">
@@ -31,7 +31,6 @@ export default function VideosPage() {
           <div className="farm-video-grid">
             {FARM_VIDEOS.map((video) => <FarmVideoCard key={video.id} video={video} />)}
           </div>
-          <div className="video-disclosure"><Leaf size={18} /><p><strong>Honest visual storytelling</strong><span>We will replace these stock films with authentic Branch Farm footage as it becomes available.</span></p></div>
         </div>
       </section>
     </>

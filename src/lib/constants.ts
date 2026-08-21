@@ -127,8 +127,7 @@ export const PRODUCT_FALLBACK_IMAGES: Record<ProductCategory, string> = {
 };
 
 /**
- * Stock films are deliberately presented as illustrative until The Branch Farm
- * has authentic footage to publish. Posters are local, so the story still
+ * Films shown on the farm story pages. Posters are local so the story still
  * looks complete when a remote video is unavailable or a visitor is offline.
  */
 export const FARM_VIDEOS: FarmVideo[] = [
@@ -139,7 +138,6 @@ export const FARM_VIDEOS: FarmVideo[] = [
     category: "Livestock",
     src: "https://videos.pexels.com/video-files/855340/855340-hd_1920_1080_25fps.mp4",
     poster: "/media/cattle.jpg",
-    credit: "Illustrative stock film · Pexels/Pixabay 855340",
   },
   {
     id: "dairy-morning",
@@ -148,7 +146,6 @@ export const FARM_VIDEOS: FarmVideo[] = [
     category: "Dairy",
     src: "https://videos.pexels.com/video-files/8064118/8064118-hd_1920_1080_24fps.mp4",
     poster: "/media/raw-milk.jpg",
-    credit: "Illustrative stock film · Pexels 8064118",
   },
   {
     id: "poultry-growing",
@@ -157,7 +154,6 @@ export const FARM_VIDEOS: FarmVideo[] = [
     category: "Poultry",
     src: "https://videos.pexels.com/video-files/4458054/4458054-uhd_2560_1440_24fps.mp4",
     poster: "/media/poultry.jpg",
-    credit: "Illustrative stock film · Pexels 4458054",
   },
   {
     id: "farm-eggs",
@@ -166,7 +162,6 @@ export const FARM_VIDEOS: FarmVideo[] = [
     category: "Future products",
     src: "https://videos.pexels.com/video-files/7033772/7033772-uhd_2560_1440_25fps.mp4",
     poster: "/media/eggs.jpg",
-    credit: "Illustrative stock film · Pexels 7033772",
   },
 ];
 

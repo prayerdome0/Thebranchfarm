@@ -17,15 +17,15 @@ interface GalleryItem {
 }
 
 const launchGallery: GalleryItem[] = [
-  { src: "/media/farm-hero.jpg", title: "A growing farm · Brand illustration", category: "Farm", wide: true },
-  { src: "/media/raw-milk.jpg", title: "Fresh full-fat milk · Brand illustration", category: "Dairy" },
-  { src: "/media/cattle.jpg", title: "Livestock care · Brand illustration", category: "Animals" },
-  { src: "/media/latsambile.jpg", title: "Traditional sour milk · Brand illustration", category: "Products" },
-  { src: "/media/poultry.jpg", title: "Future poultry · Brand illustration", category: "Animals", tall: true },
-  { src: "/media/eggs.jpg", title: "Future farm eggs · Brand illustration", category: "Products" },
-  { src: "/media/farm-operations.jpg", title: "Thoughtful operations · Brand illustration", category: "Production", wide: true },
-  { src: "/media/lashubile.jpg", title: "Made for sharing · Brand illustration", category: "Products" },
-  { src: "/media/farm-sunset.jpg", title: "Rooted in Eswatini · Brand illustration", category: "Farm" },
+  { src: "/media/farm-hero.jpg", title: "A growing farm", category: "Farm", wide: true },
+  { src: "/media/raw-milk.jpg", title: "Fresh full-fat milk", category: "Dairy" },
+  { src: "/media/cattle.jpg", title: "Livestock care", category: "Animals" },
+  { src: "/media/latsambile.jpg", title: "Traditional sour milk", category: "Products" },
+  { src: "/media/poultry.jpg", title: "Future poultry", category: "Animals", tall: true },
+  { src: "/media/eggs.jpg", title: "Future farm eggs", category: "Products" },
+  { src: "/media/farm-operations.jpg", title: "Thoughtful operations", category: "Production", wide: true },
+  { src: "/media/lashubile.jpg", title: "Made for sharing", category: "Products" },
+  { src: "/media/farm-sunset.jpg", title: "Rooted in Eswatini", category: "Farm" },
 ];
 
 export default function GalleryPage() {
@@ -69,7 +69,7 @@ export default function GalleryPage() {
               </button>
             ))}
           </div>
-          <p className="gallery-disclosure"><Camera size={16} /> Launch visuals containing “Brand illustration” are AI-created and are not photographs of current facilities.</p>
+
         </div>
       </section>
       {active && (

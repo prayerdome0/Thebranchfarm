@@ -1,13 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { Activity, ArrowRight, Boxes, Egg, Milk, PawPrint } from "lucide-react";
+import { Activity, ArrowRight, Boxes, Egg, Milk, PawPrint, Sprout, Stethoscope, Wheat, Wrench } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getCollection } from "@/lib/firebase/data";
 
 type Row = Record<string, unknown> & { id: string; archived?: boolean };
 const modules = [
   { href: "/admin/farm/animals", icon: PawPrint, title: "Livestock", copy: "Cattle, pigs, chickens, health and status records.", collection: "animals" },
+  { href: "/admin/farm/health", icon: Stethoscope, title: "Animal health", copy: "Vaccinations, treatments, medication and veterinary visits.", collection: "animalHealth" },
+  { href: "/admin/farm/crops", icon: Sprout, title: "Crops & seeds", copy: "Seed stock, planting, harvest and plot records.", collection: "crops" },
+  { href: "/admin/farm/feed", icon: Wheat, title: "Feed", copy: "Feed stock, suppliers, usage and reorder alerts.", collection: "feed" },
+  { href: "/admin/farm/equipment", icon: Wrench, title: "Equipment", copy: "Tractors, pumps, tools and machinery with maintenance.", collection: "equipment" },
   { href: "/admin/farm/milk", icon: Milk, title: "Milk production", copy: "Daily litres, sales, remaining and waste.", collection: "milkProduction" },
   { href: "/admin/farm/eggs", icon: Egg, title: "Egg production", copy: "Collected, sold, damaged and remaining stock.", collection: "eggProduction" },
   { href: "/admin/farm/inventory", icon: Boxes, title: "Inventory", copy: "Feed, supplies, packaging and product balances.", collection: "inventory" },

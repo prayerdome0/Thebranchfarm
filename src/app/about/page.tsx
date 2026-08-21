@@ -10,9 +10,9 @@ export default function AboutPage() {
   return (
     <>
       <section className="about-hero">
-        <Image src="/media/farm-sunset.jpg" alt="Conceptual illustrated Eswatini farm landscape at sunset" fill priority sizes="100vw" />
+        <Image src="/media/farm-sunset.jpg" alt="The Branch Farm at sunset" fill priority sizes="100vw" />
         <div className="about-hero-overlay" />
-        <div className="container about-hero-content"><span className="eyebrow eyebrow-light">Our farm</span><h1>Growing with purpose.<br />Serving with care.</h1><p>The Branch Farm is a young Eswatini agricultural business connecting honest production with modern, convenient service.</p><span className="visual-disclosure">AI-created brand illustration · not a farm photograph</span></div>
+        <div className="container about-hero-content"><span className="eyebrow eyebrow-light">Our farm</span><h1>Growing with purpose.<br />Serving with care.</h1><p>The Branch Farm is a young Eswatini agricultural business connecting honest production with modern, convenient service.</p></div>
       </section>
 
       <section className="section about-intro-section">
@@ -25,7 +25,7 @@ export default function AboutPage() {
       <section className="section values-section">
         <div className="container values-layout">
           <div className="values-image-stack">
-            <div className="values-image-main"><Image src="/media/cattle.jpg" alt="Conceptual illustration of Nguni cattle grazing" fill sizes="(max-width: 900px) 100vw, 50vw" /><span className="visual-label">Conceptual brand imagery</span></div>
+            <div className="values-image-main"><Image src="/media/cattle.jpg" alt="Nguni cattle grazing" fill sizes="(max-width: 900px) 100vw, 50vw" /></div>
             <div className="values-fact"><strong>2026</strong><span>Our story begins in Eswatini</span></div>
           </div>
           <div className="values-copy"><span className="eyebrow">What guides us</span><h2>A farm should earn trust every day.</h2><div className="values-list">

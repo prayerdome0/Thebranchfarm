@@ -18,7 +18,7 @@ export function Footer() {
             <p className="footer-slogan">Nayi Plug</p>
           </div>
           <p className="footer-intro">Fresh agricultural products, thoughtful service and connected farm operations — built in Eswatini.</p>
-          <span className="illustration-note">Website farm visuals are brand illustrations.</span>
+
         </div>
         <div>
           <h3>Explore</h3>

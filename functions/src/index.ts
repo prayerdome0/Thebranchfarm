@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import { getApps, initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { FieldValue, Timestamp, getFirestore } from "firebase-admin/firestore";
@@ -111,11 +111,19 @@ export const auditMilkCreated = farmCreationAudit("milkProduction");
 export const auditEggsCreated = farmCreationAudit("eggProduction");
 export const auditInventoryCreated = farmCreationAudit("inventory");
 export const auditActivityCreated = farmCreationAudit("farmActivities");
+export const auditCropCreated = farmCreationAudit("crops");
+export const auditFeedCreated = farmCreationAudit("feed");
+export const auditHealthCreated = farmCreationAudit("animalHealth");
+export const auditEquipmentCreated = farmCreationAudit("equipment");
 export const auditAnimalUpdated = farmUpdateAudit("animals");
 export const auditMilkUpdated = farmUpdateAudit("milkProduction");
 export const auditEggsUpdated = farmUpdateAudit("eggProduction");
 export const auditInventoryUpdated = farmUpdateAudit("inventory");
 export const auditActivityUpdated = farmUpdateAudit("farmActivities");
+export const auditCropUpdated = farmUpdateAudit("crops");
+export const auditFeedUpdated = farmUpdateAudit("feed");
+export const auditHealthUpdated = farmUpdateAudit("animalHealth");
+export const auditEquipmentUpdated = farmUpdateAudit("equipment");
 
 export const setUserRole = onCall({ region: REGION }, async (request) => {
   const current = await actor(request.auth?.uid, ["admin"]);
@@ -195,13 +203,11 @@ const checkoutSchema = z.object({
   items: z.array(z.object({ productId: z.string().min(2).max(100), quantity: z.number().int().min(1).max(999) }).strict()).min(1).max(30),
   customer: z.object({ fullName: z.string().trim().min(2).max(100), phone: z.string().trim().min(8).max(24), whatsappAvailable: z.boolean(), email: z.string().email().max(200).optional() }).strict(),
   delivery: z.object({ address: z.string().trim().min(4).max(300), location: z.string().trim().min(2).max(100), instructions: z.string().max(500).optional() }).strict(),
-  agreementAccepted: z.literal(true),
-  signature: z.string().startsWith("data:image/png;base64,").max(700_000),
 }).strict();
 
 export const createOrder = onCall({ region: REGION, timeoutSeconds: 60 }, async (request) => {
   let input: z.infer<typeof checkoutSchema>;
-  try { input = checkoutSchema.parse(request.data); } catch { throw new HttpsError("invalid-argument", "Check the order details and signature."); }
+  try { input = checkoutSchema.parse(request.data); } catch { throw new HttpsError("invalid-argument", "Check the order details."); }
   const combined = new Map<string, number>();
   for (const item of input.items) combined.set(item.productId, (combined.get(item.productId) || 0) + item.quantity);
   const itemPairs = [...combined.entries()];
@@ -224,7 +230,6 @@ export const createOrder = onCall({ region: REGION, timeoutSeconds: 60 }, async 
   const total = subtotal;
   const orderNumber = await nextNumber("ORD");
   const orderRef = db.collection("orders").doc();
-  const signatureHash = createHash("sha256").update(input.signature).digest("hex");
   const order = {
     orderNumber,
     customer: { ...input.customer, userId: request.auth?.uid || null },
@@ -234,9 +239,7 @@ export const createOrder = onCall({ region: REGION, timeoutSeconds: 60 }, async 
     deliveryFee,
     total,
     status: "pending" as const,
-    agreementAccepted: input.agreementAccepted,
-    signature: input.signature,
-    signatureHash,
+    agreementAccepted: false,
     documentVersion: 1,
     statusHistory: [{ status: "pending", at: Timestamp.now(), by: request.auth?.uid || "customer" }],
     createdAt: FieldValue.serverTimestamp(),
@@ -308,12 +311,15 @@ export const createDocumentFromOrder = onCall({ region: REGION }, async (request
   while ((await db.doc(`documentVerifications/${code}`).get()).exists) code = verificationCode();
   const documentRef = db.collection("documents").doc();
   const status = input.type === "quotation" ? "draft" : input.type === "receipt" ? "paid" : "sent";
+  let preparedSignature = "";
+  const stored = await db.doc(`signatures/${current.uid}`).get();
+  if (stored.exists) preparedSignature = String(stored.data()?.signature || "");
   const document = {
     id: documentRef.id,
     customerId: order.customer?.userId || null,
     documentNumber,
     type: input.type,
-    customer: { fullName: order.customer.fullName, phone: order.customer.phone, email: order.customer.email || null },
+    customer: { fullName: order.customer.fullName, phone: order.customer.phone, email: order.customer.email || null, address: order.delivery?.address || null },
     items: order.items,
     subtotal: order.subtotal,
     discount: 0,
@@ -326,8 +332,8 @@ export const createDocumentFromOrder = onCall({ region: REGION }, async (request
     paymentReference: input.payment?.reference || null,
     verificationCode: code,
     version: 1,
-    signature: order.signature || null,
-    signatureHash: order.signatureHash || null,
+    signature: preparedSignature || null,
+    preparedBy: current.name,
     issuedBy: current.uid,
     createdAt: Timestamp.now(),
     updatedAt: Timestamp.now(),
@@ -362,6 +368,118 @@ export const archiveDocument = onCall({ region: REGION }, async (request) => {
   if (code) batch.update(db.doc(`documentVerifications/${code}`), { status: "archived", archivedAt: Timestamp.now() });
   await batch.commit();
   await audit("document_archived", current, { targetType: snapshot.data()?.type || "document", targetId: input.documentId, documentNumber: snapshot.data()?.documentNumber });
+  return { ok: true };
+});
+
+export const saveUserSignature = onCall({ region: REGION }, async (request) => {
+  const current = await actor(request.auth?.uid, ["staff", "admin"]);
+  const input = z.object({ url: z.string().url().max(1200).optional(), signature: z.string().startsWith("data:image/png;base64,").max(700_000).optional() }).strict().refine((value) => Boolean(value.url || value.signature), { message: "Provide a signature image." }).parse(request.data);
+  const value = input.url || input.signature || "";
+  const batch = db.batch();
+  batch.set(db.doc(`users/${current.uid}`), { signature: value, updatedAt: Timestamp.now() }, { merge: true });
+  batch.set(db.doc(`signatures/${current.uid}`), { userId: current.uid, name: current.name, signature: value, updatedAt: Timestamp.now(), createdAt: FieldValue.serverTimestamp() }, { merge: true });
+  await batch.commit();
+  await audit("signature_updated", current, { targetType: "user", targetId: current.uid });
+  return { ok: true };
+});
+
+export const removeUserSignature = onCall({ region: REGION }, async (request) => {
+  const current = await actor(request.auth?.uid, ["staff", "admin"]);
+  const batch = db.batch();
+  batch.update(db.doc(`users/${current.uid}`), { signature: FieldValue.delete(), updatedAt: Timestamp.now() });
+  batch.set(db.doc(`signatures/${current.uid}`), { userId: current.uid, name: current.name, signature: "", updatedAt: Timestamp.now() }, { merge: true });
+  await batch.commit();
+  await audit("signature_removed", current, { targetType: "user", targetId: current.uid });
+  return { ok: true };
+});
+
+const quotationSchema = z.object({
+  customer: z.object({
+    fullName: z.string().trim().min(2).max(100),
+    phone: z.string().trim().min(8).max(24),
+    email: z.string().email().max(200).optional(),
+    address: z.string().trim().max(300).optional(),
+  }).strict(),
+  items: z.array(z.object({
+    productName: z.string().trim().min(1).max(150),
+    description: z.string().max(500).optional(),
+    quantity: z.number().int().min(1).max(9999),
+    unit: z.string().trim().min(1).max(40),
+    price: z.number().min(0).max(10_000_000),
+    discount: z.number().min(0).max(10_000_000).optional().default(0),
+  }).strict()).min(1).max(40),
+  notes: z.string().max(3000).optional(),
+  signature: z.string().max(1200).optional(),
+  quoteDate: z.string().max(20).optional(),
+}).strict();
+
+export const createQuotation = onCall({ region: REGION }, async (request) => {
+  const current = await actor(request.auth?.uid, ["staff", "admin"]);
+  const input = quotationSchema.parse(request.data);
+  const items = input.items.map((item) => {
+    const discount = Number(item.discount || 0);
+    const subtotal = Math.max(0, (item.price - discount) * item.quantity);
+    return {
+      productName: item.productName,
+      description: item.description || "",
+      quantity: item.quantity,
+      unit: item.unit,
+      price: item.price,
+      discount,
+      subtotal,
+    };
+  });
+  const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const discount = items.reduce((sum, item) => sum + item.discount * item.quantity, 0);
+  const total = Math.max(0, subtotal - discount);
+  const documentNumber = await nextNumber("QUO");
+  let code = verificationCode();
+  while ((await db.doc(`documentVerifications/${code}`).get()).exists) code = verificationCode();
+  const ref = db.collection("documents").doc();
+  let signature = input.signature || "";
+  if (!signature) {
+    const stored = await db.doc(`signatures/${current.uid}`).get();
+    signature = stored.exists ? String(stored.data()?.signature || "") : "";
+  }
+  const document = {
+    id: ref.id,
+    documentNumber,
+    type: "quotation" as const,
+    customer: { fullName: input.customer.fullName, phone: input.customer.phone, email: input.customer.email || null, address: input.customer.address || null },
+    items,
+    subtotal,
+    discount,
+    deliveryFee: null,
+    total,
+    status: "sent" as const,
+    verificationCode: code,
+    version: 1,
+    signature: signature || null,
+    preparedBy: current.name,
+    issuedBy: current.uid,
+    quoteDate: input.quoteDate || null,
+    notes: input.notes || null,
+    pdfUrl: null,
+    createdAt: Timestamp.now(),
+    updatedAt: Timestamp.now(),
+    archived: false,
+  };
+  const batch = db.batch();
+  batch.create(ref, document);
+  batch.create(db.doc(`documentVerifications/${code}`), { code, documentId: ref.id, documentType: "quotation", documentNumber, customerName: input.customer.fullName, total, status: "sent", issuedBy: current.name, issuedAt: Timestamp.now(), active: true });
+  await batch.commit();
+  await audit("quotation_created", current, { targetType: "quotation", targetId: ref.id, documentNumber, total, verificationCode: code });
+  return { document };
+});
+
+export const saveDocumentPdf = onCall({ region: REGION }, async (request) => {
+  const current = await actor(request.auth?.uid, ["staff", "admin"]);
+  const input = z.object({ documentId: z.string().min(5).max(128), pdfUrl: z.string().url().max(1200) }).strict().parse(request.data);
+  const ref = db.doc(`documents/${input.documentId}`);
+  const snapshot = await ref.get();
+  if (!snapshot.exists) throw new HttpsError("not-found", "Document not found.");
+  await ref.update({ pdfUrl: input.pdfUrl, updatedAt: Timestamp.now(), updatedBy: current.uid });
+  await audit("document_pdf_saved", current, { targetType: snapshot.data()?.type || "document", targetId: input.documentId, documentNumber: snapshot.data()?.documentNumber });
   return { ok: true };
 });
 
