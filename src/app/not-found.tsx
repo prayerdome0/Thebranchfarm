@@ -11,8 +11,8 @@ export default function NotFound() {
         <Link href="/" className="button button-primary">
           <Compass size={18} /> Go to homepage
         </Link>
-        <Link href="/shop" className="button button-secondary">
-          <ArrowLeft size={18} /> Back to shop
+        <Link href="/dashboard" className="button button-secondary">
+          <ArrowLeft size={18} /> Back to dashboard
         </Link>
       </div>
     </section>

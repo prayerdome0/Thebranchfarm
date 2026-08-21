@@ -45,15 +45,3 @@ env:
     value: "thebranchfarm"
     availability:
       - RUNTIME
-  - variable: CLOUDINARY_CLOUD_NAME
-    secret: cloudinary-cloud-name
-    availability:
-      - RUNTIME
-  - variable: CLOUDINARY_API_KEY
-    secret: cloudinary-api-key
-    availability:
-      - RUNTIME
-  - variable: CLOUDINARY_API_SECRET
-    secret: cloudinary-api-secret
-    availability:
-      - RUNTIME

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronRight, Menu, X, type LucideIcon } from "lucide-react";
+import { ChevronRight, LogOut, Menu, X, type LucideIcon } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn, initials } from "@/lib/utils";
@@ -22,7 +22,7 @@ export function DashboardShell({ title, subtitle, nav, children, roleLabel }: {
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
 
   return (
@@ -38,7 +38,7 @@ export function DashboardShell({ title, subtitle, nav, children, roleLabel }: {
         </div>
         <nav aria-label={`${roleLabel} navigation`}>
           {nav.map((item) => {
-            const active = pathname === item.href || (item.href !== "/admin" && item.href !== "/staff" && item.href !== "/dashboard" && pathname.startsWith(`${item.href}/`));
+            const active = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(`${item.href}/`));
             const Icon = item.icon;
             return (
               <Link href={item.href} key={item.href} className={cn("dashboard-nav-link", active && "active")} onClick={() => setOpen(false)}>
@@ -50,6 +50,9 @@ export function DashboardShell({ title, subtitle, nav, children, roleLabel }: {
             );
           })}
         </nav>
+        <button className="dashboard-sign-out" onClick={() => logout()}>
+          <LogOut size={17} /> Sign out
+        </button>
       </aside>
       {open && <button className="dashboard-scrim" aria-label="Close dashboard navigation" onClick={() => setOpen(false)} />}
       <section className="dashboard-content">

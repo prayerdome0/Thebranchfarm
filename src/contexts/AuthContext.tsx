@@ -38,7 +38,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 function profileFromFirebaseUser(current: FirebaseUser): UserProfile {
   return {
     uid: current.uid,
-    fullName: current.displayName || "Customer",
+    fullName: current.displayName || "Member",
     email: current.email || "",
     phone: "",
     role: "user",

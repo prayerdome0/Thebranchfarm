@@ -1,16 +1,5 @@
 export type AppRole = "user" | "staff" | "admin";
 export type AccountStatus = "active" | "disabled";
-export type ProductCategory = "dairy" | "eggs" | "beef" | "pork" | "chicken" | "other";
-export type ProductAvailability = "available" | "coming-soon" | "unavailable";
-export type OrderStatus =
-  | "pending"
-  | "confirmed"
-  | "preparing"
-  | "ready"
-  | "out-for-delivery"
-  | "delivered"
-  | "completed"
-  | "cancelled";
 
 export type TimestampValue = Date | string | { seconds: number; nanoseconds?: number } | null;
 
@@ -19,8 +8,6 @@ export interface UserProfile {
   fullName: string;
   email: string;
   phone: string;
-  photoURL?: string;
-  signature?: string;
   title?: string;
   role: AppRole;
   status: AccountStatus;
@@ -29,205 +16,109 @@ export interface UserProfile {
   lastLoginAt?: TimestampValue;
 }
 
-export interface Product {
-  id: string;
-  name: string;
-  slug: string;
-  category: ProductCategory;
-  description: string;
-  longDescription?: string;
-  price: number;
-  unit: string;
-  priceLabel?: string;
-  availability: ProductAvailability;
-  stock?: number | null;
-  trackStock?: boolean;
-  images: string[];
-  location?: string;
-  featured?: boolean;
-  createdAt?: TimestampValue;
-  updatedAt?: TimestampValue;
-}
+export type AnimalType = "cattle" | "pig" | "chicken" | "goat" | "sheep" | "other";
+export type AnimalSex = "male" | "female";
+export type AnimalStatus = "active" | "sold" | "deceased" | "transferred";
+export type AnimalHealthStatus =
+  | "healthy"
+  | "under-observation"
+  | "sick"
+  | "injured"
+  | "recovering";
 
-export interface FarmVideo {
-  id: string;
-  title: string;
-  description: string;
-  category: string;
-  src: string;
-  poster: string;
-}
-
-export interface CartItem {
-  product: Product;
-  quantity: number;
-}
-
-export interface OrderItem {
-  productId: string;
-  productName: string;
-  image?: string;
-  price: number;
-  quantity: number;
-  unit: string;
-  subtotal: number;
-}
-
-export interface OrderCustomer {
-  userId?: string | null;
-  fullName: string;
-  phone: string;
-  whatsappAvailable: boolean;
-  email?: string;
-}
-
-export interface OrderDelivery {
-  address: string;
-  location: string;
-  instructions?: string;
-  fee: number | null;
-  label: string;
-}
-
-export interface Order {
-  id: string;
-  orderNumber: string;
-  customer: OrderCustomer;
-  delivery: OrderDelivery;
-  items: OrderItem[];
-  subtotal: number;
-  deliveryFee: number | null;
-  total: number;
-  status: OrderStatus;
-  agreementAccepted: boolean;
-  signature?: string;
-  signatureHash?: string;
-  documentVersion: number;
-  createdAt: TimestampValue;
-  updatedAt: TimestampValue;
-  statusHistory?: Array<{ status: OrderStatus; at: TimestampValue; by?: string }>;
-}
-
-export interface CheckoutPayload {
-  items: Array<{ productId: string; quantity: number }>;
-  customer: Omit<OrderCustomer, "userId">;
-  delivery: Omit<OrderDelivery, "fee" | "label">;
-}
-
-export interface AppNotification {
-  id: string;
-  userId?: string;
-  audience?: "admin" | "staff" | "customer";
-  type: string;
-  title: string;
-  body: string;
-  link?: string;
-  read: boolean;
-  createdAt: TimestampValue;
-}
-
+/**
+ * Every farm record carries the who + when of its creation and last update so
+ * the system can always answer "recorded by X on Y".
+ */
 export interface FarmRecordBase {
   id: string;
   createdBy: string;
+  createdByName: string;
   createdAt: TimestampValue;
   updatedBy: string;
+  updatedByName: string;
   updatedAt: TimestampValue;
   archived?: boolean;
 }
 
 export interface Animal extends FarmRecordBase {
   animalId: string;
-  tagNumber: string;
+  tagNumber?: string;
   name?: string;
-  species: "cattle" | "pig" | "chicken";
+  animalType: AnimalType;
   breed: string;
-  sex: "male" | "female" | "mixed";
+  sex: AnimalSex;
   dateOfBirth?: string;
-  photo?: string;
-  weight?: number;
-  healthStatus: "healthy" | "sick" | "injured" | "recovering";
+  datePurchased?: string;
+  purchasePrice?: number | null;
+  supplier?: string;
   location: string;
-  currentStatus: "active" | "sold" | "deceased" | "transferred";
+  weight?: number | null;
+  status: AnimalStatus;
+  healthStatus: AnimalHealthStatus;
   notes?: string;
+  /** Public download URL of the uploaded photograph (Firebase Storage). */
+  photo?: string;
+  /** Storage path used to delete/replace the photograph. */
+  photoPath?: string;
 }
 
-export interface MilkProduction extends FarmRecordBase {
+export type HealthRecordType =
+  | "observation"
+  | "problem"
+  | "vaccination"
+  | "treatment"
+  | "examination"
+  | "other";
+
+export interface HealthRecord extends FarmRecordBase {
+  animalId: string;
+  animalLabel?: string;
+  type: HealthRecordType;
+  /** Short headline, e.g. "Animal not eating normally". */
+  problem: string;
+  observation?: string;
+  actionTaken?: string;
+  medication?: string;
+  /** Date of the event / examination, yyyy-mm-dd. */
   date: string;
-  morningProduction: number;
-  eveningProduction: number;
-  totalProduction: number;
-  sold: number;
-  remaining: number;
-  wasted: number;
-  price: number;
+  nextDate?: string;
+  notes?: string;
+  photo?: string;
+  photoPath?: string;
 }
 
-export interface EggProduction extends FarmRecordBase {
-  date: string;
-  eggsCollected: number;
-  eggsSold: number;
-  eggsDamaged: number;
-  eggsRemaining: number;
-  price: number;
-}
-
-export interface InventoryItem extends FarmRecordBase {
-  product: string;
-  category: string;
-  quantity: number;
-  unit: string;
-  lowStockThreshold: number;
-  location?: string;
-}
-
-export type DocumentType = "quotation" | "invoice" | "receipt" | "agreement";
-
-export interface QuotationItem {
-  productName: string;
+export interface FarmDocument extends FarmRecordBase {
+  name: string;
   description?: string;
-  quantity: number;
-  unit: string;
-  price: number;
-  discount: number;
-  subtotal: number;
+  fileName: string;
+  fileType: string;
+  fileSize: number;
+  /** pdf | image | word | excel | video | other */
+  category: string;
+  downloadUrl: string;
+  storagePath: string;
+  relatedAnimalId?: string;
 }
 
-export interface BusinessDocument {
-  id: string;
-  documentNumber: string;
-  type: DocumentType;
-  customer: Pick<OrderCustomer, "fullName" | "phone" | "email"> & { address?: string };
-  items: OrderItem[];
-  subtotal: number;
-  discount: number;
-  deliveryFee: number | null;
-  total: number;
-  status: "draft" | "sent" | "paid" | "overdue" | "archived";
-  orderNumber?: string;
-  paymentMethod?: string;
-  paymentReference?: string;
-  verificationCode: string;
-  version: number;
-  signature?: string;
-  preparedBy?: string;
-  issuedAt?: TimestampValue;
-  quoteDate?: string;
-  notes?: string;
-  pdfUrl?: string;
-  createdAt: TimestampValue;
-  updatedAt: TimestampValue;
+export interface ActivityRecord extends FarmRecordBase {
+  activity: string;
+  date: string;
+  time?: string;
+  location?: string;
+  notes: string;
+  animalId?: string;
 }
 
-export interface VerificationRecord {
-  id: string;
-  code: string;
-  documentType: DocumentType;
-  documentNumber: string;
-  orderNumber?: string;
-  customerName: string;
-  total: number;
-  status: string;
-  issuedBy: string;
-  issuedAt: TimestampValue;
-  active: boolean;
+export interface FarmSettings {
+  farmName: string;
+  slogan: string;
+  location: string;
+  phone: string;
+  whatsapp: string;
+  email: string;
+  currency: string;
+  updatedAt?: TimestampValue;
+  updatedBy?: string;
+  updatedByName?: string;
 }

@@ -9,6 +9,8 @@ service cloud.firestore {
     function admin() { return hasRole('admin'); }
     function own(uid) { return signedIn() && request.auth.uid == uid; }
     function safeString(value, max) { return value is string && value.size() > 0 && value.size() <= max; }
+    function optionalString(value, max) { return value == null || (value is string && value.size() <= max); }
+    function nonNegative(value) { return value is number && value >= 0; }
     function validFarmCreate() {
       return staff()
         && request.resource.data.createdBy == request.auth.uid
@@ -20,50 +22,33 @@ service cloud.firestore {
         && request.resource.data.createdAt == resource.data.createdAt
         && request.resource.data.updatedBy == request.auth.uid;
     }
-    function nonNegative(value) { return value is number && value >= 0; }
     function validAnimal() {
-      return request.resource.data.species in ['cattle', 'pig', 'chicken']
+      return request.resource.data.animalType in ['cattle', 'pig', 'chicken', 'goat', 'sheep', 'other']
         && safeString(request.resource.data.animalId, 80)
-        && safeString(request.resource.data.tagNumber, 80)
+        && optionalString(request.resource.data.tagNumber, 120)
+        && optionalString(request.resource.data.name, 120)
         && safeString(request.resource.data.breed, 100)
-        && request.resource.data.sex in ['male', 'female', 'mixed']
-        && request.resource.data.healthStatus in ['healthy', 'sick', 'injured', 'recovering']
-        && request.resource.data.currentStatus in ['active', 'sold', 'deceased', 'transferred']
+        && request.resource.data.sex in ['male', 'female']
+        && request.resource.data.healthStatus in ['healthy', 'under-observation', 'sick', 'injured', 'recovering']
+        && request.resource.data.status in ['active', 'sold', 'deceased', 'transferred']
         && safeString(request.resource.data.location, 150)
-        && (request.resource.data.weight == null || nonNegative(request.resource.data.weight));
+        && (request.resource.data.weight == null || nonNegative(request.resource.data.weight))
+        && (request.resource.data.purchasePrice == null || nonNegative(request.resource.data.purchasePrice));
     }
-    function validMilk() {
-      return safeString(request.resource.data.date, 20)
-        && nonNegative(request.resource.data.morningProduction)
-        && nonNegative(request.resource.data.eveningProduction)
-        && nonNegative(request.resource.data.totalProduction)
-        && nonNegative(request.resource.data.sold)
-        && nonNegative(request.resource.data.wasted)
-        && nonNegative(request.resource.data.remaining)
-        && request.resource.data.totalProduction == request.resource.data.morningProduction + request.resource.data.eveningProduction
-        && request.resource.data.remaining == request.resource.data.totalProduction - request.resource.data.sold - request.resource.data.wasted;
+    function validHealth() {
+      return safeString(request.resource.data.animalId, 80)
+        && request.resource.data.type in ['observation', 'problem', 'vaccination', 'treatment', 'examination', 'other']
+        && safeString(request.resource.data.problem, 500)
+        && safeString(request.resource.data.date, 20);
     }
-    function validEggs() {
-      return safeString(request.resource.data.date, 20)
-        && nonNegative(request.resource.data.eggsCollected)
-        && nonNegative(request.resource.data.eggsSold)
-        && nonNegative(request.resource.data.eggsDamaged)
-        && nonNegative(request.resource.data.eggsRemaining)
-        && request.resource.data.eggsRemaining == request.resource.data.eggsCollected - request.resource.data.eggsSold - request.resource.data.eggsDamaged;
-    }
-    function validInventory() {
-      return safeString(request.resource.data.product, 150)
-        && safeString(request.resource.data.unit, 40)
-        && nonNegative(request.resource.data.quantity)
-        && nonNegative(request.resource.data.lowStockThreshold);
-    }
-    function validInventoryTransaction() {
-      return safeString(request.resource.data.product, 150)
-        && safeString(request.resource.data.unit, 40)
-        && nonNegative(request.resource.data.stockIn)
-        && nonNegative(request.resource.data.stockOut)
-        && nonNegative(request.resource.data.currentBalance)
-        && safeString(request.resource.data.reason, 500);
+    function validDocument() {
+      return safeString(request.resource.data.name, 200)
+        && request.resource.data.fileName is string
+        && request.resource.data.fileType is string
+        && nonNegative(request.resource.data.fileSize)
+        && safeString(request.resource.data.category, 30)
+        && request.resource.data.downloadUrl is string
+        && request.resource.data.storagePath is string;
     }
     function validActivity() {
       return safeString(request.resource.data.activity, 120)
@@ -92,92 +77,41 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    match /products/{productId} {
-      allow read: if true;
-      allow write: if false; // Admin SDK callable function validates and audits changes.
-    }
-    match /categories/{categoryId} {
-      allow read: if true;
-      allow write: if false;
-    }
-
-    match /orders/{orderId} {
-      allow read: if staff() || (signedIn() && resource.data.customer.userId == request.auth.uid);
-      allow write: if false; // Price-secure order function only.
-    }
-    match /orderItems/{itemId} {
-      allow read: if staff() || (signedIn() && resource.data.customerId == request.auth.uid);
-      allow write: if false;
+    // Animals: admin adds and removes; staff can read and update the record.
+    match /animals/{id} {
+      allow read: if staff();
+      allow create: if admin() && validFarmCreate() && validAnimal();
+      allow update: if staff() && validFarmUpdate() && validAnimal();
+      allow delete: if admin();
     }
 
-    match /documents/{documentId} {
-      allow read: if staff() || (signedIn() && resource.data.customerId == request.auth.uid);
-      allow write: if false;
-    }
-    match /documentVerifications/{code} {
-      allow read: if true;
-      allow write: if false;
-    }
-    match /signatures/{signatureId} {
-      allow read: if staff() || (signedIn() && resource.data.userId == request.auth.uid);
-      allow write: if false;
+    // Health records: staff record problems/observations; admin can remove.
+    match /animalHealth/{id} {
+      allow read: if staff();
+      allow create: if staff() && validFarmCreate() && validHealth();
+      allow update: if staff() && validFarmUpdate() && validHealth();
+      allow delete: if admin();
     }
 
-    match /notifications/{notificationId} {
-      allow read: if admin()
-        || (signedIn() && resource.data.userId == request.auth.uid)
-        || (staff() && resource.data.audience in ['staff', 'admin']);
-      allow update: if signedIn()
-        && (resource.data.userId == request.auth.uid || staff())
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
-      allow create, delete: if false;
+    // Farm documents: staff upload metadata; admin can remove.
+    match /farmDocuments/{id} {
+      allow read: if staff();
+      allow create: if staff() && validFarmCreate() && validDocument();
+      allow update: if staff() && validFarmUpdate() && validDocument();
+      allow delete: if admin();
     }
 
-    // Operational records are readable by staff/admin and are archived rather than deleted.
-    match /animals/{id} { allow read: if staff(); allow create: if validFarmCreate() && validAnimal(); allow update: if validFarmUpdate() && validAnimal(); allow delete: if false; }
-    match /cattle/{id} { allow read: if staff(); allow create: if validFarmCreate(); allow update: if validFarmUpdate(); allow delete: if false; }
-    match /pigs/{id} { allow read: if staff(); allow create: if validFarmCreate(); allow update: if validFarmUpdate(); allow delete: if false; }
-    match /chickens/{id} { allow read: if staff(); allow create: if validFarmCreate(); allow update: if validFarmUpdate(); allow delete: if false; }
-    match /animalHealth/{id} { allow read: if staff(); allow create: if validFarmCreate(); allow update: if validFarmUpdate(); allow delete: if false; }
-    match /animalBreeding/{id} { allow read: if staff(); allow create: if validFarmCreate(); allow update: if validFarmUpdate(); allow delete: if false; }
-    match /animalWeights/{id} { allow read: if staff(); allow create: if validFarmCreate(); allow update: if validFarmUpdate(); allow delete: if false; }
-    match /crops/{id} { allow read: if staff(); allow create: if validFarmCreate(); allow update: if validFarmUpdate(); allow delete: if false; }
-    match /feed/{id} { allow read: if staff(); allow create: if validFarmCreate(); allow update: if validFarmUpdate(); allow delete: if false; }
-    match /equipment/{id} { allow read: if staff(); allow create: if validFarmCreate(); allow update: if validFarmUpdate(); allow delete: if false; }
-    match /milkProduction/{id} { allow read: if staff(); allow create: if validFarmCreate() && validMilk(); allow update: if validFarmUpdate() && validMilk(); allow delete: if false; }
-    match /eggProduction/{id} { allow read: if staff(); allow create: if validFarmCreate() && validEggs(); allow update: if validFarmUpdate() && validEggs(); allow delete: if false; }
-    match /inventory/{id} { allow read: if staff(); allow create: if validFarmCreate(); allow update: if validFarmUpdate(); allow delete: if false; }
-    match /inventoryTransactions/{id} { allow read: if staff(); allow create: if validFarmCreate() && validInventoryTransaction(); allow update: if validFarmUpdate() && validInventoryTransaction(); allow delete: if false; }
-    match /farmActivities/{id} { allow read: if staff(); allow create: if validFarmCreate() && validActivity(); allow update: if validFarmUpdate() && validActivity(); allow delete: if false; }
-    match /deliveries/{id} { allow read: if staff(); allow create: if validFarmCreate(); allow update: if validFarmUpdate(); allow delete: if false; }
-
-    match /auditLogs/{logId} {
-      allow read: if admin();
-      allow write: if false;
+    // Activity / records log.
+    match /farmActivities/{id} {
+      allow read: if staff();
+      allow create: if staff() && validFarmCreate() && validActivity();
+      allow update: if staff() && validFarmUpdate() && validActivity();
+      allow delete: if admin();
     }
-    match /counters/{counterId} { allow read, write: if false; }
 
     match /settings/{settingId} {
-      allow read: if settingId in ['business', 'website', 'delivery'];
-      allow write: if false;
-    }
-    match /websiteContent/{contentId} {
-      allow read: if true;
-      allow write: if false;
-    }
-    match /gallery/{itemId} {
-      allow read: if true;
-      allow write: if false;
-    }
-
-    match /contactMessages/{messageId} {
-      allow create: if safeString(request.resource.data.fullName, 100)
-        && safeString(request.resource.data.phone, 24)
-        && safeString(request.resource.data.message, 1500)
-        && request.resource.data.status == 'new';
-      allow read: if admin();
-      allow update: if admin();
-      allow delete: if false;
+      allow read: if staff() && settingId == 'farm';
+      allow write: if admin() && settingId == 'farm';
     }
 
     match /{document=**} { allow read, write: if false; }

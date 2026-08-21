@@ -1,12 +1,12 @@
 name: Deploy Firebase backend
 
-# The storefront auto-deploys from main (Vercel / Firebase App Hosting), but
-# checkout, order tracking, quotations and every staff/admin action depend on
-# the callable Cloud Functions and Firestore rules in this repository.
+# The website auto-deploys from main (Vercel / Firebase App Hosting), but
+# staff provisioning and role changes depend on the callable Cloud Functions
+# and Firestore rules in this repository.
 #
 # If the backend is not deployed, every callable URL answers HTTP 404 and the
-# storefront shows "Something went wrong. Please try again." (functions/not-found).
-# This workflow keeps the production backend in sync with main so packing code
+# staff module shows "Something went wrong. Please try again." (functions/not-found).
+# This workflow keeps the production backend in sync with main so the farm app
 # can never again ship without its backend.
 #
 # One-time setup: add a FIREBASE_SERVICE_ACCOUNT repository secret containing
@@ -73,7 +73,7 @@ jobs:
       - name: Verify callable functions respond
         run: |
           set -e
-          for fn in createOrder trackOrder createQuotation; do
+          for fn in setUserRole setUserStatus createStaffAccount; do
             status=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
               "https://us-central1-thebranchfarm.cloudfunctions.net/${fn}" \
               -H "content-type: application/json" -d '{"data":{}}')
