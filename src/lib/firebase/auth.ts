@@ -4,7 +4,10 @@ import {
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signOut,
+  updatePassword,
   updateProfile,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
   type User,
 } from "firebase/auth";
 import { doc, getDoc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
@@ -152,6 +155,36 @@ export function logoutUser() {
 
 export function resetUserPassword(email: string) {
   return sendPasswordResetEmail(auth, email.trim().toLowerCase());
+}
+
+/**
+ * Change the signed-in user's OWN password.
+ *
+ * It re-authenticates with the current password first, which proves the caller
+ * is the account owner (so only you can change your password) and avoids the
+ * "requires-recent-login" error. The new password is then saved directly to
+ * Firebase Auth and is the password used to sign in from this point on.
+ */
+export async function changeOwnPassword(currentPassword: string, newPassword: string) {
+  const current = auth.currentUser;
+  if (!current || !current.email) {
+    throw new Error("You must be signed in to change your password.");
+  }
+  if (!newPassword || newPassword.length < 8) {
+    throw new Error("New password must be at least 8 characters.");
+  }
+  // Re-authenticate so only the owner can change it, and updatePassword is allowed.
+  const credential = EmailAuthProvider.credential(current.email, currentPassword);
+  try {
+    await reauthenticateWithCredential(current, credential);
+  } catch (cause) {
+    const code = (cause as { code?: string })?.code || "";
+    if (/wrong-password|invalid-credential|invalid-email|user-mismatch/.test(code)) {
+      throw new Error("Your current password is incorrect.");
+    }
+    throw cause;
+  }
+  await updatePassword(current, newPassword);
 }
 
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {

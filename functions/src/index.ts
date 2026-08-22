@@ -116,8 +116,11 @@ export const notifyOrderCreated = onDocumentCreated(
  * Public order tracking by TB-XXXXXX reference.
  *
  * Guests cannot read the `orders` collection directly (Firestore rules limit
- * reads to staff), so tracking goes through this callable. It returns only the
- * details a customer may see — never phone, email or the delivery signature.
+ * reads to staff), so tracking goes through this callable. Privacy is strict:
+ * anyone may hold or guess a reference, so it returns ONLY the order's public
+ * progress — reference, status, fulfillment and dates. It NEVER reveals the
+ * customer name, phone, email, delivery address, order items, prices, totals
+ * or payment details. A customer sees those in their own confirmation.
  */
 export const trackOrder = onCall({ region: REGION }, async (request) => {
   const input = z
@@ -145,30 +148,11 @@ export const trackOrder = onCall({ region: REGION }, async (request) => {
     }
     return String(value);
   };
-  const items = Array.isArray(order.items)
-    ? order.items.map((item: Record<string, unknown>) => ({
-        name: String(item.name ?? "Item"),
-        quantity: Number(item.quantity ?? 1),
-        unit: typeof item.unit === "string" ? item.unit : "",
-        price: typeof item.price === "number" ? item.price : 0,
-      }))
-    : [];
-  const customer = (order.customer || {}) as Record<string, unknown>;
 
   return {
     reference: String(order.reference ?? reference),
     status: String(order.status ?? "pending"),
-    paymentStatus: String(order.paymentStatus ?? "unpaid"),
-    subtotal: Number(order.subtotal ?? 0),
-    deliveryFee: Number(order.deliveryFee ?? 0),
-    total: Number(order.total ?? 0),
     fulfillment: String(order.fulfillment ?? "pickup"),
-    items,
-    customerName: typeof customer.name === "string" ? customer.name : "",
-    deliveryAddress: typeof order.deliveryAddress === "string" ? order.deliveryAddress : undefined,
-    deliveryLocation: typeof order.deliveryLocation === "string" ? order.deliveryLocation : undefined,
-    notes: typeof order.notes === "string" ? order.notes : undefined,
-    paymentMethod: typeof order.paymentMethod === "string" ? order.paymentMethod : undefined,
     createdAt: asIso(order.createdAt),
     updatedAt: asIso(order.updatedAt),
   };
@@ -311,4 +295,38 @@ export const createStaffAccount = onCall({ region: REGION }, async (request) => 
   });
 
   return { uid: user.uid, tempPassword };
+});
+
+/**
+ * Administrator resets a member's password — used when someone has requested
+ * password help. Firebase Auth never stores recoverable plaintext passwords,
+ * so this sets a fresh temporary password (the admin then shares it via
+ * WhatsApp or email). Existing sessions are revoked so the new password must
+ * be used on the next sign-in.
+ */
+export const resetUserPassword = onCall({ region: REGION }, async (request) => {
+  const current = await actor(request.auth?.uid, ["admin"]);
+  const input = z.object({ uid: z.string().min(10).max(128) }).parse(request.data);
+
+  let label = input.uid;
+  try {
+    const record = await getAuth().getUser(input.uid);
+    label = record.displayName || record.email || input.uid;
+  } catch {
+    /* fall back to uid as the label */
+  }
+
+  const tempPassword = `TBF-${randomBytes(6).toString("hex").slice(0, 10)}`;
+  await getAuth().updateUser(input.uid, { password: tempPassword });
+  // Sign the member out everywhere so the new password takes effect.
+  await getAuth().revokeRefreshTokens(input.uid);
+
+  await recordAdminAudit(current, {
+    action: "updated",
+    entityId: input.uid,
+    entityLabel: label,
+    description: `Reset password for ${label}. Existing sessions were signed out and a new temporary password was issued.`,
+  });
+
+  return { tempPassword };
 });

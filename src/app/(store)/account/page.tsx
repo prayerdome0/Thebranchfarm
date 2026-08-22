@@ -18,13 +18,15 @@ import { Loading } from "@/components/ui/Loading";
 import { useAuth } from "@/contexts/AuthContext";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { useToast } from "@/contexts/ToastContext";
+import { ChangePassword } from "@/components/auth/ChangePassword";
 import { getMyOrders, getMyQuotations, getMyReceipts, updateStaffProfile } from "@/lib/firebase/data";
+import { BUSINESS } from "@/lib/constants";
 import { printCustomerDocument } from "@/lib/farmReports";
 import { listLocalOrders } from "@/lib/store";
 import { cn, formatDate, formatDisplayDate, friendlyError } from "@/lib/utils";
 import type { Order, Quotation, Receipt } from "@/types";
 
-type AccountTab = "orders" | "quotations" | "receipts" | "documents" | "notifications";
+type AccountTab = "orders" | "quotations" | "receipts" | "documents" | "notifications" | "security";
 
 export default function AccountPage() {
   const { user, firebaseUser, loading: authLoading, isStaff } = useAuth();
@@ -86,6 +88,7 @@ export default function AccountPage() {
     { value: "receipts", label: "Receipts", icon: ReceiptText, count: receipts.length },
     { value: "documents", label: "Documents", icon: Download, count: quotations.length + receipts.length },
     { value: "notifications", label: "Notifications", icon: Bell, count: notifications.length },
+    { value: "security", label: "Security", icon: ShieldCheck, count: 0 },
   ];
 
   return (
@@ -97,7 +100,7 @@ export default function AccountPage() {
 
       {firebaseUser && !firebaseUser.emailVerified && <div className="customer-verification-note"><ShieldCheck size={18} /><div><strong>Verify your email to unlock issued documents</strong><p>We sent a verification link to {firebaseUser.email}. Your profile and orders placed on this device remain available now.</p></div></div>}
 
-      <nav className="customer-account-tabs" aria-label="Account sections">{tabs.map((item) => { const Icon = item.icon; return <button key={item.value} className={cn(tab === item.value && "active")} onClick={() => setTab(item.value)}><Icon size={16} /><span>{item.label}</span><small>{item.count}</small></button>; })}</nav>
+      <nav className="customer-account-tabs" aria-label="Account sections">{tabs.map((item) => { const Icon = item.icon; return <button key={item.value} className={cn(tab === item.value && "active")} onClick={() => setTab(item.value)}><Icon size={16} /><span>{item.label}</span>{item.count > 0 && <small>{item.count}</small>}</button>; })}</nav>
 
       {loading ? <Loading label="Loading your records…" /> : (
         <section className="customer-account-panel">
@@ -110,6 +113,8 @@ export default function AccountPage() {
           {tab === "documents" && <><header><div><h2>My documents</h2><p>Downloadable business documents in one place.</p></div></header>{quotations.length + receipts.length ? <div className="customer-file-grid">{quotations.map((quotation) => <button key={quotation.id} onClick={() => printCustomerDocument({ kind: "quotation", reference: quotation.quotationNumber, date: quotation.date, customer: quotation.customer, items: quotation.items, total: quotation.total, balance: quotation.balance, status: quotation.status, notes: quotation.notes })}><FileText size={21} /><span><strong>{quotation.quotationNumber}</strong><small>Quotation · {formatDisplayDate(quotation.date)}</small></span><Download size={15} /></button>)}{receipts.map((receipt) => <button key={receipt.id} onClick={() => printCustomerDocument({ kind: "receipt", reference: receipt.receiptNumber, date: receipt.date, customer: receipt.customer, items: receipt.items || [], total: receipt.total ?? receipt.amount, amountPaid: receipt.amountPaid ?? receipt.amount, balance: receipt.balance, notes: receipt.notes })}><ReceiptText size={21} /><span><strong>{receipt.receiptNumber}</strong><small>Receipt · {formatDisplayDate(receipt.date)}</small></span><Download size={15} /></button>)}</div> : <AccountEmpty icon={Download} title="No documents" text="Your quotations and receipts will be collected here automatically." />}</>}
 
           {tab === "notifications" && <><header><div><h2>Notifications</h2><p>Current order and document status updates.</p></div></header>{notifications.length ? <div className="customer-notification-list">{notifications.map((notification) => <article key={notification.id}><span><Bell size={16} /></span><div><strong>{notification.title}</strong><p>{notification.detail}</p><small>{formatDate(notification.date, true)}</small></div></article>)}</div> : <AccountEmpty icon={Bell} title="You are all caught up" text="New order and document updates will appear here." />}</>}
+
+          {tab === "security" && <><header><div><h2>Change password</h2><p>Update the password you use to sign in to your {BUSINESS.name} account.</p></div></header><ChangePassword compact /><div className="customer-account-security"><ShieldCheck size={18} /><p>Only you can change your password. The new password works immediately the next time you sign in.</p></div></>}
         </section>
       )}
 

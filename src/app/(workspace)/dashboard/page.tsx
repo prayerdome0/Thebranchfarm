@@ -24,6 +24,7 @@ import {
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
+import { ChangePassword } from "@/components/auth/ChangePassword";
 import {
   watchAllProducts,
   watchAnimals,
@@ -171,6 +172,13 @@ export default function DashboardPage() {
           <Link className="button button-secondary button-small" href="/products"><Plus size={15} /> Manage products</Link>
         </div>
       </section>
+
+      {!isAdmin && (
+        <section className="dashboard-panel command-commerce-panel">
+          <div className="section-row"><div><span className="eyebrow">Account security</span><h2>Change password</h2><p>Update your own staff sign-in password.</p></div></div>
+          <ChangePassword compact />
+        </section>
+      )}
 
       <p className="command-data-note"><ShieldCheck size={14} /> {BUSINESS.name}: staff operate and record; administrators monitor, review, investigate and report.</p>
     </div>
