@@ -199,16 +199,19 @@ Firebase handles authentication and data; the media cloud handles all newly uplo
 
 ```bash
 npm install
-cp .env.example .env.local
 npm run dev
 ```
 
-The Firebase web identifiers are read from `NEXT_PUBLIC_FIREBASE_*` environment
-variables. They are public client configuration, not secrets, but production
-deployments should still set them explicitly. If they are absent, the build
-remains deployable and the public storefront uses its demo/local-data fallback;
-Firebase authentication and live farm data stay disabled until the variables
-are supplied.
+Firebase sign-in and live data work out of the box: the public web identifiers
+for the production `thebranchfarm` app ship as code-level defaults (they are
+public client configuration, not secrets — every browser receives them with
+the bundle). Copying `.env.example` is optional.
+
+The `NEXT_PUBLIC_FIREBASE_*` environment variables still win per key, so a
+deployment can point the app at a different Firebase project without code
+changes. If every variable is a placeholder (e.g. a freshly copied
+`.env.example`), the built-in defaults are used instead of erroring with
+"Firebase Authentication is not fully configured yet."
 
 Open `http://localhost:3000`.
 
@@ -227,9 +230,12 @@ Open `http://localhost:3000`.
    npm run functions:build
    ```
 
-3. Configure `INITIAL_ADMIN_EMAILS` when Firebase prompts during deployment. Use a
-   comma-separated owner allowlist. The Firestore user-created trigger promotes only an
-   allowlisted registered account; there is no insecure public bootstrap form.
+3. Configure the owner allowlist. `INITIAL_ADMIN_EMAILS` is a comma-separated
+   list of owner emails. The Firestore user-created trigger promotes only an
+   allowlisted registered account to the **admin** role (plus a matching
+   custom claim); there is no insecure public bootstrap form. When deploying
+   with the CLI, answer the prompt (the value is saved to `functions/.env`);
+   in CI it is read from the GitHub repository variable of the same name.
 
    Optionally set `NOTIFICATION_WEBHOOK_URL` to a webhook endpoint (WhatsApp/email/chat) to
    receive a ping whenever a customer places an order.
@@ -248,6 +254,22 @@ Open `http://localhost:3000`.
 7. Sign in as that admin and use **Staff → Add staff member** to provision team accounts,
    or promote already-registered accounts.
 
+### Granting the admin role without deploying functions
+
+If the Cloud Functions backend is not deployed (or you do not want to use it),
+an existing account can be promoted by hand in the Firebase Console — no
+service account or server credentials needed:
+
+1. Sign up through `/register` (or sign in once so the profile exists).
+2. Firebase Console → **Firestore Database → Data → `users`** → open the
+   account's document.
+3. Set `role` to `admin` (keep `status` as `active`) and save.
+4. Sign out and back in — the account now has full administrator access.
+
+`role`, `status` and `permissions` are intentionally never writable from the
+browser (Firestore rules and the register form both block it), so an account
+can only be granted the admin role through a trusted path like the one above.
+
 ### Automatic backend deployment
 
 A ready-to-use `Deploy Firebase backend` workflow ships in `firebase/firebase-deploy.yml`:
@@ -257,7 +279,10 @@ on `main`, and fails loudly if any callable still answers 404.
 1. Enable the workflow: `mkdir -p .github/workflows && cp firebase/firebase-deploy.yml .github/workflows/firebase-deploy.yml`.
 2. Firebase console → Project settings → **Service accounts** → **Generate new private key**.
 3. GitHub → repository **Settings → Secrets and variables → Actions** → add `FIREBASE_SERVICE_ACCOUNT` with the downloaded JSON.
-4. Run the workflow once from **Actions → Deploy Firebase backend → Run workflow**.
+4. GitHub → repository **Settings → Secrets and variables → Actions → Variables** → add
+   `INITIAL_ADMIN_EMAILS` (comma-separated owner allowlist, e.g. `owner@example.com`).
+   Optionally add `NOTIFICATION_WEBHOOK_URL` for order notifications.
+5. Run the workflow once from **Actions → Deploy Firebase backend → Run workflow**.
 
 ## Important collections
 
