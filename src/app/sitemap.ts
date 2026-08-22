@@ -5,13 +5,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const staticPaths = [
     "",
     "/shop",
-    "/videos",
+    "/our-farm",
     "/gallery",
     "/about",
     "/contact",
     "/cart",
     "/checkout",
-    "/track",
     "/login",
     "/register",
   ];
@@ -19,7 +18,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   return staticPaths.map((path) => ({
     url: `${base}${path}`,
     lastModified: new Date(),
-    changeFrequency: path === "/shop" ? "daily" : "weekly",
-    priority: path === "" ? 1 : 0.7,
+    changeFrequency: path === "/shop" ? "daily" : path === "" ? "daily" : "weekly",
+    priority: path === "" ? 1 : path === "/shop" ? 0.9 : 0.7,
   }));
 }

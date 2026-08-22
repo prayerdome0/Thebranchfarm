@@ -14,11 +14,12 @@ export interface UserProfile {
   createdAt: TimestampValue;
   updatedAt: TimestampValue;
   lastLoginAt?: TimestampValue;
+  permissions?: string[];
 }
 
 export type AnimalType = "cattle" | "pig" | "chicken" | "goat" | "sheep" | "other";
 export type AnimalSex = "male" | "female";
-export type AnimalStatus = "active" | "sold" | "deceased" | "transferred";
+export type AnimalStatus = "active" | "sold" | "deceased" | "transferred" | "other";
 export type AnimalHealthStatus =
   | "healthy"
   | "under-observation"
@@ -26,10 +27,6 @@ export type AnimalHealthStatus =
   | "injured"
   | "recovering";
 
-/**
- * Every farm record carries the who + when of its creation and last update so
- * the system can always answer "recorded by X on Y".
- */
 export interface FarmRecordBase {
   id: string;
   createdBy: string;
@@ -57,10 +54,11 @@ export interface Animal extends FarmRecordBase {
   status: AnimalStatus;
   healthStatus: AnimalHealthStatus;
   notes?: string;
-  /** Public Cloudinary delivery URL of the uploaded photograph. */
   photo?: string;
-  /** Cloudinary asset marker/public ID (legacy records may contain a Firebase path). */
   photoPath?: string;
+  // Extra fields for file record tracking
+  fileUrl?: string;
+  publicId?: string;
 }
 
 export type HealthRecordType =
@@ -75,35 +73,139 @@ export interface HealthRecord extends FarmRecordBase {
   animalId: string;
   animalLabel?: string;
   type: HealthRecordType;
-  /** Short headline, e.g. "Animal not eating normally". */
   problem: string;
+  description?: string;
   observation?: string;
   actionTaken?: string;
+  treatment?: string;
   medication?: string;
-  /** Date of the event / examination, yyyy-mm-dd. */
   date: string;
   nextDate?: string;
   notes?: string;
   photo?: string;
   photoPath?: string;
+  attachmentUrl?: string;
+  attachmentPublicId?: string;
+  fileUrl?: string;
+  publicId?: string;
+}
+
+export interface FileRecord {
+  fileUrl: string;
+  publicId: string;
+  resourceType: string;
+  fileName: string;
+  displayName: string;
+  fileType: string;
+  recordType: string;
+  recordId: string;
+  uploadedBy: string;
+  uploadedAt: TimestampValue;
 }
 
 export interface FarmDocument extends FarmRecordBase {
+  documentNumber?: string;
   name: string;
   description?: string;
   fileName: string;
   fileType: string;
   fileSize: number;
-  /** pdf | image | word | excel | video | other */
   category: string;
-  /** Business document type: general | quotation | receipt | invoice. */
   docType?: string;
   downloadUrl: string;
   storagePath: string;
-  /** Cloudinary public id when the file was uploaded through Cloudinary. */
   cloudinaryPublicId?: string;
   relatedAnimalId?: string;
   relatedOrderId?: string;
+  relatedCustomer?: string;
+  relatedSupplier?: string;
+  amount?: number;
+  // File record structure
+  fileUrl?: string;
+  publicId?: string;
+  resourceType?: string;
+  displayName?: string;
+  recordType?: string;
+  recordId?: string;
+  uploadedBy?: string;
+  uploadedAt?: TimestampValue;
+  // Extended for quotations/invoices/receipts
+  type?: string;
+  date?: string;
+  customer?: string;
+}
+
+export interface Quotation extends FarmRecordBase {
+  quotationNumber: string;
+  customer: string;
+  customerPhone?: string;
+  customerEmail?: string;
+  date: string;
+  items: { name: string; quantity: number; price: number; unit?: string }[];
+  subtotal: number;
+  discount?: number;
+  total: number;
+  notes?: string;
+  status?: string;
+  fileUrl?: string;
+  publicId?: string;
+}
+
+export interface Invoice extends FarmRecordBase {
+  invoiceNumber: string;
+  customer: string;
+  date: string;
+  items: { name: string; quantity: number; price: number; unit?: string }[];
+  subtotal: number;
+  discount?: number;
+  delivery?: number;
+  total: number;
+  paymentStatus: "Unpaid" | "Partially Paid" | "Paid" | "Cancelled";
+  notes?: string;
+  fileUrl?: string;
+  publicId?: string;
+  relatedOrderId?: string;
+}
+
+export interface Receipt extends FarmRecordBase {
+  receiptNumber: string;
+  orderNumber: string;
+  customer: string;
+  date: string;
+  amount: number;
+  paymentMethod: string;
+  description?: string;
+  fileUrl?: string;
+  publicId?: string;
+  relatedOrderId?: string;
+}
+
+export interface Customer extends FarmRecordBase {
+  name: string;
+  phone: string;
+  email?: string;
+  orders?: number;
+  totalSpent?: number;
+  lastOrder?: TimestampValue;
+  deliveryLocation?: string;
+  address?: string;
+  status?: "active" | "inactive";
+  dateRegistered?: TimestampValue;
+  orderIds?: string[];
+}
+
+export interface FarmMedia extends FarmRecordBase {
+  title?: string;
+  caption?: string;
+  description?: string;
+  fileUrl: string;
+  publicId: string;
+  resourceType: "image" | "video";
+  type: "photo" | "video";
+  featured?: boolean;
+  published?: boolean;
+  thumbnailUrl?: string;
+  thumbnailPublicId?: string;
 }
 
 export interface ActivityRecord extends FarmRecordBase {
@@ -119,23 +221,22 @@ export interface FarmSettings {
   farmName: string;
   slogan: string;
   location: string;
+  fullLocation?: string;
   phone: string;
   whatsapp: string;
   email: string;
   currency: string;
-  /** Store delivery fee (0 = free delivery). */
   deliveryFee: number;
-  /** Cart subtotal above which delivery is free. */
   freeDeliveryThreshold: number;
-  /** Optional promo code and its percentage discount (0–100). */
+  deliveryInfo?: string;
+  deliveryFree?: string;
+  deliveryOther?: string;
   promoCode?: string;
   promoDiscountPercent?: number;
-  /** Product id pinned to the homepage hero (falls back to first featured). */
   heroProductId?: string;
-  /** Cloudinary cloud name used for all unsigned uploads. */
   cloudinaryCloudName?: string;
-  /** Legacy settings field; uploads always use the fixed "branch_farm" preset. */
   cloudinaryUploadPreset?: string;
+  businessInfo?: string;
   updatedAt?: TimestampValue;
   updatedBy?: string;
   updatedByName?: string;
@@ -152,43 +253,36 @@ export type OrderStatus =
   | "ready"
   | "completed"
   | "cancelled";
-export type PaymentStatus = "unpaid" | "paid";
+export type PaymentStatus = "unpaid" | "paid" | "partial";
 
 export interface Product {
   id: string;
   name: string;
-  /** produce | livestock */
   kind: ProductKind;
   category: string;
   description: string;
+  shortDescription?: string;
   price: number;
-  /** Optional discounted price (shown with the original struck through). */
   salePrice?: number | null;
-  /** Human unit label, e.g. "dozen", "kg", "litre", "each". */
   unit: string;
   stock: number;
-  /** When true, stock is decremented on orders and shown to customers. */
   trackInventory: boolean;
-  /** When true, customers may still order after stock reaches zero (pre-order). */
   allowBackorder?: boolean;
-  /**
-   * When true the product is listed but advertised as "coming soon" — it
-   * cannot be bought yet, the price is only indicative.
-   */
   comingSoon?: boolean;
-  /** Primary image. */
   image?: string;
   imagePath?: string;
-  /** Additional gallery images (public URLs). */
   images?: string[];
   imagePaths?: string[];
   active: boolean;
+  published?: boolean;
   featured?: boolean;
   createdBy?: string;
   createdByName?: string;
   createdAt?: TimestampValue;
   updatedAt?: TimestampValue;
   archived?: boolean;
+  fileUrl?: string;
+  publicId?: string;
 }
 
 export interface OrderItem {
@@ -203,6 +297,7 @@ export interface OrderItem {
 export interface Order {
   id: string;
   reference: string;
+  orderNumber?: string;
   items: OrderItem[];
   subtotal: number;
   deliveryFee: number;
@@ -213,6 +308,7 @@ export interface Order {
     email?: string;
   };
   fulfillment: FulfillmentMethod;
+  deliveryLocation?: string;
   deliveryAddress?: string;
   notes?: string;
   paymentMethod?: string;
@@ -222,7 +318,6 @@ export interface Order {
   updatedAt?: TimestampValue;
   updatedBy?: string;
   updatedByName?: string;
-  /** Proof-of-delivery e-signature (data URL) captured on completion. */
   signature?: string;
   signedByName?: string;
   signedAt?: TimestampValue;
@@ -232,14 +327,17 @@ export interface FarmVideo {
   id: string;
   title: string;
   description?: string;
+  caption?: string;
   category: string;
-  /** Public Cloudinary delivery URL of the uploaded video. */
   videoUrl: string;
-  /** Cloudinary asset marker/public ID (legacy records may contain a Firebase path). */
   storagePath: string;
-  /** Optional poster/thumbnail image shown before play. */
+  fileUrl?: string;
+  publicId?: string;
   posterUrl?: string;
   posterPath?: string;
+  thumbnailUrl?: string;
+  featured?: boolean;
+  published?: boolean;
   createdBy: string;
   createdByName: string;
   createdAt: TimestampValue;

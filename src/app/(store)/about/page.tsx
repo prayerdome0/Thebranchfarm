@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Check, Heart, Leaf, MapPin, ShieldCheck, Sprout } from "lucide-react";
+import { ArrowRight, Heart, Leaf, MapPin, ShieldCheck, Sprout, MessageCircle, Phone } from "lucide-react";
 import { Reveal } from "@/components/ui/Reveal";
 import { BUSINESS } from "@/lib/constants";
 
@@ -10,16 +10,12 @@ export default function AboutPage() {
   return (
     <>
       <section className="about-hero">
-        <Image src="/media/farm-sunset.jpg" alt="The Branch Farm at sunset" fill priority sizes="100vw" />
+        <Image src="/media/farm-sunset.jpg" alt={`${BUSINESS.name} at sunset`} fill priority sizes="100vw" />
         <div className="about-hero-overlay" />
         <div className="container about-hero-content">
-          <span className="eyebrow eyebrow-light">About us</span>
-          <h1>A family farm, run with records.</h1>
-          <p>
-            The Branch Farm grows healthy livestock and fresh produce at Mahlabane — and keeps a
-            careful, traceable history of everything we raise.
-          </p>
-          <small className="visual-disclosure">Photography from the farm at Mahlabane, Eswatini.</small>
+          <span className="eyebrow eyebrow-light">{BUSINESS.name} · {BUSINESS.slogan}</span>
+          <h1>The Branch Farm</h1>
+          <p>{BUSINESS.slogan} — fresh farm produce and livestock from Mahlabane, Eswatini.</p>
         </div>
       </section>
 
@@ -27,24 +23,19 @@ export default function AboutPage() {
         <div className="container about-intro-grid">
           <Reveal>
             <div>
-              <span className="eyebrow">Who we are</span>
-              <h2>Honest food, from soil and herd to your table.</h2>
+              <span className="eyebrow">About</span>
+              <h2>Honest food, from our farm to you.</h2>
             </div>
           </Reveal>
           <Reveal delay={100}>
             <div>
-              <p>
-                We are a working farm, not a reseller. Every egg, litre of milk and animal we offer
-                comes from our own operation, raised with care and documented from day one.
-              </p>
-              <p>
-                What sets us apart is the record behind the product — each animal carries its full
-                health and activity history, so you always know exactly what you are buying.
-              </p>
-              <p>
-                Order online, collect at the farm or arrange delivery, and pay by cash, EFT or
-                mobile money when you receive it. Simple, honest and direct.
-              </p>
+              <p>We farm at Mahlabane — cattle, goats, pigs, poultry, milk and vegetables. Everything we sell comes from our own operation.</p>
+              <p>We keep careful records for every animal — health, treatments, origin — so you know what you are buying. No middlemen, no mystery.</p>
+              <p>Order online, collect at the farm or arrange delivery. {BUSINESS.deliveryFree} {BUSINESS.deliveryOther}</p>
+              <div style={{ marginTop: 20, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <Link className="button button-primary" href="/shop">Shop Now <ArrowRight size={17} /></Link>
+                <a className="button button-whatsapp" href={`https://wa.me/${BUSINESS.whatsappLink}`} target="_blank" rel="noreferrer"><MessageCircle size={17} /> WhatsApp Us</a>
+              </div>
             </div>
           </Reveal>
         </div>
@@ -54,116 +45,40 @@ export default function AboutPage() {
         <div className="container values-layout">
           <Reveal className="values-image-stack">
             <div className="values-image-main">
-              <Image src="/media/cattle.jpg" alt="Cattle at The Branch Farm" fill sizes="50vw" />
-            </div>
-            <div className="values-fact">
-              <strong>{new Date().getFullYear() - BUSINESS.established + 1}</strong>
-              <span>years of careful farming</span>
+              <Image src="/media/cattle.jpg" alt="Cattle at The Branch Farm" fill sizes="50vw" style={{ objectFit: "cover" }} />
             </div>
           </Reveal>
           <Reveal className="values-copy" delay={120}>
-            <span className="eyebrow">Our values</span>
+            <span className="eyebrow">What we stand for</span>
             <h2>What we stand for.</h2>
             <div className="values-list">
-              <article>
-                <span>
-                  <Heart size={19} />
-                </span>
-                <div>
-                  <h3>Care for the animals</h3>
-                  <p>Pasture-raised and naturally fed, with health checked and recorded.</p>
-                </div>
-              </article>
-              <article>
-                <span>
-                  <ShieldCheck size={19} />
-                </span>
-                <div>
-                  <h3>Full traceability</h3>
-                  <p>Every animal and batch is logged back to its source and treatment.</p>
-                </div>
-              </article>
-              <article>
-                <span>
-                  <Sprout size={19} />
-                </span>
-                <div>
-                  <h3>Honest, direct sales</h3>
-                  <p>No middlemen and no hidden costs — buy straight from the farm.</p>
-                </div>
-              </article>
+              <article><span><Heart size={19} /></span><div><h3>Care for animals</h3><p>Pasture-raised, naturally fed, health checked and recorded.</p></div></article>
+              <article><span><ShieldCheck size={19} /></span><div><h3>Traceable</h3><p>Every animal and batch logged back to source.</p></div></article>
+              <article><span><Sprout size={19} /></span><div><h3>Direct sales</h3><p>No middlemen — buy straight from farm.</p></div></article>
             </div>
           </Reveal>
         </div>
       </section>
 
-      <section className="section roadmap-section">
+      <section className="section">
         <div className="container">
-          <Reveal className="roadmap-heading">
-            <span className="eyebrow">How it works</span>
-            <h2>From the farm to you in three steps.</h2>
-          </Reveal>
-          <Reveal className="roadmap">
-            <article className="roadmap-active">
-              <span>
-                <Leaf size={20} />
-              </span>
-              <small>Step 1</small>
-              <h3>Browse the shop</h3>
-              <p>See what&apos;s fresh this week — produce and livestock with live availability.</p>
-            </article>
-            <article>
-              <span>
-                <Check size={20} />
-              </span>
-              <small>Step 2</small>
-              <h3>Place your order</h3>
-              <p>Add to cart and check out. No online payment — you settle on delivery or collection.</p>
-            </article>
-            <article>
-              <span>
-                <MapPin size={20} />
-              </span>
-              <small>Step 3</small>
-              <h3>Collect or receive</h3>
-              <p>Collect free at the farm or have it delivered. We confirm the details with you.</p>
-            </article>
-          </Reveal>
-        </div>
-      </section>
-
-      <section className="section location-section">
-        <div className="container">
-          <Reveal>
-            <div className="location-card">
-              <div>
-                <span className="location-icon">
-                  <MapPin size={24} />
-                </span>
-                <h2>Find us at Mahlabane.</h2>
-                <p>
-                  {BUSINESS.location}. We&apos;re always happy to welcome visitors — call or WhatsApp
-                  ahead and we&apos;ll show you around.
-                </p>
-                <Link className="button button-primary" href="/contact">
-                  Contact us <ArrowRight size={17} />
-                </Link>
-              </div>
-              <div>
-                <h3>Opening hours</h3>
-                <p style={{ margin: "10px 0 20px", fontSize: ".82rem" }}>
-                  Mon–Sat · 7:00–17:00
-                  <br />
-                  Sunday · by appointment
-                </p>
-                <p style={{ fontSize: ".78rem" }}>
-                  Phone {BUSINESS.phoneDisplay}
-                  <br />
-                  WhatsApp {BUSINESS.whatsappDisplay}
-                </p>
+          <div className="location-card">
+            <div>
+              <span className="location-icon"><MapPin size={24} /></span>
+              <h2>{BUSINESS.name} · {BUSINESS.slogan}</h2>
+              <p>{BUSINESS.fullLocation}. Call or WhatsApp ahead and we will show you around.</p>
+              <div style={{ marginTop: 16, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <a className="button button-whatsapp" href={`https://wa.me/${BUSINESS.whatsappLink}`} target="_blank" rel="noreferrer"><MessageCircle size={17} /> WhatsApp Us</a>
+                <a className="button button-secondary" href={`tel:${BUSINESS.phoneLink}`}><Phone size={17} /> Call Us</a>
+                <Link className="button button-primary" href="/contact">Contact <ArrowRight size={17} /></Link>
               </div>
             </div>
-          </Reveal>
+            <div>
+              <h3>Delivery</h3>
+              <p style={{ margin: "10px 0 20px", fontSize: ".85rem" }}>{BUSINESS.deliveryFree}<br />{BUSINESS.deliveryOther}</p>
+              <p style={{ fontSize: ".78rem" }}>Phone {BUSINESS.phoneDisplay}<br />WhatsApp {BUSINESS.whatsappDisplay}<br />{BUSINESS.email}</p>
+            </div>
+          </div>
         </div>
       </section>
     </>

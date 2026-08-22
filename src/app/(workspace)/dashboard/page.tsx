@@ -1,105 +1,53 @@
 "use client";
 
 import Link from "next/link";
-import {
-  Activity as ActivityIcon,
-  FileText,
-  HeartPulse,
-  PawPrint,
-  Plus,
-  ShoppingBag,
-  Stethoscope,
-  UsersRound,
-} from "lucide-react";
+import { FileText, Package, PawPrint, ShoppingBag, UsersRound, Upload, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
-import {
-  getAllProducts,
-  getActivities,
-  getAnimals,
-  getFarmDocuments,
-  getHealthRecords,
-  getOrders,
-  getUsers,
-} from "@/lib/firebase/data";
+import { getAllProducts, getAnimals, getOrders, getCustomers } from "@/lib/firebase/data";
 import { formatDisplayDate } from "@/lib/utils";
-import type {
-  ActivityRecord,
-  Animal,
-  FarmDocument,
-  HealthRecord,
-  Order,
-  Product,
-  UserProfile,
-} from "@/types";
+import type { Animal, Order, Product, Customer } from "@/types";
+import { BUSINESS } from "@/lib/constants";
 
 export default function DashboardPage() {
-  const { user, isAdmin } = useAuth();
+  const { user } = useAuth();
   const { formatMoney } = useStoreConfig();
   const [animals, setAnimals] = useState<Animal[]>([]);
-  const [health, setHealth] = useState<HealthRecord[]>([]);
-  const [documents, setDocuments] = useState<FarmDocument[]>([]);
-  const [activities, setActivities] = useState<ActivityRecord[]>([]);
-  const [staff, setStaff] = useState<UserProfile[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
 
   useEffect(() => {
     getAnimals().then(setAnimals);
-    getHealthRecords().then(setHealth);
-    getFarmDocuments().then(setDocuments);
-    getActivities().then(setActivities);
     getOrders().then(setOrders);
     getAllProducts().then(setProducts);
-    if (isAdmin) getUsers().then(setStaff);
-  }, [isAdmin]);
+    getCustomers().then(setCustomers).catch(() => setCustomers([]));
+  }, []);
 
-  const activeCount = animals.filter((animal) => animal.status === "active").length;
-  const attentionCount = animals.filter(
-    (animal) => ["sick", "injured", "under-observation"].includes(animal.healthStatus),
-  ).length;
-  const staffCount = staff.filter(
-    (member) => (member.role === "staff" || member.role === "admin") && member.status === "active",
-  ).length;
+  const today = new Date().toISOString().slice(0,10);
+  const ordersToday = orders.filter((o) => {
+    const d = typeof o.createdAt === "string" ? o.createdAt : (o.createdAt as any)?.toDate?.()?.toISOString?.() || new Date().toISOString();
+    return d.slice(0,10) === today;
+  });
 
-  const openOrders = orders.filter((order) => !["completed", "cancelled"].includes(order.status));
-  const pendingOrders = orders.filter((order) => order.status === "pending");
-  const revenue = orders
-    .filter((order) => order.status !== "cancelled")
-    .reduce((sum, order) => sum + order.total, 0);
-  const lowStock = products.filter(
-    (product) => product.trackInventory && product.stock <= 5 && product.active,
-  );
+  const lowStock = products.filter((p) => p.trackInventory && p.stock <= 5 && p.active);
 
   const stats = [
+    { label: "Orders Today", value: ordersToday.length, icon: ShoppingBag, href: "/orders" },
+    { label: "Products", value: products.length, icon: Package, href: "/products" },
     { label: "Animals", value: animals.length, icon: PawPrint, href: "/animals" },
-    { label: "Active animals", value: activeCount, icon: PawPrint, href: "/animals" },
-    { label: "Need attention", value: attentionCount, icon: HeartPulse, href: "/health", warning: attentionCount > 0 },
-    { label: "Health records", value: health.length, icon: Stethoscope, href: "/health" },
-    { label: "Documents", value: documents.length, icon: FileText, href: "/documents" },
-    { label: "Open orders", value: openOrders.length, icon: ShoppingBag, href: "/orders", warning: pendingOrders.length > 0 },
-    { label: "Revenue", value: formatMoney(revenue), icon: ShoppingBag, href: "/orders" },
-    ...(isAdmin ? [{ label: "Staff", value: staffCount, icon: UsersRound, href: "/staff" }] : []),
+    { label: "Customers", value: customers.length, icon: UsersRound, href: "/customers" },
+    { label: "Low Stock", value: lowStock.length, icon: Package, href: "/products", warning: lowStock.length > 0 },
   ];
 
   return (
     <div className="dashboard-stack">
-      <section className="dashboard-welcome">
+      <section className="dashboard-welcome" style={{ background: "var(--green-900)" }}>
         <div>
-          <span>Farm dashboard</span>
-          <h2>Good day, {user?.fullName?.split(" ")[0] || "team"}.</h2>
-          <p>Here is a live view of the farm — animals, health, staff, documents and activity.</p>
-        </div>
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          {isAdmin && (
-            <Link className="button button-light" href="/animals/new">
-              <Plus size={18} /> Add animal
-            </Link>
-          )}
-          <Link className="button button-glass" href="/health">
-            <Stethoscope size={18} /> Animal health
-          </Link>
+          <span>{BUSINESS.name} · {BUSINESS.slogan}</span>
+          <h2>Good day, {user?.fullName?.split(" ")[0] || "admin"}.</h2>
+          <p>Simple dashboard — orders today, products, animals, customers, low stock, recent orders, quick actions.</p>
         </div>
       </section>
 
@@ -107,15 +55,12 @@ export default function DashboardPage() {
         {stats.map((stat) => {
           const Icon = stat.icon;
           return (
-            <article key={stat.label} className={stat.warning ? "warning" : ""}>
-              <span>
-                <Icon size={21} />
-              </span>
-              <div>
-                <small>{stat.label}</small>
-                <strong>{stat.value}</strong>
-              </div>
-            </article>
+            <Link href={stat.href} key={stat.label} style={{ textDecoration: "none" }}>
+              <article className={stat.warning ? "warning" : ""} style={{ cursor: "pointer" }}>
+                <span><Icon size={21} /></span>
+                <div><small>{stat.label}</small><strong>{stat.value}</strong></div>
+              </article>
+            </Link>
           );
         })}
       </section>
@@ -123,135 +68,51 @@ export default function DashboardPage() {
       <section className="dashboard-two-columns">
         <div className="dashboard-panel">
           <div className="section-row">
-            <div>
-              <h2>Recent health records</h2>
-              <p>Problems, observations and treatments from the team.</p>
-            </div>
-            <Link className="text-link" href="/health">
-              View all
-            </Link>
+            <div><h2>Recent Orders</h2><p>Latest customer orders.</p></div>
+            <Link className="text-link" href="/orders">View all</Link>
           </div>
-          {health.length ? (
-            <div className="activity-feed" style={{ marginTop: 14 }}>
-              {health.slice(0, 5).map((record) => (
-                <article key={record.id}>
-                  <span>
-                    <Stethoscope size={16} />
-                  </span>
-                  <div>
-                    <strong>{record.problem}</strong>
-                    <p>{record.animalLabel || record.animalId}</p>
-                    <small>
-                      {formatDisplayDate(record.date)} · {record.createdByName || "Team member"}
-                    </small>
-                  </div>
-                </article>
+          {orders.length ? (
+            <div className="staff-order-list" style={{ marginTop: 14 }}>
+              {orders.slice(0, 5).map((order) => (
+                <Link href={`/orders/${order.id}`} key={order.id}>
+                  <span><ShoppingBag size={16} /></span>
+                  <div><strong>{order.reference}</strong><small>{order.customer.name} · {order.deliveryAddress || order.fulfillment}</small></div>
+                  <strong style={{ fontSize: ".72rem" }}>{formatMoney(order.total)}</strong>
+                  <small>{order.status}</small>
+                </Link>
               ))}
             </div>
-          ) : (
-            <p style={{ marginTop: 14, fontSize: ".75rem" }}>
-              No health records yet. Open an animal to add the first one.
-            </p>
-          )}
+          ) : <p style={{ marginTop: 14, fontSize: ".75rem" }}>No orders yet.</p>}
         </div>
 
         <div className="dashboard-panel">
           <div className="section-row">
-            <div>
-              <h2>Recent activity</h2>
-              <p>Daily work recorded around the farm.</p>
-            </div>
-            <Link className="text-link" href="/activity">
-              View all
-            </Link>
+            <div><h2>Recent Activity</h2><p>Orders and stock alerts.</p></div>
           </div>
-          {activities.length ? (
-            <div className="activity-feed" style={{ marginTop: 14 }}>
-              {activities.slice(0, 5).map((record) => (
-                <article key={record.id}>
-                  <span>
-                    <ActivityIcon size={16} />
-                  </span>
-                  <div>
-                    <strong>{record.activity}</strong>
-                    <p>{record.notes}</p>
-                    <small>
-                      {formatDisplayDate(record.date)} · {record.createdByName || "Team member"}
-                    </small>
-                  </div>
-                </article>
-              ))}
-            </div>
-          ) : (
-            <p style={{ marginTop: 14, fontSize: ".75rem" }}>
-              No activity recorded yet. Log feeding, cleaning, inspections and more.
-            </p>
-          )}
+          <div style={{ marginTop: 14, display: "grid", gap: 10 }}>
+            {ordersToday.length ? ordersToday.slice(0,3).map((o) => (
+              <div key={o.id} style={{ padding: 12, background: "#f8faf7", borderRadius: 8, fontSize: ".75rem" }}>
+                <strong>{o.reference}</strong> — {o.customer.name} — {formatMoney(o.total)} — {o.deliveryAddress || o.fulfillment}
+              </div>
+            )) : <p style={{ fontSize: ".75rem" }}>No orders today.</p>}
+            {lowStock.length > 0 && (
+              <div style={{ padding: 12, background: "#fff3d8", borderRadius: 8, fontSize: ".75rem" }}>
+                <strong>Low stock:</strong> {lowStock.slice(0,3).map((p) => p.name).join(", ")} {lowStock.length > 3 ? `+${lowStock.length - 3} more` : ""}
+              </div>
+            )}
+          </div>
         </div>
       </section>
 
-      <section className="dashboard-two-columns">
-        <div className="dashboard-panel">
-          <div className="section-row">
-            <div>
-              <h2>Recent orders</h2>
-              <p>Latest orders from the online shop.</p>
-            </div>
-            <Link className="text-link" href="/orders">
-              View all
-            </Link>
-          </div>
-          {orders.length ? (
-            <div className="staff-order-list">
-              {orders.slice(0, 5).map((order) => (
-                <Link href={`/orders/${order.id}`} key={order.id}>
-                  <span>
-                    <ShoppingBag size={16} />
-                  </span>
-                  <div>
-                    <strong>{order.reference}</strong>
-                    <small>{order.customer.name}</small>
-                  </div>
-                  <strong style={{ fontSize: ".72rem" }}>{formatMoney(order.total)}</strong>
-                  <small style={{ color: "var(--muted)" }}>{order.status}</small>
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <p style={{ marginTop: 14, fontSize: ".75rem" }}>No orders yet.</p>
-          )}
-        </div>
-
-        <div className="dashboard-panel">
-          <div className="section-row">
-            <div>
-              <h2>Low stock</h2>
-              <p>Products with five or fewer units left.</p>
-            </div>
-            <Link className="text-link" href="/products">
-              Manage
-            </Link>
-          </div>
-          {lowStock.length ? (
-            <div className="staff-order-list">
-              {lowStock.slice(0, 6).map((product) => (
-                <Link href={`/products/${product.id}/edit`} key={product.id}>
-                  <span>
-                    <ShoppingBag size={16} />
-                  </span>
-                  <div>
-                    <strong>{product.name}</strong>
-                    <small>{product.kind}</small>
-                  </div>
-                  <strong style={{ fontSize: ".72rem", color: "var(--warning)" }}>
-                    {product.stock} left
-                  </strong>
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <p style={{ marginTop: 14, fontSize: ".75rem" }}>All products are well stocked.</p>
-          )}
+      <section className="dashboard-panel">
+        <h2 style={{ fontFamily: "var(--sans)", fontSize: "1rem", marginBottom: 16 }}>Quick Actions</h2>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 10 }}>
+          <Link className="button button-primary" href="/products/new"><Plus size={16} /> Add Product</Link>
+          <Link className="button button-secondary" href="/animals/new"><Plus size={16} /> Add Animal</Link>
+          <Link className="button button-secondary" href="/orders"><ShoppingBag size={16} /> New Order (Shop)</Link>
+          <Link className="button button-secondary" href="/media"><Upload size={16} /> Upload Media</Link>
+          <Link className="button button-secondary" href="/documents/quotations"><FileText size={16} /> Create Quotation</Link>
+          <Link className="button button-secondary" href="/documents/invoices"><FileText size={16} /> Create Invoice</Link>
         </div>
       </section>
     </div>

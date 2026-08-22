@@ -2,45 +2,17 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { ArrowRight, FileText, ShoppingBag, Trash2, Truck } from "lucide-react";
+import { ArrowRight, ShoppingBag, Trash2, Truck, MessageCircle } from "lucide-react";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { QuantityStepper } from "@/components/store/ProductCard";
 import { useCart } from "@/contexts/CartContext";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
+import { getCartWhatsAppLink } from "@/lib/whatsapp";
+import { BUSINESS } from "@/lib/constants";
 
 export default function CartPage() {
   const { lines, subtotal, setQuantity, remove } = useCart();
   const { deliveryFee, freeDeliveryThreshold, formatMoney } = useStoreConfig();
-  const [quoting, setQuoting] = useState(false);
-
-  /** Builds a printable farm quotation for the current cart via /api/quotations. */
-  const downloadQuotation = async () => {
-    setQuoting(true);
-    try {
-      const response = await fetch("/api/quotations", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          items: lines.map((line) => ({
-            productId: line.productId,
-            name: line.name,
-            unit: line.unit,
-            price: line.price,
-            quantity: line.quantity,
-          })),
-        }),
-      });
-      if (!response.ok) throw new Error("quotation-failed");
-      const html = await response.text();
-      const blobUrl = URL.createObjectURL(new Blob([html], { type: "text/html" }));
-      window.open(blobUrl, "_blank");
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
-    } catch {
-      window.alert("Could not build the quotation right now. Please try again.");
-    } finally {
-      setQuoting(false);
-    }
-  };
 
   if (!lines.length) {
     return (
@@ -60,6 +32,8 @@ export default function CartPage() {
   }
 
   const freeDelivery = subtotal >= freeDeliveryThreshold;
+  const delivery = freeDelivery ? 0 : deliveryFee;
+  const total = subtotal + delivery;
 
   return (
     <section className="section cart-section">
@@ -68,11 +42,9 @@ export default function CartPage() {
           <div>
             <span className="eyebrow">Your cart</span>
             <h1>Shopping basket</h1>
-            <p>Review your items, then continue to checkout.</p>
+            <p>{BUSINESS.deliveryFree} {BUSINESS.deliveryOther}</p>
           </div>
-          <Link className="text-link" href="/shop">
-            Continue shopping <ArrowRight size={15} />
-          </Link>
+          <Link className="text-link" href="/shop">Continue Shopping <ArrowRight size={15} /></Link>
         </div>
 
         <div className="cart-layout">
@@ -80,7 +52,7 @@ export default function CartPage() {
             <div className="cart-table-head">
               <span>Product</span>
               <span>Quantity</span>
-              <span style={{ textAlign: "right" }}>Total</span>
+              <span style={{ textAlign: "right" }}>Subtotal</span>
             </div>
 
             {lines.map((line) => (
@@ -91,15 +63,7 @@ export default function CartPage() {
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={line.image} alt={line.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                     ) : (
-                      <span
-                        style={{
-                          width: "100%",
-                          height: "100%",
-                          display: "grid",
-                          placeItems: "center",
-                          color: "#9fb2a6",
-                        }}
-                      >
+                      <span style={{ width: "100%", height: "100%", display: "grid", placeItems: "center", color: "#9fb2a6" }}>
                         <ShoppingBag size={26} />
                       </span>
                     )}
@@ -111,11 +75,7 @@ export default function CartPage() {
                   </div>
                 </div>
                 <div className="cart-item-quantity">
-                  <QuantityStepper
-                    small
-                    value={line.quantity}
-                    onChange={(next) => setQuantity(line.productId, next)}
-                  />
+                  <QuantityStepper small value={line.quantity} onChange={(next) => setQuantity(line.productId, next)} />
                   <button className="remove-cart-item" onClick={() => remove(line.productId)}>
                     <Trash2 size={13} /> Remove
                   </button>
@@ -127,41 +87,37 @@ export default function CartPage() {
 
           <aside className="cart-summary">
             <h2>Order summary</h2>
-            <div className="summary-line">
-              <span>Subtotal</span>
-              <strong>{formatMoney(subtotal)}</strong>
-            </div>
-            <div className="summary-line">
-              <span>Delivery</span>
-              <strong>{freeDelivery ? "Free" : `from ${formatMoney(deliveryFee)}`}</strong>
-            </div>
+            <div className="summary-line"><span>Subtotal</span><strong>{formatMoney(subtotal)}</strong></div>
+            <div className="summary-line"><span>Delivery</span><strong>{freeDelivery ? "Free" : formatMoney(delivery)}</strong></div>
+            <div className="summary-line"><span>Total</span><strong>{formatMoney(total)}</strong></div>
+
             <div className="delivery-policy">
               <Truck size={17} />
               <div>
-                <strong>Pickup is free at the farm</strong>
-                <p>
-                  Delivery {formatMoney(deliveryFee)}, free over {formatMoney(freeDeliveryThreshold)}.
-                  Final fee confirmed at checkout.
-                </p>
+                <strong>{BUSINESS.deliveryFree}</strong>
+                <p>{BUSINESS.deliveryOther} Pickup free at farm. Delivery {formatMoney(deliveryFee)}, free over {formatMoney(freeDeliveryThreshold)}.</p>
               </div>
             </div>
+
             <div className="summary-total">
-              <span>Total</span>
-              <strong>{formatMoney(subtotal + (freeDelivery ? 0 : deliveryFee))}</strong>
+              <span>Total to pay on collection/delivery</span>
+              <strong>{formatMoney(total)}</strong>
             </div>
+
             <Link className="button button-primary button-large button-full" href="/checkout">
-              Continue to checkout <ArrowRight size={18} />
+              Checkout <ArrowRight size={18} />
             </Link>
-            <button
-              className="button button-secondary button-full"
-              onClick={downloadQuotation}
-              disabled={quoting}
-              style={{ marginTop: 10 }}
-            >
-              <FileText size={17} /> {quoting ? "Preparing…" : "Download quotation"}
-            </button>
+
+            <Link className="button button-secondary button-full" href="/shop" style={{ marginTop: 10 }}>
+              Continue Shopping
+            </Link>
+
+            <a className="button button-whatsapp button-full" href={getCartWhatsAppLink(lines, subtotal)} target="_blank" rel="noreferrer" style={{ marginTop: 10 }}>
+              <MessageCircle size={17} /> Order on WhatsApp
+            </a>
+
             <div className="summary-note">
-              <span>No online payment needed — pay on collection or delivery.</span>
+              <span>No online payment — pay on collection or delivery. WhatsApp or cart — your choice.</span>
             </div>
           </aside>
         </div>

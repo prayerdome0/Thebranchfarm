@@ -8,6 +8,7 @@ import { AuthShell } from "@/components/auth/AuthShell";
 import { useAuth } from "@/contexts/AuthContext";
 import { registerSchema } from "@/lib/validation";
 import { friendlyError } from "@/lib/utils";
+import { BUSINESS } from "@/lib/constants";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -17,7 +18,7 @@ export default function RegisterPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [serverError, setServerError] = useState("");
   const [loading, setLoading] = useState(false);
-  const update = (key: keyof typeof form, value: string) => setForm((current) => ({ ...current, [key]: value }));
+  const update = (key: keyof typeof form, value: string) => setForm((c) => ({ ...c, [key]: value }));
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -28,5 +29,18 @@ export default function RegisterPage() {
     catch (cause) { setServerError(friendlyError(cause)); setLoading(false); }
   };
 
-  return <AuthShell eyebrow="Request access" title="Create your account." description="Register, then a farm administrator will grant you staff access."><form className="auth-form register-form" onSubmit={submit} noValidate>{serverError && <div className="form-alert error"><CircleAlert size={18} /> {serverError}</div>}<label className="field"><span>Full name</span><div className="input-with-icon"><UserRound size={18} /><input value={form.fullName} onChange={(e) => update("fullName", e.target.value)} autoComplete="name" autoFocus /></div>{errors.fullName && <small className="field-error">{errors.fullName}</small>}</label><label className="field"><span>Phone</span><div className="input-with-icon"><Phone size={18} /><input value={form.phone} onChange={(e) => update("phone", e.target.value)} autoComplete="tel" inputMode="tel" placeholder="+268 …" /></div>{errors.phone && <small className="field-error">{errors.phone}</small>}</label><label className="field"><span>Email</span><div className="input-with-icon"><Mail size={18} /><input type="email" value={form.email} onChange={(e) => update("email", e.target.value)} autoComplete="email" /></div>{errors.email && <small className="field-error">{errors.email}</small>}</label><label className="field"><span>Password</span><div className="input-with-icon input-with-action"><LockKeyhole size={18} /><input type={show ? "text" : "password"} value={form.password} onChange={(e) => update("password", e.target.value)} autoComplete="new-password" /><button type="button" onClick={() => setShow((value) => !value)} aria-label={show ? "Hide password" : "Show password"}>{show ? <EyeOff size={18} /> : <Eye size={18} />}</button></div>{errors.password && <small className="field-error">{errors.password}</small>}</label><label className="field"><span>Confirm password</span><div className="input-with-icon"><Check size={18} /><input type={show ? "text" : "password"} value={form.confirmPassword} onChange={(e) => update("confirmPassword", e.target.value)} autoComplete="new-password" /></div>{errors.confirmPassword && <small className="field-error">{errors.confirmPassword}</small>}</label><button className="button button-primary button-large button-full" disabled={loading}>{loading ? <><i className="button-spinner" /> Creating account…</> : <>Request access <ArrowRight size={18} /></>}</button></form><p className="auth-switch">Already have an account? <Link href="/login">Sign in</Link></p></AuthShell>;
+  return (
+    <AuthShell eyebrow={BUSINESS.name} title="Welcome to register" description={`${BUSINESS.name} - ${BUSINESS.slogan}. Create account to continue.`}>
+      <form className="auth-form register-form" onSubmit={submit} noValidate>
+        {serverError && <div className="form-alert error"><CircleAlert size={18} /> {serverError}</div>}
+        <label className="field"><span>Full name</span><div className="input-with-icon"><UserRound size={18} /><input value={form.fullName} onChange={(e) => update("fullName", e.target.value)} autoComplete="name" autoFocus /></div>{errors.fullName && <small className="field-error">{errors.fullName}</small>}</label>
+        <label className="field"><span>Phone</span><div className="input-with-icon"><Phone size={18} /><input value={form.phone} onChange={(e) => update("phone", e.target.value)} autoComplete="tel" inputMode="tel" placeholder="+268 …" /></div>{errors.phone && <small className="field-error">{errors.phone}</small>}</label>
+        <label className="field"><span>Email</span><div className="input-with-icon"><Mail size={18} /><input type="email" value={form.email} onChange={(e) => update("email", e.target.value)} autoComplete="email" /></div>{errors.email && <small className="field-error">{errors.email}</small>}</label>
+        <label className="field"><span>Password</span><div className="input-with-icon input-with-action"><LockKeyhole size={18} /><input type={show ? "text" : "password"} value={form.password} onChange={(e) => update("password", e.target.value)} autoComplete="new-password" /><button type="button" onClick={() => setShow((v) => !v)}>{show ? <EyeOff size={18} /> : <Eye size={18} />}</button></div>{errors.password && <small className="field-error">{errors.password}</small>}</label>
+        <label className="field"><span>Confirm password</span><div className="input-with-icon"><Check size={18} /><input type={show ? "text" : "password"} value={form.confirmPassword} onChange={(e) => update("confirmPassword", e.target.value)} autoComplete="new-password" /></div>{errors.confirmPassword && <small className="field-error">{errors.confirmPassword}</small>}</label>
+        <button className="button button-primary button-large button-full" disabled={loading}>{loading ? <><i className="button-spinner" /> Creating…</> : <>Register <ArrowRight size={18} /></>}</button>
+      </form>
+      <p className="auth-switch">Already have account? <Link href="/login">Sign in</Link></p>
+    </AuthShell>
+  );
 }

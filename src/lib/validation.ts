@@ -53,7 +53,7 @@ export const animalSchema = z.object({
   supplier: z.string().trim().max(150).optional(),
   location: z.string().trim().min(1, "Enter the current location").max(150),
   weight: optionalNumber,
-  status: z.enum(["active", "sold", "deceased", "transferred"]),
+  status: z.enum(["active", "sold", "deceased", "transferred", "other"]),
   healthStatus: z.enum([
     "healthy",
     "under-observation",
@@ -124,8 +124,8 @@ export const settingsSchema = z.object({
     .optional()
     .default(0),
   heroProductId: z.string().trim().max(200).optional().default(""),
-  cloudinaryCloudName: z.string().trim().max(120).optional().default(""),
-  cloudinaryUploadPreset: z.string().trim().max(120).optional().default("branch_farm"),
+  cloudinaryCloudName: z.string().trim().max(120).optional().default("dhad95cch"),
+  cloudinaryUploadPreset: z.string().trim().max(120).optional().default("branch_farm_unsigned"),
 });
 
 export const productSchema = z.object({
@@ -160,9 +160,11 @@ export const checkoutSchema = z.object({
       .optional(),
   ),
   fulfillment: z.enum(["pickup", "delivery"]),
+  deliveryLocation: z.string().trim().max(200).optional(),
   deliveryAddress: z.string().trim().max(300).optional(),
   paymentMethod: z.string().trim().max(60).optional(),
   notes: z.string().trim().max(1000).optional(),
+  promo: z.string().trim().max(40).optional(),
   agree: z.boolean().refine((value) => value === true, {
     message: "Please confirm the order details",
   }),
