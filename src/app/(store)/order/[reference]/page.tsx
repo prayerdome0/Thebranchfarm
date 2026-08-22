@@ -3,26 +3,59 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ArrowRight, Check, Copy, MessageSquareText, PackageCheck, Receipt } from "lucide-react";
+import { ArrowRight, Check, Copy, MessageSquareText, PackageCheck, Receipt, RefreshCcw } from "lucide-react";
 import { Loading } from "@/components/ui/Loading";
 import { useToast } from "@/contexts/ToastContext";
 import { FULFILLMENT_LABELS } from "@/lib/constants";
-import { getOrderByReference } from "@/lib/firebase/data";
+import { lookupOrderByReference, type LookupOrderResult } from "@/lib/firebase/data";
+import { getLocalOrder } from "@/lib/store";
 import { money } from "@/lib/utils";
 import type { Order } from "@/types";
 
 export default function OrderSuccessPage() {
   const params = useParams<{ reference: string }>();
+  const reference = (params.reference || "").toUpperCase();
   const { showToast } = useToast();
-  const [order, setOrder] = useState<Order | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Orders placed on this device are readable instantly, so the success page
+  // never 404s after checkout; the effect below refreshes the live status.
+  const [order, setOrder] = useState<Order | null>(() => getLocalOrder(reference));
+  const [lookup, setLookup] = useState<Extract<LookupOrderResult, { status: "not-found" | "unavailable" }> | null>(null);
+  const [loading, setLoading] = useState(() => !getLocalOrder(reference));
 
   useEffect(() => {
-    getOrderByReference(params.reference).then((found) => {
-      setOrder(found);
+    if (!reference) return;
+    let cancelled = false;
+    lookupOrderByReference(reference).then((result) => {
+      if (cancelled) return;
+      if (result.status === "found") {
+        setOrder(result.order);
+        setLookup(null);
+      } else if (!getLocalOrder(reference)) {
+        setOrder(null);
+        setLookup(result);
+      }
       setLoading(false);
     });
-  }, [params.reference]);
+    return () => {
+      cancelled = true;
+    };
+  }, [reference]);
+
+  const retry = () => {
+    if (!reference) return;
+    setLoading(true);
+    setLookup(null);
+    lookupOrderByReference(reference).then((result) => {
+      if (result.status === "found") {
+        setOrder(result.order);
+        setLookup(null);
+      } else {
+        setOrder(null);
+        setLookup(result);
+      }
+      setLoading(false);
+    });
+  };
 
   if (loading) {
     return (
@@ -32,12 +65,34 @@ export default function OrderSuccessPage() {
     );
   }
 
+  if (!order && lookup?.status === "unavailable") {
+    return (
+      <section className="page-shell not-found-panel">
+        <span>⏳</span>
+        <h1>We couldn&apos;t load your order.</h1>
+        <p>
+          Reference <strong>{reference}</strong> was placed, but the order service is
+          unavailable right now. Try again in a moment or contact the farm.
+        </p>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
+          <button className="button button-primary" onClick={retry} disabled={loading}>
+            <RefreshCcw size={16} /> Try again
+          </button>
+          <Link href="/track" className="button button-secondary">
+            Track an order
+          </Link>
+        </div>
+      </section>
+    );
+  }
+
   if (!order) {
     return (
       <section className="page-shell not-found-panel">
         <span>404</span>
         <h1>Order not found.</h1>
-        <p>We couldn&apos;t find an order with that reference.</p>
+        <p>We couldn&apos;t find an order with reference {reference || ""}.</p>
+        <p>Check the number on your confirmation, receipt or invoice.</p>
         <Link href="/track" className="button button-primary">
           Track an order
         </Link>
@@ -89,7 +144,7 @@ export default function OrderSuccessPage() {
         </div>
 
         <div className="success-actions">
-          <Link className="button button-primary" href="/track">
+          <Link className="button button-primary" href={`/track?ref=${encodeURIComponent(order.reference)}`}>
             Track this order <PackageCheck size={18} />
           </Link>
           {order.paymentStatus === "paid" && (

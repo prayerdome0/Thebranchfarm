@@ -35,7 +35,13 @@ staff — there is no payment gateway.
 - **Cart** is stored in the browser (`localStorage`) and works for guests — no sign-in to buy.
 - **Checkout** collects name, phone, pickup/delivery and preferred payment method. No online
   payment: the customer pays by cash, EFT or mobile money on collection or delivery.
-- **Order tracking** at `/track` — look up an order by its `TB-XXXXXX` reference.
+- **Order tracking** at `/track` — look up an order by its `TB-XXXXXX` reference. Because the
+  `orders` collection is staff-only, tracking goes through the public `trackOrder` Cloud
+  Function, which returns only what a customer may see (no phone/email/signature). Orders
+  placed on the same device are also cached locally, so the success page
+  (`/order/TB-XXXXXX`) shows the order number and track button immediately after checkout —
+  even if the live backend is temporarily unreachable. A `/track?ref=TB-…` link pre-fills the
+  tracker.
 - **Videos** at `/videos` — farm tours, livestock and daily-life clips uploaded by staff/admin
   (MP4/WebM up to 200 MB, with an optional thumbnail) and played back inline on the public site.
   Four sample **photo-films** (cinematic slideshows cut from gallery stills) ship in

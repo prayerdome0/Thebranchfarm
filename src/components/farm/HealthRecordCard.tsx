@@ -22,25 +22,25 @@ export function HealthRecordCard({
     <article className="health-record-card">
       <div className="health-record-head">
         <div>
-          <h4>{record.problem}</h4>
+          <h4>{String(record.problem || "Health record")}</h4>
           {showAnimal && record.animalLabel && (
-            <small style={{ color: "var(--muted)", fontSize: ".62rem" }}>{record.animalLabel}</small>
+            <small style={{ color: "var(--muted)", fontSize: ".62rem" }}>{String(record.animalLabel)}</small>
           )}
         </div>
-        <span className={`status-badge status-${record.type}`}>{STATUS_LABELS[record.type] || record.type}</span>
+        <span className={`status-badge status-${record.type}`}>{STATUS_LABELS[record.type] || String(record.type || "other")}</span>
       </div>
       <div className="health-record-body">
         {record.observation && (
-          <p><strong>Observation:</strong> {record.observation}</p>
+          <p><strong>Observation:</strong> {String(record.observation)}</p>
         )}
         {record.actionTaken && (
-          <p><strong>Action taken:</strong> {record.actionTaken}</p>
+          <p><strong>Action taken:</strong> {String(record.actionTaken)}</p>
         )}
         {record.medication && (
-          <p><strong>Medication / vaccine:</strong> {record.medication}</p>
+          <p><strong>Medication / vaccine:</strong> {String(record.medication)}</p>
         )}
         {record.notes && (
-          <p><strong>Medical notes:</strong> {record.notes}</p>
+          <p><strong>Medical notes:</strong> {String(record.notes)}</p>
         )}
         {record.nextDate && (
           <p><strong>Follow-up:</strong> {formatDisplayDate(record.nextDate)}</p>
@@ -49,7 +49,7 @@ export function HealthRecordCard({
       {record.photo && (
         <div className="health-record-photo">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={record.photo} alt={record.problem} />
+          <img src={String(record.photo)} alt={String(record.problem || "Health record")} />
         </div>
       )}
       <div className="health-record-foot">

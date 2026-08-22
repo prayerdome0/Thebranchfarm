@@ -25,6 +25,13 @@ export async function GET(_request: Request, { params }: { params: Promise<{ ref
     const order = { id: doc.id, ...doc.data() } as Order;
     const createdAt = order.createdAt as { toDate?: () => Date } | undefined;
 
+    const items = (order.items || []).map((item) => ({
+      name: item.name,
+      quantity: item.quantity,
+      unit: item.unit,
+      price: item.price,
+    }));
+
     return Response.json({
       reference: order.reference,
       status: order.status,
@@ -32,9 +39,16 @@ export async function GET(_request: Request, { params }: { params: Promise<{ ref
       paymentStatus: order.paymentStatus,
       paymentLabel: PAYMENT_STATUS_LABELS[order.paymentStatus] || order.paymentStatus,
       total: order.total,
-      itemCount: (order.items || []).reduce((sum, item) => sum + item.quantity, 0),
-      items: (order.items || []).map((item) => ({ name: item.name, quantity: item.quantity, unit: item.unit })),
+      subtotal: order.subtotal,
+      deliveryFee: order.deliveryFee,
+      itemCount: items.reduce((sum, item) => sum + item.quantity, 0),
+      items,
       fulfillment: order.fulfillment,
+      customerName: order.customer?.name || "",
+      deliveryAddress: order.deliveryAddress,
+      deliveryLocation: order.deliveryLocation,
+      notes: order.notes,
+      paymentMethod: order.paymentMethod,
       createdAt: createdAt?.toDate?.().toISOString() ?? order.createdAt,
       receiptUrl: `/api/orders/${doc.id}/receipt?reference=${encodeURIComponent(order.reference)}`,
     });
