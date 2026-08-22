@@ -1,4 +1,10 @@
-import { cert, getApps, initializeApp, type App } from "firebase-admin/app";
+import {
+  applicationDefault,
+  cert,
+  getApps,
+  initializeApp,
+  type App,
+} from "firebase-admin/app";
 import { getAuth, type Auth } from "firebase-admin/auth";
 import { getFirestore, type Firestore } from "firebase-admin/firestore";
 
@@ -6,9 +12,13 @@ import { getFirestore, type Firestore } from "firebase-admin/firestore";
  * Server-side Firebase Admin access for the Next.js API routes.
  *
  * Admin is optional: when FIREBASE_ADMIN_* credentials are present the routes
- * read/write the live Firestore; without them public routes fall back to the
- * sample catalogue and protected routes answer 503 so the client keeps using
- * its direct Firestore path. Nothing breaks without a backend.
+ * read/write the live Firestore; without them the routes fall back to the
+ * platform's Application Default Credentials — on Firebase App Hosting /
+ * Cloud Run these are provisioned automatically (together with the auto
+ * injected FIREBASE_CONFIG), so the authenticated API routes work with zero
+ * manual configuration. Only when neither source yields a working Admin SDK
+ * do protected routes answer 503 so the client keeps using its direct
+ * Firestore path. Nothing breaks without a backend.
  */
 
 export class ApiError extends Error {
@@ -45,24 +55,49 @@ export function getAdmin(): AdminBundle | null {
   if (bundle) return bundle;
   if (attempted) return null;
   attempted = true;
+
+  const build = (appId: string, makeOpts: () => Record<string, unknown>): AdminBundle | null => {
+    try {
+      const app =
+        getApps().find((existing) => existing.name === appId) ||
+        initializeApp(makeOpts() as never, appId);
+      return { app, db: getFirestore(app), auth: getAuth(app) };
+    } catch {
+      return null;
+    }
+  };
+
+  const storageBucket =
+    process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "thebranchfarm.firebasestorage.app";
+
+  // 1) Explicit service-account credentials from the environment (Vercel,
+  //    local dev, any host where FIREBASE_ADMIN_* is set).
   const creds = credentials();
-  if (!creds) return null;
-  try {
-    const app =
-      getApps().find((existing) => existing.name === "thebranchfarm-api") ||
-      initializeApp(
-        {
-          credential: cert(creds),
-          storageBucket:
-            process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "thebranchfarm.firebasestorage.app",
-        },
-        "thebranchfarm-api",
-      );
-    bundle = { app, db: getFirestore(app), auth: getAuth(app) };
-    return bundle;
-  } catch {
-    return null;
+  if (creds) {
+    bundle =
+      build("thebranchfarm-api", () => ({
+        credential: cert(creds),
+        storageBucket,
+      })) ?? null;
+    if (bundle) return bundle;
   }
+
+  // 2) Application Default Credentials. Firebase App Hosting (Cloud Run)
+  //    provisions these automatically and injects FIREBASE_CONFIG, so the
+  //    Admin SDK works there with no environment configuration at all.
+  //    Elsewhere (e.g. a laptop without `gcloud auth`) this simply fails and
+  //    we keep the documented 503 behaviour.
+  bundle =
+    build("thebranchfarm-adc", () => {
+      const projectId =
+        process.env.FIREBASE_ADMIN_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+      return {
+        ...(projectId ? { projectId } : {}),
+        credential: applicationDefault(),
+        storageBucket,
+      };
+    }) ?? null;
+  return bundle;
 }
 
 export interface Actor {
@@ -97,8 +132,19 @@ export async function requireStaff(
   if (!token) throw new ApiError(401, "Sign in is required. Pass an Authorization: Bearer <id token> header.");
   try {
     const decoded = await admin.auth.verifyIdToken(token);
-    const profile = await admin.db.doc(`users/${decoded.uid}`).get();
-    const data = profile.data();
+
+    // The Firestore profile is the primary role source, but the read can fail
+    // for infrastructure reasons (e.g. the runtime service account has not
+    // been granted Firestore access yet). Custom claims are set only by
+    // trusted server code, so they remain a valid role source on their own.
+    let data: Record<string, unknown> | undefined;
+    let profileReadFailed = false;
+    try {
+      const profile = await admin.db.doc(`users/${decoded.uid}`).get();
+      data = profile.data();
+    } catch {
+      profileReadFailed = true;
+    }
 
     // Check role from claims, Firestore profile, and initial admin email allowlist
     const claimsRole =
@@ -122,11 +168,17 @@ export async function requireStaff(
 
     const status = (data?.status as string) || (decoded.disabled ? "disabled" : "active");
     if (status !== "active" || !roles.includes(role as "staff" | "admin")) {
+      if (profileReadFailed) {
+        throw new ApiError(
+          502,
+          "Your account was verified, but its farm profile could not be read. Grant the server's service account access to Firestore (or set FIREBASE_ADMIN_* credentials), then try again.",
+        );
+      }
       throw new ApiError(403, "This account is not authorized for this action.");
     }
 
     // Ensure Firestore profile and custom claims stay in sync if promoted as admin
-    if ((isInitialAdmin || claimsRole === "admin") && data?.role !== "admin") {
+    if (!profileReadFailed && (isInitialAdmin || claimsRole === "admin") && data?.role !== "admin") {
       admin.db.doc(`users/${decoded.uid}`).set({ role: "admin" }, { merge: true }).catch(() => {});
       admin.auth.setCustomUserClaims(decoded.uid, { role: "admin" }).catch(() => {});
     }

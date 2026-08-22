@@ -1,6 +1,47 @@
+# Firebase App Hosting configuration for The Branch Farm.
+#
+# The public Firebase web identifiers are needed at BUILD time (they end up in
+# the client bundle). Server-only configuration is deliberately NOT required:
+#   - The authenticated API routes (/api/uploads, /api/guide, …) verify
+#     sessions with the platform's Application Default Credentials, which App
+#     Hosting provisions automatically (see src/lib/server/admin.ts).
+#   - Media uploads fall back to the farm's unsigned Cloudinary preset when
+#     the server has no Cloudinary credentials (see src/lib/cloudinary.ts).
+#
+# To harden the deployment (server-signed uploads + password-protected guide),
+# create the secrets below and uncomment their entries:
+#   firebase apphosting:secrets:set cloudinary-url
+#   firebase apphosting:secrets:set firebase-admin-client-email
+#   firebase apphosting:secrets:set firebase-admin-private-key
+#   firebase apphosting:secrets:set guide-pdf-password
+#
+#   env:
+#     - variable: CLOUDINARY_URL
+#       secret: cloudinary-url
+#       availability:
+#         - RUNTIME
+#     - variable: FIREBASE_ADMIN_PROJECT_ID
+#       value: thebranchfarm
+#       availability:
+#         - RUNTIME
+#     - variable: FIREBASE_ADMIN_CLIENT_EMAIL
+#       secret: firebase-admin-client-email
+#       availability:
+#         - RUNTIME
+#     - variable: FIREBASE_ADMIN_PRIVATE_KEY
+#       secret: firebase-admin-private-key
+#       availability:
+#         - RUNTIME
+#     - variable: GUIDE_PDF_PASSWORD
+#       secret: guide-pdf-password
+#       availability:
+#         - RUNTIME
+
 runConfig:
   cpu: 1
-  memoryMiB: 512
+  # Large media (videos up to 200 MB) is streamed through /api/uploads, which
+  # buffers the request body in memory — 512 MiB is not enough headroom.
+  memoryMiB: 2048
   minInstances: 0
   maxInstances: 10
   concurrency: 80

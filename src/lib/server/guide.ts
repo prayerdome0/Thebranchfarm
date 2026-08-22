@@ -1,7 +1,6 @@
 import { PDFDocument, PDFFont, PDFImage, PDFPage, StandardFonts, rgb } from "pdf-lib";
 import { BUSINESS } from "@/lib/constants";
 import { LOGO_DATA_URL } from "@/lib/logoData";
-import { encryptPdfRc4 } from "@/lib/server/pdfEncrypt";
 
 /**
  * The Branch Farm — complete in-app user guide (PDF).
@@ -1164,6 +1163,21 @@ function quickReferencePage(doc: PDFDocument) {
 
 export const GUIDE_VERSION = "1.1";
 
+/**
+ * Decodes base64 without depending on Node's Buffer, so the guide can be
+ * built both on the server (API route) and, as a fallback, in the browser.
+ */
+function base64ToBytes(base64: string): Uint8Array {
+  const cleaned = base64.replace(/[^A-Za-z0-9+/=]/g, "");
+  const binary =
+    typeof atob === "function"
+      ? atob(cleaned)
+      : Buffer.from(cleaned, "base64").toString("binary");
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
 export async function buildGuidePdf(options: { password?: string } = {}): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
   FONT_CACHE = {
@@ -1173,7 +1187,7 @@ export async function buildGuidePdf(options: { password?: string } = {}): Promis
   };
   const base64 = LOGO_DATA_URL.split(",")[1] || "";
   if (base64) {
-    LOGO = await doc.embedPng(Buffer.from(base64, "base64"));
+    LOGO = await doc.embedPng(base64ToBytes(base64));
   }
   PAGE_NO = 0;
 
@@ -1206,6 +1220,12 @@ export async function buildGuidePdf(options: { password?: string } = {}): Promis
 
   const bytes = await doc.save({ useObjectStreams: false });
   const password = (options.password || process.env.GUIDE_PDF_PASSWORD || "").trim();
-  if (password) return encryptPdfRc4(bytes, password);
+  if (password) {
+    // Loaded dynamically so node:crypto stays out of the browser bundle —
+    // this branch only ever runs on the server (GUIDE_PDF_PASSWORD is a
+    // server-only configuration value).
+    const { encryptPdfRc4 } = await import("./pdfEncrypt");
+    return encryptPdfRc4(bytes, password);
+  }
   return bytes;
 }

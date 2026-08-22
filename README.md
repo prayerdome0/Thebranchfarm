@@ -95,22 +95,41 @@ The private workspace follows one operating principle:
   a sample catalogue is shown and orders are stored locally in the browser. An admin can also
   seed the sample catalogue into Firestore from **Products → Add sample products**.
 
-## Media uploads and downloads (server-signed)
+## Media uploads and downloads (secure-first, with automatic fallback)
 
 All animal and health photos, product images, farm videos, thumbnails and farm documents are
-uploaded **through this app's own authenticated API** (`POST /api/uploads`) — never straight
-from the browser to the media cloud. The server signs each upload with credentials that exist
-only in server environment variables, so **no cloud name, API key, API secret or upload preset
-is ever exposed in the website code or shipped to the browser**. There are no folders; the
-database's `recordType` + `recordId` identify what each file belongs to. Stored secure delivery
-URLs power viewing, playback and document downloads.
+uploaded **through this app's own authenticated API** (`POST /api/uploads`) — the server signs
+each upload with credentials that exist only in server environment variables, so **no API key
+or API secret is ever exposed in the website code or shipped to the browser**. There are no
+folders; the database's `recordType` + `recordId` identify what each file belongs to. Stored
+secure delivery URLs power viewing, playback and document downloads.
 
-Setup (server-side only):
+**Zero-configuration resilience.** A deployment without server secrets still works end to end:
+
+- **Session verification** — when `FIREBASE_ADMIN_*` is not set, the API routes fall back to
+  the platform's Application Default Credentials, which Firebase App Hosting provisions
+  automatically. On App Hosting the authenticated routes (uploads, guide, order management)
+  therefore work with **no environment configuration at all**.
+- **Uploads** — if the server route cannot sign the upload (no `CLOUDINARY_*` configuration,
+  API unreachable, or a file larger than the platform's request limit), the browser falls back
+  to the farm's **unsigned upload preset** (`branch_farm` in cloud `dhad95cch`). A cloud name +
+  unsigned preset are public identifiers — exactly like the Firebase web config — usable only
+  within the preset's limits; they can never read, modify or delete media. Genuine verdicts
+  from the server (sign-in required, not authorized, file too large, Cloudinary rejection)
+  are shown as-is instead of being masked by a generic error.
+- **Guide & manual** — `/api/guide` generates the PDF server-side for signed-in admins; if the
+  route is unavailable, the same generator builds the PDF in the administrator's browser
+  (identical, minus the optional password layer, which only the server can apply).
+
+To harden the deployment (fully server-signed uploads + password-protected guide):
 
 1. Set `CLOUDINARY_URL=cloudinary://API_KEY:API_SECRET@CLOUD_NAME` (or the discrete
    `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` variables).
+   On Firebase App Hosting, store them with `firebase apphosting:secrets:set` and list them
+   in `apphosting.yaml` (a ready-to-uncomment block is included in the file).
 2. Upload surfaces authenticate the signed-in staff/admin session automatically; a missing
    server configuration produces a clear upload error instead of leaking anything.
+3. Optionally set `GUIDE_PDF_PASSWORD` to encrypt the generated guide PDF.
 
 ## REST API
 

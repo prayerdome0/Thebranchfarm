@@ -186,12 +186,19 @@ export function friendlyError(error: unknown) {
     cancelled: "The request was interrupted. Please try again.",
     aborted: "The request was interrupted. Please try again.",
   };
-  return (
-    messages[code] ||
-    messages[normalized] ||
-    messages[`auth/${normalized}`] ||
-    "Something went wrong. Please try again."
-  );
+  const mapped = messages[code] || messages[normalized] || messages[`auth/${normalized}`];
+  if (mapped) return mapped;
+  // Errors raised by this app itself (upload proxy verdicts, API responses,
+  // validation) carry a clear, safe message written for the team — show it
+  // instead of masking it behind a generic apology. Unknown internal Firebase
+  // SDK errors keep the generic fallback.
+  const isFirebaseInternal =
+    typeof error === "object" &&
+    error !== null &&
+    "name" in error &&
+    String((error as { name?: unknown }).name || "").startsWith("Firebase");
+  if (!isFirebaseInternal && message.trim()) return message.trim();
+  return "Something went wrong. Please try again.";
 }
 
 export function todayIso() {

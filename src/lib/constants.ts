@@ -137,15 +137,33 @@ export const DOCUMENT_TYPE_LABELS: Record<string, string> = DOCUMENT_TYPES.reduc
 /**
  * Media storage for all farm photos, videos and downloadable files.
  *
- * SECURITY: uploads are signed SERVER-SIDE only. The browser posts each file
- * to this app's own /api/uploads route (authenticated with the member's
- * Firebase session) and the server talks to Cloudinary with credentials that
- * live only in server environment variables. No cloud name, API key, secret
- * or upload preset is exposed in client code.
+ * SECURITY LAYERS:
+ *  1. PRIMARY — uploads are signed SERVER-SIDE. The browser posts each file
+ *     to this app's own /api/uploads route (authenticated with the member's
+ *     Firebase session) and the server talks to Cloudinary with credentials
+ *     that live only in server environment variables. No API key or secret is
+ *     ever exposed to the browser.
+ *  2. FALLBACK — when the server route cannot handle the upload (deployment
+ *     without server credentials, server unreachable, request larger than the
+ *     platform accepts), the browser falls back to the farm's UNSIGNED upload
+ *     preset. A cloud name + unsigned preset are public identifiers exactly
+ *     like the Firebase web config — they allow uploads only within the
+ *     preset's limits and can never read, modify or delete media.
  */
 export const CLOUDINARY = {
   /** Uploads are proxied through this app's authenticated server route. */
   uploadEndpoint: "/api/uploads",
+  /**
+   * Public unsigned-upload identifiers used ONLY by the automatic fallback
+   * (see src/lib/cloudinary.ts). The preset "branch_farm" is configured as
+   * UNSIGNED in cloud "dhad95cch" with: overwrite=false, use_filename=false,
+   * unique_filename=false, use_filename_as_display_name=true — no API key,
+   * API secret or signing secret lives in client code.
+   */
+  fallbackUnsigned: {
+    cloudName: "dhad95cch",
+    uploadPreset: "branch_farm",
+  },
   /** No folders - all uploads go to root, recordType + recordId identify ownership */
   folders: {} as Record<string, string>,
 } as const;
