@@ -68,10 +68,11 @@ export async function POST(request: Request) {
     }
 
     const payload = (await cloudResponse.json().catch(() => null)) as
-      | { secure_url?: string; public_id?: string; bytes?: number; format?: string; resource_type?: string; display_name?: string; original_filename?: string; error?: { message?: string } }
+      | { secure_url?: string; url?: string; public_id?: string; bytes?: number; format?: string; resource_type?: string; display_name?: string; original_filename?: string; error?: { message?: string } }
       | null;
 
-    if (!cloudResponse.ok || !payload?.secure_url) {
+    const deliveryUrl = payload?.secure_url || payload?.url;
+    if (!cloudResponse.ok || !deliveryUrl) {
       const detail = String(payload?.error?.message || "").replaceAll(credentials.cloudName, "***");
       throw new ApiError(
         cloudResponse.status === 401 || cloudResponse.status === 403 ? 502 : cloudResponse.status,
@@ -80,17 +81,17 @@ export async function POST(request: Request) {
     }
 
     console.info(
-      `[uploads] ${actor.name} stored a ${resourceType} asset (${file.size} bytes, ${payload.public_id || "no-id"}).`,
+      `[uploads] ${actor.name} stored a ${resourceType} asset (${file.size} bytes, ${payload?.public_id || "no-id"}).`,
     );
 
     return Response.json({
-      url: payload.secure_url,
-      publicId: String(payload.public_id || ""),
-      bytes: Number(payload.bytes || file.size),
-      format: String(payload.format || ""),
-      resourceType: String(payload.resource_type || resourceType),
-      displayName: String(payload.display_name || payload.original_filename || file.name),
-      originalFilename: String(payload.original_filename || file.name),
+      url: deliveryUrl,
+      publicId: String(payload?.public_id || ""),
+      bytes: Number(payload?.bytes || file.size),
+      format: String(payload?.format || ""),
+      resourceType: String(payload?.resource_type || resourceType),
+      displayName: String(payload?.display_name || payload?.original_filename || file.name),
+      originalFilename: String(payload?.original_filename || file.name),
     });
   } catch (cause) {
     return errorResponse(cause);

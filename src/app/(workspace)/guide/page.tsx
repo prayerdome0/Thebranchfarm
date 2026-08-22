@@ -4,6 +4,7 @@ import { useState } from "react";
 import { BookOpen, Download, Loader2, Lock } from "lucide-react";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { useAuth } from "@/contexts/AuthContext";
+import { auth } from "@/lib/firebase/config";
 
 /**
  * Guide & user manual — the admin-only page that hands out the complete
@@ -21,9 +22,15 @@ export default function GuidePage() {
     setBusy(true);
     setError("");
     try {
-      const token = await refreshToken();
+      let token = await refreshToken();
+      if (!token && auth?.currentUser) {
+        token = await auth.currentUser.getIdToken(false).catch(() => null);
+      }
+      if (!token) {
+        throw new Error("Your session could not be verified. Sign in again and retry.");
+      }
       const response = await fetch("/api/guide", {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        headers: { Authorization: `Bearer ${token}` },
       });
       if (!response.ok) {
         const detail = (await response.json().catch(() => null)) as { error?: string } | null;
