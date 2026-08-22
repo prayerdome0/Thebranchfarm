@@ -128,7 +128,7 @@ export function HealthRecordForm({
         path={photo.path}
         upload={async (file, onProgress) => asStoredCloudinaryAsset(await uploadHealthPhotoToCloudinary(file, resolveCloudinaryConfig(settings), onProgress))}
         onChange={(result) => setPhoto({ url: result.url, path: result.path })}
-        hint="Stored in Cloudinary dhad95cch with branch_farm_unsigned preset, no folders. recordType animal, recordId animal ID."
+        hint="Stored in Cloudinary dhad95cch with branch_farm preset, no folders. recordType animal, recordId animal ID."
       />
 
       <label className="field field-full"><span>Notes</span><textarea rows={3} value={form.notes} onChange={(e) => update("notes", e.target.value)} placeholder="Additional notes" /></label>

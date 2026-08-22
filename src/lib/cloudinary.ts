@@ -7,7 +7,7 @@ import type { FarmSettings } from "@/types";
  * Cloudinary UNSIGNED uploads for the farm's media and paperwork.
  * Spec:
  *  cloud_name: dhad95cch
- *  upload_preset: branch_farm_unsigned (unsigned)
+ *  upload_preset: branch_farm (unsigned)
  *  signing: unsigned
  *  overwrite: false
  *  use_filename: false
@@ -51,9 +51,9 @@ export function resolveCloudinaryConfig(settings?: Partial<FarmSettings> | null)
     (settings?.cloudinaryCloudName || "").trim() ||
     process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME ||
     CLOUDINARY.cloudName;
-  const preset =
-    process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET ||
-    CLOUDINARY.uploadPreset;
+  // The farm uses one fixed unsigned preset. Do not allow stale deployment
+  // environment values to silently switch upload surfaces to another preset.
+  const preset = CLOUDINARY.uploadPreset;
   return { cloudName: cloudName || CLOUDINARY.cloudName, uploadPreset: preset };
 }
 
@@ -98,7 +98,7 @@ export function uploadToCloudinary(
   if (!cloudinaryEnabled(config)) {
     return Promise.reject(
       new CloudinaryError(
-        "Cloudinary is not configured. Set NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=dhad95cch and NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET=branch_farm_unsigned",
+        "Cloudinary is not configured. Set NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=dhad95cch and NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET=branch_farm",
       ),
     );
   }
