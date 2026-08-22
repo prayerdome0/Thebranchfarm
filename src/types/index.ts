@@ -171,6 +171,10 @@ export interface Quotation extends FarmRecordBase {
   status?: QuotationStatus;
   /** Name of the staff member who prepared the quotation. */
   authorizedBy?: string;
+  /** PNG data-URL signature captured on the device. */
+  signature?: string;
+  signedByName?: string;
+  signedAt?: string;
   validUntil?: string;
   /** Set once the quotation has been converted into a receipt. */
   convertedReceiptId?: string;
@@ -191,6 +195,14 @@ export interface Invoice extends FarmRecordBase {
   total: number;
   paymentStatus: "Unpaid" | "Partially Paid" | "Paid" | "Cancelled";
   notes?: string;
+  /** Name of the staff member who prepared the invoice. */
+  preparedBy?: string;
+  /** Name of the staff member who authorized the invoice. */
+  authorizedBy?: string;
+  /** PNG data-URL signature captured on the device. */
+  signature?: string;
+  signedByName?: string;
+  signedAt?: string;
   fileUrl?: string;
   publicId?: string;
   relatedOrderId?: string;

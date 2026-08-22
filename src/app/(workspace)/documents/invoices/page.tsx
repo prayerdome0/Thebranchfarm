@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Plus, FileText, Download, Eye, Printer, Search, X, CircleAlert } from "lucide-react";
+import { Plus, FileText, Download, Eye, PenLine, Printer, Search, X, CircleAlert } from "lucide-react";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Loading } from "@/components/ui/Loading";
+import { SignaturePad } from "@/components/store/SignaturePad";
+import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/contexts/ToastContext";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { watchInvoices, createInvoice } from "@/lib/firebase/data";
@@ -21,6 +23,9 @@ interface InvoiceForm {
   discount: string;
   delivery: string;
   paymentStatus: Invoice["paymentStatus"];
+  preparedBy: string;
+  signature: string;
+  signedByName: string;
   items: { name: string; quantity: number; price: number; unit: string }[];
 }
 
@@ -32,7 +37,7 @@ function errorMessage(err: unknown, fallback: string) {
   return err instanceof Error && err.message ? err.message : fallback;
 }
 
-function blankForm(invoiceNumber = ""): InvoiceForm {
+function blankForm(invoiceNumber = "", preparedBy = ""): InvoiceForm {
   return {
     invoiceNumber,
     customer: "",
@@ -41,6 +46,9 @@ function blankForm(invoiceNumber = ""): InvoiceForm {
     discount: "0",
     delivery: "0",
     paymentStatus: "Unpaid",
+    preparedBy,
+    signature: "",
+    signedByName: "",
     items: [{ name: "", quantity: 1, price: 0, unit: "each" }],
   };
 }
@@ -48,6 +56,7 @@ function blankForm(invoiceNumber = ""): InvoiceForm {
 export default function InvoicesPage() {
   const { showToast } = useToast();
   const { settings, formatMoney, currency } = useStoreConfig();
+  const { user } = useAuth();
   const [list, setList] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -87,7 +96,7 @@ export default function InvoicesPage() {
   };
 
   const openNew = () => {
-    setForm(blankForm(generateInvoiceNumber(list.map((inv) => inv.invoiceNumber))));
+    setForm(blankForm(generateInvoiceNumber(list.map((inv) => inv.invoiceNumber)), user?.fullName || ""));
     setError("");
     setShowForm(true);
   };
@@ -122,6 +131,10 @@ export default function InvoicesPage() {
         total,
         paymentStatus: form.paymentStatus,
         notes: form.notes.trim(),
+        preparedBy: form.preparedBy.trim() || user?.fullName || "",
+        signature: form.signature || undefined,
+        signedByName: form.signedByName || undefined,
+        signedAt: form.signature ? new Date().toISOString() : undefined,
       };
 
       // Render the professional invoice (with the real logo) and store it in
@@ -200,7 +213,8 @@ export default function InvoicesPage() {
               <article key={inv.id} style={{ gridTemplateColumns: "1fr 1.2fr .8fr .7fr .7fr auto" }}>
                 <span>
                   <strong>{inv.invoiceNumber}</strong>
-                  <small>{inv.items?.length || 0} items</small>
+                  <small>{inv.items?.length || 0} items {inv.signature ? "· signed" : ""}</small>
+                  {inv.signature && <PenLine size={13} style={{ verticalAlign: "-2px", marginLeft: 5 }} />}
                 </span>
                 <span>{inv.customer}</span>
                 <span>{formatDisplayDate(inv.date)}</span>
@@ -268,6 +282,33 @@ export default function InvoicesPage() {
 
               <label className="field"><span>Notes</span><textarea rows={3} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></label>
 
+              <label className="field"><span>Prepared / Authorized by</span><input value={form.preparedBy} onChange={(e) => setForm({ ...form, preparedBy: e.target.value })} placeholder={user?.fullName || "Staff name"} /></label>
+
+              {form.signature ? (
+                <div className="signature-saved">
+                  <img src={form.signature} alt="Signature" />
+                  <div>
+                    <strong>Signature attached</strong>
+                    <small>Authorized Signature · [signed digitally]</small>
+                    <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                      <button
+                        type="button"
+                        className="button button-ghost button-small"
+                        onClick={() => setForm({ ...form, signature: "", signedByName: "" })}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <SignaturePad
+                  label="Customer / authorized signature"
+                  hint="Sign with a finger or mouse — the signature and preparer name are printed on the invoice."
+                  onSave={(dataUrl) => setForm({ ...form, signature: dataUrl, signedByName: user?.fullName || "" })}
+                />
+              )}
+
               {error && <div className="form-alert error"><CircleAlert size={16} /> {error}</div>}
 
               <div className="modal-actions">
@@ -331,6 +372,26 @@ export default function InvoicesPage() {
 
               {viewing.notes && (
                 <p style={{ fontSize: ".8rem", margin: 0 }}><strong>Notes:</strong> {viewing.notes}</p>
+              )}
+
+              {viewing.signature ? (
+                <div className="signature-saved">
+                  <img src={viewing.signature} alt="Signature" />
+                  <div>
+                    <strong>Authorized Signature</strong>
+                    <small>[signed digitally]</small>
+                    <small>
+                      Prepared by: {viewing.preparedBy || viewing.authorizedBy || viewing.signedByName || "—"}
+                      {viewing.signedAt ? ` · ${formatDisplayDate(viewing.signedAt)}` : ""}
+                    </small>
+                  </div>
+                </div>
+              ) : (
+                viewing.preparedBy && (
+                  <p style={{ fontSize: ".74rem", margin: 0, color: "var(--muted)" }}>
+                    Prepared by {viewing.preparedBy}
+                  </p>
+                )
               )}
 
               <div className="modal-actions">

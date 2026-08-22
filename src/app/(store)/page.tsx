@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ArrowRight,
   BadgeCheck,
@@ -31,6 +31,87 @@ import { getProducts, getVideos } from "@/lib/firebase/data";
 import { BUSINESS } from "@/lib/constants";
 import type { FarmVideo, Product } from "@/types";
 
+/**
+ * Real farm footage so visitors can see the animals at work. Stock clips from
+ * Pexels (free licence, no attribution required) stand in until the farm's
+ * own cattle, pig, chicken and goat clips are uploaded from the workspace —
+ * those then show up in "The farm on film" below.
+ */
+const ANIMAL_CLIPS = [
+  {
+    label: "Cattle — grazing & moving",
+    video: "https://videos.pexels.com/video-files/25749459/11905810_1920_1080_30fps.mp4",
+    poster: "https://images.pexels.com/videos/25749459/pexels-photo-25749459.jpeg?cs=tinysrgb&w=1280",
+  },
+  {
+    label: "Pigs — eating & moving",
+    video: "https://videos.pexels.com/video-files/28647430/12442054_1920_1080_30fps.mp4",
+    poster: "https://images.pexels.com/videos/28647430/carport-farm-animals-field-pig-farming-28647430.jpeg?cs=tinysrgb&w=1280",
+  },
+  {
+    label: "Chickens — eating & moving",
+    video: "https://videos.pexels.com/video-files/5563939/5563939-hd_1280_720_50fps.mp4",
+    poster: "https://images.pexels.com/videos/5563939/active-background-backyard-beak-5563939.jpeg?cs=tinysrgb&w=1280",
+  },
+  {
+    label: "Goats — grazing & moving",
+    video: "https://videos.pexels.com/video-files/4441040/4441040-hd_1920_1080_25fps.mp4",
+    poster: "https://images.pexels.com/videos/4441040/pexels-photo-4441040.jpeg?cs=tinysrgb&w=1280",
+  },
+];
+
+/**
+ * Muted looping clip that auto-plays the moment it scrolls into view and
+ * pauses when it leaves, so the page stays light. Falls back to the poster
+ * image if the clip cannot be loaded.
+ */
+function AnimalClip({ clip }: { clip: (typeof ANIMAL_CLIPS)[number] }) {
+  const ref = useRef<HTMLVideoElement>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    const node = ref.current;
+    if (!node || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) node.play().catch(() => {});
+          else node.pause();
+        });
+      },
+      { threshold: 0.25 },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
+  if (failed) {
+    return (
+      <figure className="animal-clip">
+        <img src={clip.poster} alt={clip.label} className="animal-clip-fallback" />
+        <span className="animal-clip-label">{clip.label}</span>
+      </figure>
+    );
+  }
+
+  return (
+    <figure className="animal-clip">
+      <video
+        ref={ref}
+        src={clip.video}
+        poster={clip.poster}
+        muted
+        loop
+        playsInline
+        preload="none"
+        onError={() => setFailed(true)}
+        aria-label={clip.label}
+      />
+      <span className="animal-clip-label">{clip.label}</span>
+    </figure>
+  );
+}
+
 export default function HomePage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [videos, setVideos] = useState<FarmVideo[]>([]);
@@ -38,7 +119,8 @@ export default function HomePage() {
 
   useEffect(() => {
     getProducts().then((list) => setProducts(list.slice(0, 12)));
-    getVideos().then((list) => setVideos(list.slice(0, 6)));
+    // Show every uploaded video on the homepage — no limit.
+    getVideos().then((list) => setVideos(list));
   }, []);
 
   const featured = products.filter((p) => p.featured).slice(0, 4);
@@ -121,18 +203,18 @@ export default function HomePage() {
           </Reveal>
           <div className="price-strip">
             {[
-              { name: "Fresh milk", price: "E16", unit: "per litre", video: "/media/videos/dairy-morning.mp4", poster: "/media/raw-milk.jpg" },
-              { name: "Sour milk — Latsambile", price: "E20", unit: "per 500 ml tub", video: "/media/videos/dairy-morning.mp4", poster: "/media/latsambile.jpg" },
-              { name: "Sour milk — Lashubile", price: "E35", unit: "per 1 litre tub", video: "/media/videos/dairy-morning.mp4", poster: "/media/lashubile.jpg" },
+              { name: "Fresh milk", price: "E16", unit: "per litre" },
+              { name: "Sour milk — Latsambile", price: "E20", unit: "per 500 ml tub" },
+              { name: "Sour milk — Lashubile", price: "E35", unit: "per 1 litre tub" },
             ].map((item, index) => (
               <Reveal key={item.name} delay={index * 80}>
-                <article className="price-card">
-                  <InlineVideo src={item.video} poster={item.poster} label={item.name} playOnHoverOnly showSound={false} />
+                <article className="price-card price-card-plain">
                   <div className="price-card-body">
                     <span className="availability-pill available">Available now</span>
                     <h3>{item.name}</h3>
                     <strong>{item.price}</strong>
                     <small>{item.unit}</small>
+                    <small className="price-card-note">Farm photo & clip coming — WhatsApp us to order today.</small>
                   </div>
                 </article>
               </Reveal>
@@ -286,6 +368,33 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* 5b. The animals in motion — auto-playing footage */}
+      <section className="section animals-motion-section">
+        <div className="container">
+          <Reveal>
+            <div className="section-heading section-heading-center">
+              <div>
+                <span className="eyebrow">Watch them live</span>
+                <h2>Our animals, in their element</h2>
+                <p>Cattle grazing, pigs feeding, chickens pecking and goats on the move — real footage, auto-playing as you scroll.</p>
+              </div>
+            </div>
+          </Reveal>
+          <div className="animal-clip-grid" style={{ marginTop: 28 }}>
+            {ANIMAL_CLIPS.map((clip, index) => (
+              <Reveal key={clip.label} delay={(index % 4) * 70}>
+                <AnimalClip clip={clip} />
+              </Reveal>
+            ))}
+          </div>
+          <Reveal delay={100}>
+            <p className="coming-note" style={{ marginTop: 18 }}>
+              <BadgeCheck size={15} /> Upload your own clips of our herd from the workspace and they will appear here and in <Link className="text-link" href="/videos">The farm on film</Link>.
+            </p>
+          </Reveal>
+        </div>
+      </section>
+
       {/* 6. Fresh products */}
       <section className="section">
         <div className="container">
@@ -357,7 +466,7 @@ export default function HomePage() {
               <div>
                 <span className="eyebrow">In motion</span>
                 <h2>The farm on film</h2>
-                <p>Every part of the farm has a clip — the dairy, the herd, harvest day and a walk around Mahlabane.</p>
+                <p>Every video uploaded to the farm shows up right here — the dairy, the herd, harvest day and a walk around Mahlabane.</p>
               </div>
               <div className="section-heading-action">
                 <Link className="text-link" href="/videos">Watch all videos <ArrowRight size={15} /></Link>

@@ -63,7 +63,7 @@ export interface PrintableDocumentInput {
   /** PNG data-URL signature captured on the device. */
   signature?: string;
   signedByName?: string;
-  signedAt?: Date | string | null;
+  signedAt?: Date | string | { seconds?: number } | null;
   /** Toolbar back link (defaults to the storefront). */
   backHref?: string;
   backLabel?: string;
@@ -74,6 +74,30 @@ const KIND_COPY = {
   invoice: { label: "Invoice", tagline: `Invoice — ${BUSINESS.name} · ${BUSINESS.slogan}. Payable on collection/delivery.` },
   quotation: { label: "Quotation", tagline: `Quotation — ${BUSINESS.name} · ${BUSINESS.slogan}. Prices held for validity.` },
 } as const;
+
+/**
+ * Signature + preparer block shown on every receipt, quotation and invoice.
+ * When a digital signature was captured it is printed; otherwise a signature
+ * line is left for a wet signature, so the document always shows who prepared
+ * it and where to sign.
+ */
+function signatureBlockHtml(input: PrintableDocumentInput) {
+  const preparer = input.preparedBy || input.authorizedBy || input.signedByName || "";
+  if (!input.signature && !preparer) return "";
+  const name = escapeHtml(
+    input.signature ? input.authorizedBy || input.signedByName || "Authorized" : preparer,
+  );
+  const date = input.signedAt ? ` &middot; ${escapeHtml(formatDate(input.signedAt))}` : "";
+  return `
+    <div class="signature-block">
+      <div class="sig-image">${input.signature ? `<img src="${input.signature}" alt="Signature" />` : ""}</div>
+      <div class="sig-details">
+        <span class="sig-title">${input.signature ? "Authorized Signature" : "Signature"}</span>
+        ${input.signature ? `<span class="sig-meta">[signed digitally]</span>` : `<span class="sig-meta">sign here</span>`}
+        <span class="sig-by">Prepared by: ${name}${date}</span>
+      </div>
+    </div>`;
+}
 
 export function renderPrintableDocument(input: PrintableDocumentInput) {
   const currency = input.currency || BUSINESS.currency;
@@ -202,15 +226,7 @@ export function renderPrintableDocument(input: PrintableDocumentInput) {
 
     ${input.notes ? `<div class="notes"><strong>Notes</strong><br />${escapeHtml(input.notes)}</div>` : ""}
 
-    ${input.signature ? `
-    <div class="signature-block">
-      <div class="sig-image"><img src="${input.signature}" alt="Customer signature" /></div>
-      <div class="sig-details">
-        <span class="sig-title">Authorized Signature</span>
-        <span class="sig-meta">[signed digitally]</span>
-        <span class="sig-by">Authorized by: ${escapeHtml(input.authorizedBy || input.signedByName || "Admin")}${input.signedAt ? ` &middot; ${escapeHtml(formatDate(input.signedAt))}` : ""}</span>
-      </div>
-    </div>` : ""}
+    ${signatureBlockHtml(input)}
 
     <footer><span>${escapeHtml(BUSINESS.name)} · ${escapeHtml(BUSINESS.slogan)} · ${escapeHtml(BUSINESS.location)}</span><span>${escapeHtml(copy.label)} ${escapeHtml(input.reference)} · ${new Date().toLocaleString("en-GB")}</span></footer>
   </main>

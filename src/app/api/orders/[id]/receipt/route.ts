@@ -51,6 +51,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       paymentMethod: order.paymentMethod,
       paymentStatus: order.paymentStatus ? PAYMENT_STATUS_LABELS[order.paymentStatus] : undefined,
       notes: order.notes,
+      preparedBy: order.updatedByName || "The Branch Farm",
+      signature: order.signature,
+      signedByName: order.signedByName,
+      signedAt: order.signedAt,
     });
     return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8" } });
   } catch (cause) {

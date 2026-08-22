@@ -249,6 +249,8 @@ export default function ReceiptsPage() {
           taxRate: "0",
           amountPaid: order.paymentStatus === "paid" ? String(order.total) : "0",
           paymentMethod: order.paymentMethod || next.paymentMethod,
+          signature: order.signature || next.signature,
+          signedByName: order.signedByName || next.signedByName,
         };
       }
       const quotation = quotations.find((q) => q.id === value.slice(10));
