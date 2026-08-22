@@ -43,7 +43,7 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
   const pathname = usePathname();
 
   const allNav: WorkspaceNavItem[] = [
-    { href: "/dashboard", label: "Farm overview", icon: LayoutDashboard, section: "Overview" },
+    { href: "/dashboard", label: "Home", icon: LayoutDashboard, section: "Overview" },
     { href: "/tasks", label: "My tasks", icon: ClipboardCheck, permission: "Farm Operations", section: "Overview" },
     { href: "/incidents", label: "Problems & incidents", icon: AlertTriangle, permission: "Farm Operations", section: "Overview" },
 

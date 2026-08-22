@@ -221,7 +221,7 @@ function tableMock(page: PDFPage, x: number, y: number, w: number, headers: stri
 }
 
 const NAV_SECTIONS: Array<[string, string[]]> = [
-  ["Overview", ["Farm overview", "My tasks", "Problems & incidents"]],
+  ["Overview", ["Home", "My tasks", "Problems & incidents"]],
   ["Livestock", ["Animals", "Health & vaccination", "Breeding", "Births"]],
   ["Daily operations", ["Feed management", "Farm inventory", "Milk production", "Egg production", "Daily farm log"]],
   ["Assets & finance", ["Equipment", "Maintenance", "Farm expenses"]],
@@ -585,7 +585,7 @@ function workspaceOrientationPage(doc: PDFDocument) {
 
   const sx = MARGIN;
   const sw = CONTENT_W;
-  appShell(page, sx, y - 6, sw, 330, "Farm overview", (area) => {
+  appShell(page, sx, y - 6, sw, 330, "Home", (area) => {
     let cy = area.y - 6;
     box(page, area.x + 10, cy - 46, (area.w - 30) / 2, 46, SHEET, LINE);
     page.drawText("Welcome, Administrator", { x: area.x + 18, y: cy - 14, size: 7.4, font: FONT_CACHE!.bold, color: INK });
@@ -604,7 +604,7 @@ function workspaceOrientationPage(doc: PDFDocument) {
   callout(page, 4, sx + 30, y - 380, sx + 18, y - 346); // sign out
 
   steps(page, [
-    "The menu (left) is grouped: Overview, Livestock, Daily operations, Assets & finance, Monitoring, Store & customers, Content & system. The guide point (“Farm overview”) is where you start each day.",
+    "The menu (left) is grouped: Overview, Livestock, Daily operations, Assets & finance, Monitoring, Store & customers, Content & system. “Home” (the farm overview) is where you start each day — priorities, quick actions and live totals.",
     "Your name and role appear at the top of the menu; the page title tells you exactly where you are.",
     "The bell shows notifications — the red count is how many need attention. See the next page.",
     "“Sign out” is at the bottom of the menu. Always sign out on shared devices.",
@@ -625,7 +625,7 @@ function notificationsPage(doc: PDFDocument) {
   page.drawText("Workspace", { x: area.cx + 10, y: area.cy - 13, size: 7, font: FONT_CACHE!.bold, color: PAPER });
   page.drawText("…", { x: area.cx + 10, y: area.cy - 40, size: 7, font: FONT_CACHE!.regular, color: rgb(0.7, 0.75, 0.7) });
   page.drawText("Administrator", { x: area.cx + 130, y: area.cy - 12, size: 5.4, font: FONT_CACHE!.regular, color: GOLD });
-  page.drawText("Farm overview", { x: area.cx + 130, y: area.cy - 24, size: 10, font: FONT_CACHE!.bold, color: INK });
+  page.drawText("Home", { x: area.cx + 130, y: area.cy - 24, size: 10, font: FONT_CACHE!.bold, color: INK });
   // bell
   const bellX = area.cx + area.cw - 22;
   page.drawCircle({ x: bellX, y: area.cy - 16, size: 8, color: PAPER, borderColor: LINE, borderWidth: 0.8 });
@@ -1162,7 +1162,7 @@ function quickReferencePage(doc: PDFDocument) {
 
 /* -------------------------------- build -------------------------------- */
 
-export const GUIDE_VERSION = "1.0";
+export const GUIDE_VERSION = "1.1";
 
 export async function buildGuidePdf(options: { password?: string } = {}): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
