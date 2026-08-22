@@ -286,6 +286,21 @@ export function watchQuotations(cb: (list: Quotation[]) => void): Unsubscribe {
 export async function createQuotation(values: Omit<Quotation, "id" | keyof ReturnType<typeof stamp>>) {
   return addDoc(collection(db, "quotations"), cleanFirestoreData({ ...values, ...stamp() }));
 }
+export async function getQuotation(id: string): Promise<Quotation | null> {
+  try {
+    const snap = await getDoc(doc(db, "quotations", id));
+    return snap.exists() ? mapped<Quotation>(snap) : null;
+  } catch { return null; }
+}
+export async function updateQuotation(id: string, patch: Partial<Quotation>) {
+  try {
+    await updateDoc(doc(db, "quotations", id), cleanFirestoreData({ ...patch, ...updateStamp() }));
+    return true;
+  } catch { return false; }
+}
+export async function deleteQuotation(id: string) {
+  try { await deleteDoc(doc(db, "quotations", id)); return true; } catch { return false; }
+}
 
 /* ----------------------------- Invoices ----------------------------- */
 
@@ -319,6 +334,21 @@ export function watchReceipts(cb: (list: Receipt[]) => void): Unsubscribe {
 }
 export async function createReceipt(values: Omit<Receipt, "id" | keyof ReturnType<typeof stamp>>) {
   return addDoc(collection(db, "receipts"), cleanFirestoreData({ ...values, ...stamp() }));
+}
+export async function getReceipt(id: string): Promise<Receipt | null> {
+  try {
+    const snap = await getDoc(doc(db, "receipts", id));
+    return snap.exists() ? mapped<Receipt>(snap) : null;
+  } catch { return null; }
+}
+export async function updateReceipt(id: string, patch: Partial<Receipt>) {
+  try {
+    await updateDoc(doc(db, "receipts", id), cleanFirestoreData({ ...patch, ...updateStamp() }));
+    return true;
+  } catch { return false; }
+}
+export async function deleteReceipt(id: string) {
+  try { await deleteDoc(doc(db, "receipts", id)); return true; } catch { return false; }
 }
 
 /* ----------------------------- Customers ----------------------------- */
@@ -695,7 +725,19 @@ export async function getOrderByReference(reference: string): Promise<Order | nu
 
 export async function updateOrder(
   id: string,
-  patch: Partial<Pick<Order, "status" | "paymentStatus" | "notes" | "signature" | "signedByName" | "signedAt" | "deliveryAddress">>,
+  patch: Partial<
+    Pick<
+      Order,
+      | "status"
+      | "paymentStatus"
+      | "paymentMethod"
+      | "notes"
+      | "signature"
+      | "signedByName"
+      | "signedAt"
+      | "deliveryAddress"
+    >
+  >,
 ) {
   try {
     await updateDoc(doc(db, "orders", id), cleanFirestoreData({ ...patch, ...updateStamp() }));

@@ -220,6 +220,37 @@ export const ORDER_STATUS_SPEC = ["New", "Confirmed", "Preparing", "Out for Deli
 
 export const INVOICE_STATUSES = ["Unpaid", "Partially Paid", "Paid", "Cancelled"] as const;
 
+/* ------------------------- Quotation lifecycle ------------------------- */
+
+export const QUOTATION_STATUSES = [
+  "draft",
+  "sent",
+  "accepted",
+  "rejected",
+  "converted",
+] as const;
+
+export const QUOTATION_STATUS_LABELS: Record<string, string> = {
+  draft: "Draft",
+  sent: "Sent",
+  accepted: "Accepted",
+  rejected: "Rejected",
+  converted: "Converted",
+};
+
+/** Allowed status transitions — Draft → Sent → Accepted/Rejected → Converted. */
+export const QUOTATION_STATUS_FLOW: Record<string, string[]> = {
+  draft: ["sent", "rejected", "draft"],
+  sent: ["accepted", "rejected", "sent", "draft"],
+  accepted: ["converted", "accepted", "rejected"],
+  rejected: ["draft", "rejected"],
+  converted: ["converted"],
+};
+
+/** Numbering prefixes for professional document numbers (PREFIX-YYYY-NNNN). */
+export const QUOTATION_NUMBER_PREFIX = "QF";
+export const RECEIPT_NUMBER_PREFIX = "RCP";
+
 export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
   unpaid: "Unpaid",
   paid: "Paid",
@@ -277,4 +308,5 @@ export const STATUS_LABELS: Record<string, string> = {
   ...ORDER_STATUS_LABELS,
   ...PAYMENT_STATUS_LABELS,
   ...FULFILLMENT_LABELS,
+  ...QUOTATION_STATUS_LABELS,
 };

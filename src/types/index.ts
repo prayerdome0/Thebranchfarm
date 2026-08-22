@@ -135,18 +135,45 @@ export interface FarmDocument extends FarmRecordBase {
   customer?: string;
 }
 
+export type QuotationStatus = "draft" | "sent" | "accepted" | "rejected" | "converted";
+
+export interface QuotationLine {
+  productId?: string;
+  name: string;
+  quantity: number;
+  price: number;
+  unit?: string;
+}
+
 export interface Quotation extends FarmRecordBase {
   quotationNumber: string;
   customer: string;
   customerPhone?: string;
   customerEmail?: string;
+  /** Link to the `customers` collection when the customer is on file. */
+  customerId?: string;
   date: string;
-  items: { name: string; quantity: number; price: number; unit?: string }[];
+  items: QuotationLine[];
   subtotal: number;
   discount?: number;
+  /** Tax rate in percent, e.g. 15. */
+  taxRate?: number;
+  /** Computed tax amount. */
+  taxAmount?: number;
+  deliveryFee?: number;
   total: number;
+  /** Total minus amount paid (equal to total while unpaid). */
+  balance?: number;
   notes?: string;
-  status?: string;
+  /** Legacy quotations may lack a status — treat them as drafts. */
+  status?: QuotationStatus;
+  /** Name of the staff member who prepared the quotation. */
+  authorizedBy?: string;
+  validUntil?: string;
+  /** Set once the quotation has been converted into a receipt. */
+  convertedReceiptId?: string;
+  convertedReceiptNumber?: string;
+  convertedOrderNumber?: string;
   fileUrl?: string;
   publicId?: string;
 }
@@ -169,12 +196,41 @@ export interface Invoice extends FarmRecordBase {
 
 export interface Receipt extends FarmRecordBase {
   receiptNumber: string;
+  /** Linked storefront order reference (may be empty for walk-in receipts). */
   orderNumber: string;
   customer: string;
+  customerPhone?: string;
+  customerEmail?: string;
+  /** Link to the `customers` collection when the customer is on file. */
+  customerId?: string;
   date: string;
+  /** Line items for full receipts; legacy simple receipts may lack these. */
+  items?: QuotationLine[];
+  subtotal?: number;
+  discount?: number;
+  /** Tax rate in percent, e.g. 15. */
+  taxRate?: number;
+  /** Computed tax amount. */
+  taxAmount?: number;
+  /** Grand total; for legacy receipts it equals the paid amount. */
+  total?: number;
+  /** Amount paid (kept on the legacy `amount` field as well). */
   amount: number;
+  amountPaid?: number;
+  /** Total minus amount paid. */
+  balance?: number;
   paymentMethod: string;
   description?: string;
+  notes?: string;
+  /** Name of the staff member who issued the receipt. */
+  authorizedBy?: string;
+  /** PNG data-URL signature captured on the device. */
+  signature?: string;
+  signedByName?: string;
+  signedAt?: string;
+  /** Present when the receipt was converted from a quotation. */
+  quotationNumber?: string;
+  quotationId?: string;
   fileUrl?: string;
   publicId?: string;
   relatedOrderId?: string;
