@@ -32,7 +32,7 @@ import {
   watchHealthRecords,
   watchOrders,
 } from "@/lib/firebase/data";
-import { formatDate, formatDisplayDate } from "@/lib/utils";
+import { displayAuthor, formatDate, formatDisplayDate, initials } from "@/lib/utils";
 import type { Animal, AuditEvent, FarmOperationRecord, HealthRecord, Order, Product } from "@/types";
 import { BUSINESS } from "@/lib/constants";
 
@@ -110,7 +110,7 @@ export default function DashboardPage() {
         </div>
         <div className="command-hero-actions">
           <Link href="/incidents" className="button command-alert-action"><AlertTriangle size={17} /> Report a problem</Link>
-          <Link href="/daily-log" className="button command-log-action"><Activity size={17} /> Daily farm log</Link>
+          <Link href="/daily-log" className="button button-small command-log-action"><Activity size={15} /> Daily farm log</Link>
         </div>
       </section>
 
@@ -134,7 +134,7 @@ export default function DashboardPage() {
 
         <div className="dashboard-panel command-activity-panel">
           <div className="section-row"><div><span className="eyebrow">Who · what · when</span><h2>Recent staff activity</h2><p>Live accountability feed from the audit trail.</p></div>{isAdmin && <Link className="text-link" href="/audit">Full audit</Link>}</div>
-          {audit.length ? <div className="command-activity-feed">{audit.slice(0, 7).map((event) => <article key={event.id}><span>{event.createdByName?.split(" ").map((part) => part[0]).slice(0, 2).join("") || "T"}</span><div><p><strong>{event.createdByName}</strong> {event.description.charAt(0).toLowerCase() + event.description.slice(1)}</p><small>{formatDate(event.createdAt, true)} · {event.action.replace(/-/g, " ")}</small></div></article>)}</div> : <div className="command-empty-feed"><Activity size={24} /><p>Staff actions will appear here as farm records are added and updated.</p></div>}
+          {audit.length ? <div className="command-activity-feed">{audit.slice(0, 7).map((event) => { const author = displayAuthor(event.createdByName); return <article key={event.id}><span>{initials(author)}</span><div><p><strong>{author}</strong> {event.description.charAt(0).toLowerCase() + event.description.slice(1)}</p><small>{formatDate(event.createdAt, true)} · {event.action.replace(/-/g, " ")}</small></div></article>; })}</div> : <div className="command-empty-feed"><Activity size={24} /><p>Staff actions will appear here as farm records are added and updated.</p></div>}
         </div>
       </section>
 

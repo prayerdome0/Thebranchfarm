@@ -189,45 +189,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 1b. What is on sale right now */}
-      <section className="section availability-section">
-        <div className="container">
-          <Reveal>
-            <div className="section-heading section-heading-center">
-              <div>
-                <span className="eyebrow">Price list</span>
-                <h2>On sale right now</h2>
-                <p>These three lines are available today. Everything else on the farm is coming soon.</p>
-              </div>
-            </div>
-          </Reveal>
-          <div className="price-strip">
-            {[
-              { name: "Fresh milk", price: "E16", unit: "per litre" },
-              { name: "Sour milk — Latsambile", price: "E20", unit: "per 500 ml tub" },
-              { name: "Sour milk — Lashubile", price: "E35", unit: "per 1 litre tub" },
-            ].map((item, index) => (
-              <Reveal key={item.name} delay={index * 80}>
-                <article className="price-card price-card-plain">
-                  <div className="price-card-body">
-                    <span className="availability-pill available">Available now</span>
-                    <h3>{item.name}</h3>
-                    <strong>{item.price}</strong>
-                    <small>{item.unit}</small>
-                    <small className="price-card-note">Farm photo & clip coming — WhatsApp us to order today.</small>
-                  </div>
-                </article>
-              </Reveal>
-            ))}
-          </div>
-          <Reveal delay={120}>
-            <p className="coming-note">
-              <BadgeCheck size={15} /> Eggs, chicken, cattle, goats, pigs and vegetables are <strong>coming soon</strong> — they are listed on the shop so you can see them, but they cannot be ordered yet. Call or WhatsApp us to be told first when they open.
-            </p>
-          </Reveal>
-        </div>
-      </section>
-
       {/* 2. Featured products */}
       <section className="section products-section">
         <div className="container">
