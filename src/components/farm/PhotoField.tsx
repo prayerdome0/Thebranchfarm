@@ -16,7 +16,7 @@ export function PhotoField({
   path,
   upload,
   onChange,
-  hint = "Uploaded to Cloudinary with the unsigned branch_farm preset. JPG, PNG or WebP up to 8 MB.",
+  hint = "Uploaded securely through the farm server. JPG, PNG or WebP up to 8 MB.",
 }: {
   label?: string;
   value?: string;

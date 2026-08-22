@@ -5,8 +5,9 @@ export const dynamic = "force-dynamic";
 
 /**
  * GET /api/settings — the public storefront configuration (currency, delivery,
- * promo, Cloudinary upload preset). Falls back to the built-in defaults when
- * the backend is not reachable.
+ * promo). Falls back to the built-in defaults when the backend is not
+ * reachable. Media storage is configured server-side only and is deliberately
+ * not part of the public settings payload.
  */
 export async function GET() {
   const defaults = {
@@ -20,7 +21,6 @@ export async function GET() {
     freeDeliveryThreshold: STORE.freeDeliveryThreshold,
     promoCode: "",
     promoDiscountPercent: 0,
-    cloudinaryUploadPreset: "branch_farm",
   };
 
   const admin = getAdmin();

@@ -148,8 +148,8 @@ export const settingsSchema = z.object({
     .optional()
     .default(0),
   heroProductId: z.string().trim().max(200).optional().default(""),
-  cloudinaryCloudName: z.string().trim().max(120).optional().default("dhad95cch"),
-  cloudinaryUploadPreset: z.string().trim().max(120).optional().default("branch_farm"),
+  cloudinaryCloudName: z.string().trim().max(120).optional().default(""),
+  cloudinaryUploadPreset: z.string().trim().max(120).optional().default(""),
 });
 
 export const productSchema = z.object({

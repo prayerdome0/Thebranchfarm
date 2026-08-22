@@ -3,9 +3,8 @@
 import { useState } from "react";
 import { CircleAlert, CloudUpload, Trash2 } from "lucide-react";
 import { PhotoField } from "@/components/farm/PhotoField";
-import { useStoreConfig } from "@/contexts/StoreConfigContext";
-import { PRODUCT_CATEGORIES, PRODUCT_KIND_LABELS, CLOUDINARY } from "@/lib/constants";
-import { asStoredCloudinaryAsset, resolveCloudinaryConfig, uploadProductImageToCloudinary } from "@/lib/cloudinary";
+import { PRODUCT_CATEGORIES, PRODUCT_KIND_LABELS } from "@/lib/constants";
+import { asStoredCloudinaryAsset, uploadProductImageToCloudinary } from "@/lib/cloudinary";
 import { productSchema } from "@/lib/validation";
 import { friendlyError } from "@/lib/utils";
 import type { Product, ProductKind } from "@/types";
@@ -51,10 +50,9 @@ export function ProductForm({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [serverError, setServerError] = useState("");
   const [saving, setSaving] = useState(false);
-  const { settings } = useStoreConfig();
 
   const uploadImage = async (file: File, onProgress?: (percent: number) => void) =>
-    asStoredCloudinaryAsset(await uploadProductImageToCloudinary(file, resolveCloudinaryConfig(settings), onProgress));
+    asStoredCloudinaryAsset(await uploadProductImageToCloudinary(file, onProgress));
 
   const update = <K extends keyof ProductFormValues>(key: K, value: ProductFormValues[K]) =>
     setForm((current) => ({ ...current, [key]: value }));
@@ -168,17 +166,17 @@ export function ProductForm({
           <label className="check-field" style={{ marginTop: 0 }}><input type="checkbox" checked={form.active} onChange={(e) => update("active", e.target.checked)} /><span><i>✓</i> Publish/unpublish (active)</span></label>
           <label className="check-field" style={{ marginTop: 0 }}><input type="checkbox" checked={form.featured} onChange={(e) => update("featured", e.target.checked)} /><span><i>✓</i> Set featured product</span></label>
         </div>
-        <small>Admin can add, edit, delete, upload image, change price, change stock/availability, set featured, publish/unpublish, add description, set unit — no code editing. Stored Cloudinary {CLOUDINARY.cloudName} / {CLOUDINARY.uploadPreset}, no folders.</small>
+        <small>Admin can add, edit, delete, upload image, change price, change stock/availability, set featured, publish/unpublish, add description, set unit — no code editing. Images are uploaded securely through the farm server.</small>
       </section>
 
       <section className="dashboard-panel" style={{ display: "grid", gap: 16 }}>
-        <h2 style={{ fontFamily: "var(--sans)", fontSize: "1.05rem" }}>Product images — Cloudinary, no folders</h2>
+        <h2 style={{ fontFamily: "var(--sans)", fontSize: "1.05rem" }}>Product images</h2>
         <PhotoField
           value={form.image}
           path={form.imagePath}
           upload={uploadImage}
           onChange={(result) => { update("image", result.url); update("imagePath", result.path); update("fileUrl", result.url); update("publicId", (result.path || "").replace("cloudinary:", "")); }}
-          hint={`Primary product image. Uploaded to Cloudinary ${CLOUDINARY.cloudName} with preset ${CLOUDINARY.uploadPreset}, no folders. fileUrl + publicId saved, recordType product.`}
+          hint="Primary product image. Uploaded securely through the farm server — fileUrl + publicId saved with the product."
         />
         <div className="auth-field-grid">
           <label className="field">

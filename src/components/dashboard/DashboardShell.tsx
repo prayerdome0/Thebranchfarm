@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { ChevronRight, LogOut, Menu, X, type LucideIcon } from "lucide-react";
 import { Fragment, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { NotificationsBell } from "@/components/dashboard/NotificationsBell";
 import { cn, initials } from "@/lib/utils";
 
 export interface DashboardNavItem {
@@ -64,6 +65,7 @@ export function DashboardShell({ title, subtitle, nav, children, roleLabel }: {
         <header className="dashboard-page-header">
           <button className="icon-button dashboard-menu-button" onClick={() => setOpen(true)} aria-label="Open dashboard navigation"><Menu size={21} /></button>
           <div><span className="eyebrow">{roleLabel}</span><h1>{title}</h1><p>{subtitle}</p></div>
+          <NotificationsBell />
         </header>
         {children}
       </section>

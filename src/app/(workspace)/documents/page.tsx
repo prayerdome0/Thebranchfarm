@@ -5,10 +5,9 @@ import { FileText, Download, Trash2, Plus, Upload, Search, X, CircleAlert } from
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Loading } from "@/components/ui/Loading";
 import { useAuth } from "@/contexts/AuthContext";
-import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { useToast } from "@/contexts/ToastContext";
 import { DOCUMENT_TYPES } from "@/lib/constants";
-import { resolveCloudinaryConfig, uploadGenericFileToCloudinary } from "@/lib/cloudinary";
+import { uploadGenericFileToCloudinary } from "@/lib/cloudinary";
 import { createFarmDocument, deleteFarmDocument, getFarmDocuments } from "@/lib/firebase/data";
 import { documentSchema } from "@/lib/validation";
 import { cn, formatBytes, formatDate, friendlyError, documentCategory } from "@/lib/utils";
@@ -17,7 +16,6 @@ import type { FarmDocument } from "@/types";
 export default function DocumentsPage() {
   const { isAdmin } = useAuth();
   const { showToast } = useToast();
-  const { settings } = useStoreConfig();
   const [documents, setDocuments] = useState<FarmDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [typeFilter, setTypeFilter] = useState("all");
@@ -67,8 +65,7 @@ export default function DocumentsPage() {
     if (!parsed.success) { setError(parsed.error.issues[0]?.message || "Review info"); return; }
     setSaving(true);
     try {
-      const config = resolveCloudinaryConfig(settings);
-      const uploaded = await uploadGenericFileToCloudinary(file, config, form.docType, setProgress);
+      const uploaded = await uploadGenericFileToCloudinary(file, form.docType, setProgress);
       await createFarmDocument({
         documentNumber: form.documentNumber || `${form.docType.toUpperCase()}-${Date.now().toString().slice(-6)}`,
         name: parsed.data.name,
@@ -93,7 +90,7 @@ export default function DocumentsPage() {
         amount: form.amount ? Number(form.amount) : undefined,
         date: new Date().toISOString(),
       });
-      showToast("Document uploaded to Cloudinary (no folders)", "success");
+      showToast("Document uploaded", "success");
       setFile(null);
       setForm({ name: "", description: "", docType: "quotation", relatedOrderId: "", relatedCustomer: "", amount: "", documentNumber: "" });
       setShowForm(false);
@@ -118,7 +115,7 @@ export default function DocumentsPage() {
       <section className="dashboard-section-title">
         <div>
           <h2>Documents</h2>
-          <p>Quotations, Invoices, Receipts, Purchase Orders, Delivery Notes, Contracts, Supplier, Customer, Staff, Animal, Other — stored in Cloudinary dhad95cch with preset branch_farm, no folders.</p>
+          <p>Quotations, Invoices, Receipts, Purchase Orders, Delivery Notes, Contracts, Supplier, Customer, Staff, Animal, Other — stored securely by the farm server, no folders.</p>
         </div>
         <button className="button button-primary" onClick={() => setShowForm(true)}><Plus size={18} /> Upload</button>
       </section>
@@ -161,7 +158,7 @@ export default function DocumentsPage() {
           ))}
         </div>
       ) : (
-        <EmptyState icon={FileText} title="No documents" description="Upload quotations, invoices, receipts, etc. Stored in Cloudinary, metadata in Firestore." action={<button className="button button-primary" onClick={() => setShowForm(true)}><Plus size={18} /> Upload</button>} />
+        <EmptyState icon={FileText} title="No documents" description="Upload quotations, invoices, receipts, etc. Stored securely by the farm server, metadata in Firestore." action={<button className="button button-primary" onClick={() => setShowForm(true)}><Plus size={18} /> Upload</button>} />
       )}
 
       {showForm && (
@@ -170,7 +167,7 @@ export default function DocumentsPage() {
           <div className="record-modal small-modal">
             <header><div><span className="eyebrow">Documents</span><h2>Upload Document</h2></div><button className="icon-button" onClick={() => setShowForm(false)}><X size={18} /></button></header>
             <form onSubmit={submit} className="dashboard-stack" style={{ padding: 20 }}>
-              <label className="field"><span>File * (stored in Cloudinary, no folders)</span>
+              <label className="field"><span>File * (stored securely, no folders)</span>
                 <span className="button button-secondary file-button button-full"><Upload size={16} /> {file ? file.name : `Choose file ${progress ? progress + "%" : ""}`}<input type="file" onChange={(e) => setFile(e.target.files?.[0] || null)} /></span>
               </label>
               <div className="form-grid">

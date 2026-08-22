@@ -61,7 +61,7 @@ The private workspace follows one operating principle:
     new one) and products from the farm/store catalogue, set quantity, price, discount and
     tax — subtotal, tax, total and balance calculate live. Professional numbers
     (`QF-YYYY-NNNN`) are generated automatically. The document is saved to Firebase and a
-    printable copy is stored in **Cloudinary** (URL + public ID recorded on the record).
+    printable copy is stored in secure media storage (URL + public ID recorded on the record).
     Status flow is enforced: **Draft → Sent → Accepted/Rejected → Converted**, with view,
     edit, print/save-PDF and download on every quotation.
   * **Convert to receipt/order**: an *Accepted* quotation converts in one click — its
@@ -95,27 +95,26 @@ The private workspace follows one operating principle:
   a sample catalogue is shown and orders are stored locally in the browser. An admin can also
   seed the sample catalogue into Firestore from **Products → Add sample products**.
 
-## Cloudinary uploads and downloads
+## Media uploads and downloads (server-signed)
 
-All animal and health photos, product images, farm videos and thumbnails, and every farm
-document upload **straight from the browser to Cloudinary**. Every upload uses the same fixed
-unsigned preset, **`branch_farm`** — callers and saved settings cannot override it. Assets are
-organised under `branch_farm/animals`, `branch_farm/health`, `branch_farm/products`,
-`branch_farm/videos`, `branch_farm/video-posters`, `branch_farm/documents`, and the dedicated
-quotation, receipt and invoice folders. Stored secure Cloudinary URLs power viewing, playback
-and document downloads.
+All animal and health photos, product images, farm videos, thumbnails and farm documents are
+uploaded **through this app's own authenticated API** (`POST /api/uploads`) — never straight
+from the browser to the media cloud. The server signs each upload with credentials that exist
+only in server environment variables, so **no cloud name, API key, API secret or upload preset
+is ever exposed in the website code or shipped to the browser**. There are no folders; the
+database's `recordType` + `recordId` identify what each file belongs to. Stored secure delivery
+URLs power viewing, playback and document downloads.
 
-Setup:
+Setup (server-side only):
 
-1. In Cloudinary → Settings → Upload presets, create an **unsigned** preset named `branch_farm`.
-2. Put your **cloud name** (Cloudinary dashboard → Product Environment) in
-   **Settings → Media uploads**, or set `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME`.
-3. All upload surfaces now use Cloudinary. A missing cloud name or invalid preset produces a
-   clear upload error instead of silently storing the file with another provider.
+1. Set `CLOUDINARY_URL=cloudinary://API_KEY:API_SECRET@CLOUD_NAME` (or the discrete
+   `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` variables).
+2. Upload surfaces authenticate the signed-in staff/admin session automatically; a missing
+   server configuration produces a clear upload error instead of leaking anything.
 
 ## REST API
 
-Next.js route handlers under `/api` make the storefront scriptable (POS systems, WhatsApp
+Next.js route handlers under `/api` (including the authenticated `/api/uploads` proxy and the admin-only `/api/guide` user manual) make the storefront scriptable (POS systems, WhatsApp
 bots, integrations). Public reads work everywhere; writes and staff reads require
 `Authorization: Bearer <firebase id token>` of an active staff/admin account. Without
 `FIREBASE_ADMIN_*` credentials the public endpoints serve the sample catalogue and protected
@@ -180,13 +179,13 @@ the Staff page.
 - **Firebase Authentication** — admin and staff accounts. Email/password sign-in.
 - **Firestore** — `animals`, `animalHealth`, `farmOperations`, append-only `auditTrail`, `users`,
   `farmDocuments`, `farmActivities`, commerce collections and `settings`.
-- **Cloudinary** — all uploaded photos, product media, operational evidence, videos and downloadable documents,
-  using the fixed unsigned `branch_farm` upload preset.
+- **Media storage (Cloudinary)** — all uploaded photos, product media, operational evidence,
+  videos and downloadable documents, signed and proxied **server-side** via `/api/uploads`.
 - **Cloud Functions** — a small, focused set: `bootstrapInitialAdmin` (allowlist promotion),
   `setUserRole`, `setUserStatus`, `createStaffAccount` and `notifyOrderCreated` (order
   webhook notification). Everything else runs directly against Firestore and Cloudinary.
 
-Firebase handles authentication and data; Cloudinary handles all newly uploaded files.
+Firebase handles authentication and data; the media cloud handles all newly uploaded files — always through the server-signed upload proxy.
 
 ## Technology
 

@@ -6,8 +6,8 @@ const storage = getStorage(app);
 /**
  * Remove a legacy Firebase Storage object.
  *
- * New assets are uploaded to Cloudinary with the unsigned `branch_farm`
- * preset. Cloudinary assets cannot be deleted securely from browser code, so
+ * New assets are uploaded through the authenticated /api/uploads proxy
+ * (signed server-side). Cloudinary assets cannot be deleted securely from browser code, so
  * their lifecycle is managed in Cloudinary while the associated app record is
  * removed normally.
  */

@@ -138,7 +138,7 @@ export default function InvoicesPage() {
       };
 
       // Render the professional invoice (with the real logo) and store it in
-      // Cloudinary — URL + public ID are recorded in Firestore with the invoice.
+      // secure media storage — URL + public ID are recorded in Firestore with the invoice.
       const generated = await generateAndStoreDocument(
         "invoice",
         {
@@ -146,7 +146,6 @@ export default function InvoicesPage() {
           backHref: "/documents/invoices",
           backLabel: "Back to invoices",
         },
-        settings,
       );
 
       const payload = {

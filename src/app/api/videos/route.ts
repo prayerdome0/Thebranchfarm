@@ -31,7 +31,7 @@ export async function GET() {
   return Response.json({ source: "demo", count: videos.length, videos });
 }
 
-/** POST /api/videos — staff publish a farm video (uploaded via Cloudinary with the unsigned branch_farm preset). */
+/** POST /api/videos — staff publish a farm video (file stored via the authenticated /api/uploads proxy). */
 export async function POST(request: Request) {
   try {
     const { db, actor } = await requireStaff(request);

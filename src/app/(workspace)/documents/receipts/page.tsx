@@ -19,8 +19,8 @@ import { SignaturePad } from "@/components/store/SignaturePad";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Loading } from "@/components/ui/Loading";
 import { useAuth } from "@/contexts/AuthContext";
-import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { useToast } from "@/contexts/ToastContext";
+import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import {
   createReceipt,
   deleteReceipt,
@@ -78,7 +78,7 @@ function errorMessage(err: unknown, fallback: string) {
 
 export default function ReceiptsPage() {
   const { showToast } = useToast();
-  const { settings, formatMoney, currency } = useStoreConfig();
+  const { formatMoney, currency } = useStoreConfig();
   const { user } = useAuth();
 
   const [list, setList] = useState<Receipt[]>([]);
@@ -341,7 +341,6 @@ export default function ReceiptsPage() {
           backHref: "/documents/receipts",
           backLabel: "Back to receipts",
         },
-        settings,
       );
       const fileUrl = generated?.fileUrl || editing?.fileUrl || "";
       const publicId = generated?.publicId || editing?.publicId || "";

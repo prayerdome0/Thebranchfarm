@@ -135,17 +135,17 @@ export const DOCUMENT_TYPE_LABELS: Record<string, string> = DOCUMENT_TYPES.reduc
 /* ------------------------------- Cloudinary ------------------------------- */
 
 /**
- * Cloudinary unsigned uploads for all farm media and downloadable files.
- * Exact spec:
- *  cloud_name: dhad95cch
- *  upload_preset: branch_farm (unsigned)
- *  No folders - application/database identifies what file belongs to.
+ * Media storage for all farm photos, videos and downloadable files.
+ *
+ * SECURITY: uploads are signed SERVER-SIDE only. The browser posts each file
+ * to this app's own /api/uploads route (authenticated with the member's
+ * Firebase session) and the server talks to Cloudinary with credentials that
+ * live only in server environment variables. No cloud name, API key, secret
+ * or upload preset is exposed in client code.
  */
 export const CLOUDINARY = {
-  cloudName: "dhad95cch",
-  uploadPreset: "branch_farm",
-  cloudNameEnv: "NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME",
-  presetEnv: "NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET",
+  /** Uploads are proxied through this app's authenticated server route. */
+  uploadEndpoint: "/api/uploads",
   /** No folders - all uploads go to root, recordType + recordId identify ownership */
   folders: {} as Record<string, string>,
 } as const;

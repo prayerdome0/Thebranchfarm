@@ -6,13 +6,11 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Loading } from "@/components/ui/Loading";
 import { useToast } from "@/contexts/ToastContext";
 import { watchFarmMedia, createFarmMedia, deleteFarmMedia, updateFarmMedia } from "@/lib/firebase/data";
-import { resolveCloudinaryConfig, uploadFarmPhotoToCloudinary, uploadFarmVideoToCloudinary } from "@/lib/cloudinary";
-import { useStoreConfig } from "@/contexts/StoreConfigContext";
+import { uploadFarmPhotoToCloudinary, uploadFarmVideoToCloudinary } from "@/lib/cloudinary";
 import type { FarmMedia } from "@/types";
 
 export default function FarmMediaPage() {
   const { showToast } = useToast();
-  const { settings } = useStoreConfig();
   const [media, setMedia] = useState<FarmMedia[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "photo" | "video">("all");
@@ -33,10 +31,9 @@ export default function FarmMediaPage() {
     if (!files || !files.length) return;
     const file = files[0];
     const isVideo = file.type.startsWith("video/");
-    const config = resolveCloudinaryConfig(settings);
     setUploading(true);
     try {
-      const result = isVideo ? await uploadFarmVideoToCloudinary(file, config) : await uploadFarmPhotoToCloudinary(file, config);
+      const result = isVideo ? await uploadFarmVideoToCloudinary(file) : await uploadFarmPhotoToCloudinary(file);
       await createFarmMedia({
         title: file.name,
         caption: "",

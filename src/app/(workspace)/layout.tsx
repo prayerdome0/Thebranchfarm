@@ -4,6 +4,7 @@ import {
   Activity,
   AlertTriangle,
   BarChart3,
+  BookOpen,
   Boxes,
   ClipboardCheck,
   FileStack,
@@ -42,7 +43,7 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
   const pathname = usePathname();
 
   const allNav: WorkspaceNavItem[] = [
-    { href: "/dashboard", label: "Farm overview", icon: LayoutDashboard, section: "Overview" },
+    { href: "/dashboard", label: "Home", icon: LayoutDashboard, section: "Overview" },
     { href: "/tasks", label: "My tasks", icon: ClipboardCheck, permission: "Farm Operations", section: "Overview" },
     { href: "/incidents", label: "Problems & incidents", icon: AlertTriangle, permission: "Farm Operations", section: "Overview" },
 
@@ -80,6 +81,7 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
     { href: "/media", label: "Farm media", icon: Images, permission: "Media", section: "Content & system" },
     { href: "/videos/manage", label: "Videos", icon: Video, permission: "Videos", section: "Content & system" },
     { href: "/settings", label: "Settings", icon: Settings, adminOnly: true, section: "Content & system" },
+    { href: "/guide", label: "Guide & user manual", icon: BookOpen, adminOnly: true, section: "Content & system" },
   ];
 
   const nav: DashboardNavItem[] = allNav

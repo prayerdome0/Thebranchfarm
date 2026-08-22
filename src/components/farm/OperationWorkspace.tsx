@@ -25,7 +25,6 @@ import { useEffect, useMemo, useState } from "react";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Loading } from "@/components/ui/Loading";
 import { useAuth } from "@/contexts/AuthContext";
-import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { useToast } from "@/contexts/ToastContext";
 import {
   defaultOperationValues,
@@ -50,7 +49,7 @@ import {
   watchFarmOperations,
 } from "@/lib/firebase/data";
 import { printOperationRecord } from "@/lib/farmReports";
-import { resolveCloudinaryConfig, uploadGenericFileToCloudinary } from "@/lib/cloudinary";
+import { uploadGenericFileToCloudinary } from "@/lib/cloudinary";
 import { cn, formatDate, formatDisplayDate, friendlyError, money } from "@/lib/utils";
 import type {
   Animal,
@@ -100,7 +99,6 @@ function RecordForm({
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const { settings } = useStoreConfig();
   const { showToast } = useToast();
   const [form, setForm] = useState<FormState>(() => {
     if (record) return { ...record.values };
@@ -140,7 +138,6 @@ function RecordForm({
         const file = selected[index];
         const result = await uploadGenericFileToCloudinary(
           file,
-          resolveCloudinaryConfig(settings),
           `farm_${definition.module}`,
           (progress) => setUploadProgress(Math.round(((index + progress / 100) / selected.length) * 100)),
         );

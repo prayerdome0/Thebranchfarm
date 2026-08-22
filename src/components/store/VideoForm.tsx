@@ -3,10 +3,8 @@
 import { useState } from "react";
 import { CircleAlert, CloudUpload, Film } from "lucide-react";
 import { PhotoField } from "@/components/farm/PhotoField";
-import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import {
   asStoredCloudinaryAsset,
-  resolveCloudinaryConfig,
   uploadFarmVideoToCloudinary,
   uploadVideoPosterToCloudinary,
 } from "@/lib/cloudinary";
@@ -41,7 +39,6 @@ export function VideoForm({
   const [uploadingVideo, setUploadingVideo] = useState(false);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
-  const { settings } = useStoreConfig();
 
   const handleVideo = async (file?: File) => {
     if (!file || uploadingVideo) return;
@@ -57,11 +54,7 @@ export function VideoForm({
     setUploadingVideo(true);
     setVideoProgress(0);
     try {
-      const result = await uploadFarmVideoToCloudinary(
-        file,
-        resolveCloudinaryConfig(settings),
-        setVideoProgress,
-      );
+      const result = await uploadFarmVideoToCloudinary(file, setVideoProgress);
       setVideo(asStoredCloudinaryAsset(result));
     } catch (cause) {
       setError(friendlyError(cause));
@@ -183,16 +176,10 @@ export function VideoForm({
           value={poster.url}
           path={poster.path}
           upload={async (file, onProgress) =>
-            asStoredCloudinaryAsset(
-              await uploadVideoPosterToCloudinary(
-                file,
-                resolveCloudinaryConfig(settings),
-                onProgress,
-              ),
-            )
+            asStoredCloudinaryAsset(await uploadVideoPosterToCloudinary(file, onProgress))
           }
           onChange={(result) => setPoster({ url: result.url, path: result.path })}
-          hint="Optional cover image. Uploaded to Cloudinary with the unsigned branch_farm preset. JPG, PNG or WebP up to 8 MB."
+          hint="Optional cover image. Uploaded securely through the farm server. JPG, PNG or WebP up to 8 MB."
         />
       </section>
 

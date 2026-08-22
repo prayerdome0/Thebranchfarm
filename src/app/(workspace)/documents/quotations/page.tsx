@@ -20,8 +20,8 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Loading } from "@/components/ui/Loading";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { useAuth } from "@/contexts/AuthContext";
-import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { useToast } from "@/contexts/ToastContext";
+import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import {
   createOrder,
   createQuotation,
@@ -90,7 +90,7 @@ function addDays(date: string, days: number) {
 
 export default function QuotationsPage() {
   const { showToast } = useToast();
-  const { settings, formatMoney, currency } = useStoreConfig();
+  const { formatMoney, currency } = useStoreConfig();
   const { user } = useAuth();
 
   const [list, setList] = useState<Quotation[]>([]);
@@ -281,7 +281,7 @@ export default function QuotationsPage() {
         publicId: editing?.publicId,
       };
 
-      // Render the professional document and store it in Cloudinary — the
+      // Render the professional document and store it in secure media storage — the
       // URL and public ID are recorded in Firestore with the quotation.
       const generated = await generateAndStoreDocument(
         "quotation",
@@ -290,7 +290,6 @@ export default function QuotationsPage() {
           backHref: "/documents/quotations",
           backLabel: "Back to quotations",
         },
-        settings,
       );
       const fileUrl = generated?.fileUrl || editing?.fileUrl || "";
       const publicId = generated?.publicId || editing?.publicId || "";
@@ -412,7 +411,6 @@ export default function QuotationsPage() {
           backHref: "/documents/receipts",
           backLabel: "Back to receipts",
         },
-        settings,
       );
       if (generated) {
         await updateReceipt(receiptRef.id, {
