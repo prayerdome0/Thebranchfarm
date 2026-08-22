@@ -6,7 +6,7 @@ import { ArrowRight, Search, ShoppingBag } from "lucide-react";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Loading } from "@/components/ui/Loading";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { FULFILLMENT_LABELS, PAYMENT_STATUS_LABELS, ORDER_STATUS_LABELS, ORDER_STATUS_SPEC } from "@/lib/constants";
+import { FULFILLMENT_LABELS, PAYMENT_STATUS_LABELS } from "@/lib/constants";
 import { watchOrders } from "@/lib/firebase/data";
 import { cn, formatDate, money } from "@/lib/utils";
 import type { Order, OrderStatus } from "@/types";
@@ -41,7 +41,7 @@ export default function OrdersPage() {
       const matchesFilter = filter === "all" || order.status === filter;
       const matchesSearch =
         !term ||
-        [order.reference, order.customer.name, order.customer.phone, order.customer.email, order.deliveryAddress, (order as any).deliveryLocation]
+        [order.reference, order.customer.name, order.customer.phone, order.customer.email, order.deliveryAddress, order.deliveryLocation]
           .filter(Boolean)
           .some((value) => String(value).toLowerCase().includes(term));
       return matchesFilter && matchesSearch;
@@ -84,7 +84,7 @@ export default function OrdersPage() {
               <div className="operational-customer">
                 <strong>{order.customer.name}</strong>
                 <span>{order.customer.phone} {order.customer.email ? `· ${order.customer.email}` : ""}</span>
-                <small>Delivery: {order.deliveryAddress || (order as any).deliveryLocation || FULFILLMENT_LABELS[order.fulfillment]} · {formatDate(order.createdAt, true)}</small>
+                <small>Delivery: {order.deliveryAddress || order.deliveryLocation || FULFILLMENT_LABELS[order.fulfillment]} · {formatDate(order.createdAt, true)}</small>
                 <small>Payment: {PAYMENT_STATUS_LABELS[order.paymentStatus] || order.paymentStatus} · {order.paymentMethod || "—"}</small>
               </div>
 

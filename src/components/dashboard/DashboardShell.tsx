@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronRight, LogOut, Menu, X, type LucideIcon } from "lucide-react";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn, initials } from "@/lib/utils";
 
@@ -12,6 +12,7 @@ export interface DashboardNavItem {
   label: string;
   icon: LucideIcon;
   badge?: string | number;
+  section?: string;
 }
 
 export function DashboardShell({ title, subtitle, nav, children, roleLabel }: {
@@ -37,16 +38,20 @@ export function DashboardShell({ title, subtitle, nav, children, roleLabel }: {
           <span><strong>{user?.fullName}</strong><small>{roleLabel}</small></span>
         </div>
         <nav aria-label={`${roleLabel} navigation`}>
-          {nav.map((item) => {
+          {nav.map((item, index) => {
             const active = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(`${item.href}/`));
             const Icon = item.icon;
+            const showSection = item.section && item.section !== nav[index - 1]?.section;
             return (
-              <Link href={item.href} key={item.href} className={cn("dashboard-nav-link", active && "active")} onClick={() => setOpen(false)}>
-                <Icon size={19} />
-                <span>{item.label}</span>
-                {item.badge != null && <small>{item.badge}</small>}
-                <ChevronRight size={15} className="dashboard-nav-arrow" />
-              </Link>
+              <Fragment key={item.href}>
+                {showSection && <span className="dashboard-nav-section">{item.section}</span>}
+                <Link href={item.href} className={cn("dashboard-nav-link", active && "active")} onClick={() => setOpen(false)}>
+                  <Icon size={18} />
+                  <span>{item.label}</span>
+                  {item.badge != null && <small>{item.badge}</small>}
+                  <ChevronRight size={15} className="dashboard-nav-arrow" />
+                </Link>
+              </Fragment>
             );
           })}
         </nav>

@@ -92,7 +92,7 @@ export default function DocumentsPage() {
         relatedCustomer: form.relatedCustomer || undefined,
         amount: form.amount ? Number(form.amount) : undefined,
         date: new Date().toISOString(),
-      } as any);
+      });
       showToast("Document uploaded to Cloudinary (no folders)", "success");
       setFile(null);
       setForm({ name: "", description: "", docType: "quotation", relatedOrderId: "", relatedCustomer: "", amount: "", documentNumber: "" });

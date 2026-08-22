@@ -126,7 +126,7 @@ export default function CheckoutPage() {
           <div className="checkout-server-error">
             <CircleAlert size={20} />
             <div>
-              <strong>We couldn't place your order.</strong>
+              <strong>We couldn&apos;t place your order.</strong>
               <p>{serverError}</p>
               <a className="checkout-error-whatsapp" href={`https://wa.me/${BUSINESS.whatsappLink}?text=${encodeURIComponent("Hello, I'd like to place an order.")}`} target="_blank" rel="noreferrer">
                 <MessageSquareText size={15} /> Or order on WhatsApp instead
@@ -230,7 +230,7 @@ export default function CheckoutPage() {
 
               <div className="agreement-summary" style={{ marginTop: 16 }}>
                 <PackageCheck size={18} />
-                <p>You'll receive order number and confirmation. Admin is notified. Track your order with reference. Customer record is created for future orders.</p>
+                <p>You&apos;ll receive an order number and confirmation. Admin is notified. Track your order with the reference. A customer record is created for future orders.</p>
               </div>
 
               <label className="check-field">

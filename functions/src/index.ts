@@ -34,6 +34,19 @@ async function actor(uid: string | undefined, roles: Role[]) {
   };
 }
 
+async function recordAdminAudit(
+  current: { uid: string; name: string },
+  values: { action: "created" | "updated" | "status-changed"; entityId: string; entityLabel: string; description: string },
+) {
+  await db.collection("auditTrail").add({
+    ...values,
+    entityType: "staff-account",
+    createdBy: current.uid,
+    createdByName: current.name,
+    createdAt: FieldValue.serverTimestamp(),
+  });
+}
+
 /**
  * Bootstraps the first administrator(s): when a registered account matches the
  * allowlist, it is promoted to admin and given a matching custom claim.
@@ -163,9 +176,11 @@ export const trackOrder = onCall({ region: REGION }, async (request) => {
 
 /** Workspace areas an administrator can grant to a staff member. */
 const STAFF_PERMISSIONS = [
+  "Farm Operations",
+  "Animals",
+  "Reports",
   "Orders",
   "Products",
-  "Animals",
   "Customers",
   "Media",
   "Documents",
@@ -176,7 +191,7 @@ const STAFF_PERMISSIONS = [
 
 /** Administrator updates the explicit area permissions of a member. */
 export const setUserPermissions = onCall({ region: REGION }, async (request) => {
-  await actor(request.auth?.uid, ["admin"]);
+  const current = await actor(request.auth?.uid, ["admin"]);
   const input = z
     .object({
       uid: z.string().min(10).max(128),
@@ -189,6 +204,12 @@ export const setUserPermissions = onCall({ region: REGION }, async (request) => 
   await ref.update({
     permissions: Array.from(new Set(input.permissions)),
     updatedAt: FieldValue.serverTimestamp(),
+  });
+  await recordAdminAudit(current, {
+    action: "updated",
+    entityId: input.uid,
+    entityLabel: String(target.data()?.fullName || input.uid),
+    description: `Updated staff permissions: ${input.permissions.join(", ") || "no workspace areas"}.`,
   });
   return { ok: true };
 });
@@ -208,6 +229,12 @@ export const setUserRole = onCall({ region: REGION }, async (request) => {
     ref.update({ role: input.role, permissions, updatedAt: FieldValue.serverTimestamp() }),
     getAuth().setCustomUserClaims(input.uid, { ...existing.customClaims, role: input.role }),
   ]);
+  await recordAdminAudit(current, {
+    action: "updated",
+    entityId: input.uid,
+    entityLabel: String(target.data()?.fullName || input.uid),
+    description: `Changed account role to ${input.role}.`,
+  });
   return { ok: true };
 });
 
@@ -222,6 +249,12 @@ export const setUserStatus = onCall({ region: REGION }, async (request) => {
     ref.update({ status: input.status, updatedAt: FieldValue.serverTimestamp() }),
     getAuth().updateUser(input.uid, { disabled: input.status === "disabled" }),
   ]);
+  await recordAdminAudit(current, {
+    action: "status-changed",
+    entityId: input.uid,
+    entityLabel: String(target.data()?.fullName || input.uid),
+    description: `Changed staff account status to ${input.status}.`,
+  });
   return { ok: true };
 });
 
@@ -270,6 +303,12 @@ export const createStaffAccount = onCall({ region: REGION }, async (request) => 
       updatedAt: FieldValue.serverTimestamp(),
     }),
   ]);
+  await recordAdminAudit(current, {
+    action: "created",
+    entityId: user.uid,
+    entityLabel: input.fullName,
+    description: `Created ${input.role} account for ${input.fullName}.`,
+  });
 
   return { uid: user.uid, tempPassword };
 });

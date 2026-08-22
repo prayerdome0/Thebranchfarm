@@ -55,7 +55,7 @@ export default function SettingsPage() {
         cloudinaryCloudName: "dhad95cch",
         cloudinaryUploadPreset: "branch_farm",
         businessInfo: `${parsed.data.farmName} - ${parsed.data.slogan} - ${parsed.data.location}`,
-      } as any);
+      });
       showToast("Settings saved", "success");
     } catch (cause) {
       setError(friendlyError(cause));

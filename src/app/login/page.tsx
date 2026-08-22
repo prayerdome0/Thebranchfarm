@@ -28,10 +28,10 @@ function LoginForm() {
     setLoading(true);
     setError("");
     try {
-      await login(email.trim().toLowerCase(), password);
+      const profile = await login(email.trim().toLowerCase(), password);
       const requested = search.get("next");
       const safeRequested = requested?.startsWith("/") && !requested.startsWith("//") ? requested : null;
-      router.replace(safeRequested || "/dashboard");
+      router.replace(safeRequested || (profile?.role === "staff" || profile?.role === "admin" ? "/dashboard" : "/account"));
     } catch (cause) {
       setError(friendlyError(cause));
       setLoading(false);
@@ -58,7 +58,7 @@ function LoginForm() {
           {loading ? <><i className="button-spinner" /> Signing in…</> : <>Sign in <ArrowRight size={18} /></>}
         </button>
       </form>
-      <p className="auth-switch">Don't have account? <Link href="/register">Register</Link></p>
+      <p className="auth-switch">Don&apos;t have an account? <Link href="/register">Register</Link></p>
       <p className="auth-switch" style={{ marginTop: 8 }}><Link href="/">Back to {BUSINESS.name}</Link></p>
     </>
   );

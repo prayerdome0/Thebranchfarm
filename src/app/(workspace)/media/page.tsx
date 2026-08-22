@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Images, Video, Trash2, Star, Eye, EyeOff, Plus, Upload } from "lucide-react";
+import { Images, Video, Trash2, Star, Eye, EyeOff, Upload } from "lucide-react";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Loading } from "@/components/ui/Loading";
 import { useToast } from "@/contexts/ToastContext";
@@ -46,10 +46,10 @@ export default function FarmMediaPage() {
         type: isVideo ? "video" : "photo",
         featured: false,
         published: true,
-      } as any);
+      });
       showToast(`${isVideo ? "Video" : "Photo"} uploaded`, "success");
-    } catch (err: any) {
-      showToast(err?.message || "Upload failed", "error");
+    } catch (error: unknown) {
+      showToast(error instanceof Error ? error.message : "Upload failed", "error");
     } finally {
       setUploading(false);
       e.target.value = "";

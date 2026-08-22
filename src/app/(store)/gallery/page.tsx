@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { Camera, X, ZoomIn, Images, Video, Play } from "lucide-react";
+import { Camera, X, ZoomIn, Images, Video } from "lucide-react";
 import { Reveal } from "@/components/ui/Reveal";
 import { watchFarmMedia } from "@/lib/firebase/data";
 import type { FarmMedia } from "@/types";
@@ -25,9 +25,11 @@ const STATIC_IMAGES = [
 
 const TAGS = ["All", "Photos", "Videos", "Farm", "Livestock", "Produce", "Dairy"];
 
+type GalleryLightboxItem = { src: string; caption: string; tag: string };
+
 export default function GalleryPage() {
   const [tag, setTag] = useState("All");
-  const [active, setActive] = useState<any>(null);
+  const [active, setActive] = useState<GalleryLightboxItem | null>(null);
   const [media, setMedia] = useState<FarmMedia[]>([]);
 
   useEffect(() => {

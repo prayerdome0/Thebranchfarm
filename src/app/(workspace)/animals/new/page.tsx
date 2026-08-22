@@ -8,6 +8,7 @@ import { AnimalForm, type AnimalFormValues } from "@/components/farm/AnimalForm"
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { useToast } from "@/contexts/ToastContext";
 import { createAnimal } from "@/lib/firebase/data";
+import { friendlyError } from "@/lib/utils";
 
 export default function NewAnimalPage() {
   const router = useRouter();
@@ -27,13 +28,23 @@ export default function NewAnimalPage() {
         breed: values.breed,
         sex: values.sex,
         dateOfBirth: values.dateOfBirth,
+        estimatedAge: values.estimatedAge,
+        colour: values.colour,
+        identifyingFeatures: values.identifyingFeatures,
+        registrationType: values.registrationType,
         datePurchased: values.datePurchased,
+        acquisitionDate: values.acquisitionDate,
         purchasePrice: values.purchasePrice,
         supplier: values.supplier,
+        sellerContact: values.sellerContact,
+        purchasedFor: values.purchasedFor,
+        transportInformation: values.transportInformation,
         location: values.location,
         weight: values.weight,
         status: values.status,
         healthStatus: values.healthStatus,
+        statusDate: values.statusDate,
+        statusReason: values.statusReason,
         notes: values.notes,
         photo: values.photo,
         photoPath: values.photoPath,
@@ -41,13 +52,13 @@ export default function NewAnimalPage() {
       showToast("Animal saved.", "success");
       router.replace(`/animals/${ref.id}`);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Could not save the animal.");
+      setError(friendlyError(cause));
       setSaving(false);
     }
   };
 
   return (
-    <ProtectedRoute roles={["admin"]}>
+    <ProtectedRoute roles={["staff", "admin"]} permission="Animals">
       <div className="dashboard-stack">
         <nav className="breadcrumb" aria-label="Breadcrumb">
           <span>

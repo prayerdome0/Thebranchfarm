@@ -8,22 +8,31 @@ Firebase is the source of truth for identity and application data; Cloudinary st
 uploaded media and downloadable files. Orders are placed against Firestore and fulfilled by
 staff — there is no payment gateway.
 
-## The seven modules
+## Full farm operations center
 
-| Module | Purpose |
+The private workspace follows one operating principle:
+
+> **Staff operate and record. Admin monitors, reviews, approves where necessary, investigates problems, and exports reports.**
+
+| Area | Purpose |
 | --- | --- |
-| **Dashboard** | Live counts — animals, active animals, animals needing attention, health records, documents and staff. |
-| **Animals** | Add, edit, view and (admin) delete animal records with a photograph, full details, health history, documents and activity. |
-| **Animal health** | Health records across the herd: problems, observations, vaccinations, treatments, examinations. |
-| **Staff** | Admin provisions staff/admin accounts, changes roles and enables/disables accounts. |
-| **Farm documents** | Upload PDFs, images, Word and Excel files, videos and other farm files; view/download them. |
-| **Activity** | Feeding, cleaning, inspections and other daily work, logged with who did it and when. |
-| **Settings** | Farm name, slogan, location, contact details and currency. |
-| **Shop** | Public storefront: browse produce and livestock, product details, gallery, cart, checkout and order tracking. |
-| **Orders** | Staff fulfil customer orders — confirm, progress, mark ready/complete, record payment and capture a proof-of-delivery signature. |
-| **Products** | Staff add and edit the catalogue — prices, sale prices, backorder, multiple images, stock levels and visibility; admin removes. |
-| **Videos** | Staff upload farm videos with thumbnails; a public `/videos` page shares them with customers. |
-| **About / Contact / Gallery** | Public pages with the farm story, WhatsApp contact form, and a photo gallery with a lightbox. |
+| **Remote farm dashboard** | Live animals, health attention, vaccinations due, births, low feed, incidents, tasks and equipment warnings; production/cost snapshot and immutable recent staff activity. |
+| **Animals** | Permanent cattle, pig, poultry, goat, sheep and other-animal profiles with identity, acquisition, photos, status and full creator/updater attribution. |
+| **Health & vaccination** | Vaccines, medication, symptoms, treatment, veterinary visits, next dates and supporting evidence, classified as Attention Required / Upcoming / Up to Date. |
+| **Weight & growth** | Every weigh-in updates the current profile while preserving previous weight, recorder and growth history. |
+| **Breeding & births** | Mating, pregnancy, expected dates, outcomes and complications. A birth creates the newborn’s animal profile and connects its mother, father and offspring links atomically. |
+| **Acquisitions & movements** | Purchased/transferred-in animals create permanent profiles. Sales/transfers update status rather than removing the animal from history. |
+| **Feed & inventory** | Received → Used → Remaining records for feed, medicine, vaccines, equipment, tools, cleaning stock, packaging and parts, including low-stock warnings. |
+| **Milk & egg production** | Morning/evening milk totals, waste/sales/farm use; egg collection, quality, sold/used/remaining calculations. |
+| **Daily farm log** | Feeding, cleaning, checks, vaccinations, treatments, births/deaths, purchases/sales, repairs, deliveries, problems and observations. |
+| **Problems & incidents** | Prominent problem reporting with category, Low/Medium/High/Critical severity, photos/documents, immediate action, investigation and resolution. |
+| **Tasks** | Admin assigns work and due dates; assigned staff update Pending → In Progress → Completed and attach completion evidence. |
+| **Equipment & maintenance** | Asset/serial records, condition, location, assignment and matching repair/maintenance history with parts, cost and next service. |
+| **Farm expenses** | Staff records operational costs and receipts; admins approve or return the entry. |
+| **Report Center** | 20 date-filtered animal, health, vaccination, breeding, birth, purchase, movement, feed, inventory, production, expense, asset, staff, incident, daily, monthly and custom reports. |
+| **Audit trail** | Append-only Who → What → When ledger; updates and deletes are denied even to admins. |
+| **Professional exports** | Branded PDF-ready views with The Branch Farm logo, report reference, photos, full details, financial fields, staff attribution and signature/approval areas. |
+| **Commerce & content** | The existing shop, products, orders, customers, quotations, invoices, receipts, media, videos, gallery and settings remain available. |
 
 ## The storefront
 
@@ -151,21 +160,27 @@ history, not a static profile.
 
 ## Roles
 
-- **Admin** — add/edit/delete animals, upload animal photos, view everything, add health
-  records, manage staff, manage documents, see activity/history, manage settings, and delete
-  products/videos.
-- **Staff** — view animals, add observations, report animal problems, add health/medical
-  records, upload relevant photos/documents, update records, add/edit products, upload videos
-  and fulfil customer orders.
+- **Admin** — sees the complete farm, staff activity and audit history; reviews/approves
+  sensitive records; investigates alerts; manages staff permissions, users, commerce and
+  settings; views every individual record; and exports professional reports.
+- **Staff** — runs farm operations: animals, health/vaccination, growth, breeding, births,
+  acquisitions, movements, feed, inventory, production, daily logs, incidents, assigned tasks,
+  equipment, maintenance, expenses, documents and evidence. Every write is attributed.
+- **Registered user** — a normal storefront customer account at `/account` with profile,
+  personal orders, quotations, receipts, downloadable PDF-ready documents and status
+  notifications. It has no private farm access; staff/admin access must be explicitly granted
+  by an administrator.
 
-There is also a `user` (pending) role: anyone can register an account, but it has no farm
-access until an administrator promotes it to staff or admin.
+Workspace permissions are explicit. New staff receive Farm Operations, Animals and Reports by
+default alongside the existing commerce/document areas; admins can change the visible areas on
+the Staff page.
 
 ## Architecture
 
 - **Firebase Authentication** — admin and staff accounts. Email/password sign-in.
-- **Firestore** — `animals`, `animalHealth`, `users`, `farmDocuments`, `farmActivities`, `settings`.
-- **Cloudinary** — all uploaded photos, product media, videos and downloadable documents,
+- **Firestore** — `animals`, `animalHealth`, `farmOperations`, append-only `auditTrail`, `users`,
+  `farmDocuments`, `farmActivities`, commerce collections and `settings`.
+- **Cloudinary** — all uploaded photos, product media, operational evidence, videos and downloadable documents,
   using the fixed unsigned `branch_farm` upload preset.
 - **Cloud Functions** — a small, focused set: `bootstrapInitialAdmin` (allowlist promotion),
   `setUserRole`, `setUserStatus`, `createStaffAccount` and `notifyOrderCreated` (order

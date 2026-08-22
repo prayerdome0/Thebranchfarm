@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { Clapperboard, ExternalLink, Plus, Search, Trash2, Eye, EyeOff, Star } from "lucide-react";
+import { Clapperboard, ExternalLink, Plus, Search, Trash2 } from "lucide-react";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Loading } from "@/components/ui/Loading";
 import { VideoForm, type VideoFormValues } from "@/components/store/VideoForm";
@@ -48,7 +48,7 @@ export default function WorkspaceVideosPage() {
       publicId: values.storagePath.replace("cloudinary:", ""),
       published: true,
       featured: false,
-    } as any);
+    });
     showToast(`Video uploaded — Cloudinary no folders, ${BUSINESS.name}`, "success");
     setAdding(false);
   };

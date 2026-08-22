@@ -25,7 +25,7 @@ export default function RegisterPage() {
     const parsed = registerSchema.safeParse(form);
     if (!parsed.success) { setErrors(Object.fromEntries(parsed.error.issues.map((issue) => [String(issue.path[0]), issue.message]))); return; }
     setErrors({}); setServerError(""); setLoading(true);
-    try { await register({ fullName: parsed.data.fullName, email: parsed.data.email, phone: parsed.data.phone, password: parsed.data.password }); router.replace("/dashboard?welcome=1"); }
+    try { await register({ fullName: parsed.data.fullName, email: parsed.data.email, phone: parsed.data.phone, password: parsed.data.password }); router.replace("/account?welcome=1"); }
     catch (cause) { setServerError(friendlyError(cause)); setLoading(false); }
   };
 
