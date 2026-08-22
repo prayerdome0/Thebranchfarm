@@ -105,7 +105,7 @@ export default function InvoicesPage() {
                 <span>{inv.date}</span>
                 <span><span className={`status-badge status-${inv.paymentStatus.toLowerCase().replace(" ", "-")}`}>{inv.paymentStatus}</span></span>
                 <span>{formatMoney(inv.total)}</span>
-                <span>{inv.fileUrl && <a className="button button-secondary button-small" href={inv.fileUrl} target="_blank" rel="noreferrer"><Download size={14} /> File</a>}</span>
+                <span>{inv.fileUrl && <a className="button button-secondary button-small" href={inv.fileUrl} download={`${inv.invoiceNumber}.pdf`} target="_blank" rel="noreferrer"><Download size={14} /> Download</a>}</span>
               </article>
             ))}
           </div>

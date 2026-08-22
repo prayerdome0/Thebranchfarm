@@ -15,7 +15,7 @@ export interface GeneratedDocumentFile {
 
 /**
  * Renders the printable document and stores it in Cloudinary (unsigned
- * `branch_farm_unsigned` preset, no folders). Returns the delivery URL and
+ * `branch_farm` preset, no folders). Returns the delivery URL and
  * public ID so they can be recorded in Firestore next to the record.
  *
  * Returns `null` (no throw) when Cloudinary is not configured, so the record

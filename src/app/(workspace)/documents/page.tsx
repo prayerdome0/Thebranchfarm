@@ -118,7 +118,7 @@ export default function DocumentsPage() {
       <section className="dashboard-section-title">
         <div>
           <h2>Documents</h2>
-          <p>Quotations, Invoices, Receipts, Purchase Orders, Delivery Notes, Contracts, Supplier, Customer, Staff, Animal, Other — stored in Cloudinary dhad95cch with preset branch_farm_unsigned, no folders.</p>
+          <p>Quotations, Invoices, Receipts, Purchase Orders, Delivery Notes, Contracts, Supplier, Customer, Staff, Animal, Other — stored in Cloudinary dhad95cch with preset branch_farm, no folders.</p>
         </div>
         <button className="button button-primary" onClick={() => setShowForm(true)}><Plus size={18} /> Upload</button>
       </section>

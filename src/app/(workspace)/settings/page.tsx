@@ -53,7 +53,7 @@ export default function SettingsPage() {
         promoDiscountPercent: parsed.data.promoDiscountPercent,
         heroProductId: parsed.data.heroProductId,
         cloudinaryCloudName: "dhad95cch",
-        cloudinaryUploadPreset: "branch_farm_unsigned",
+        cloudinaryUploadPreset: "branch_farm",
         businessInfo: `${parsed.data.farmName} - ${parsed.data.slogan} - ${parsed.data.location}`,
       } as any);
       showToast("Settings saved", "success");
@@ -101,7 +101,7 @@ export default function SettingsPage() {
                 <label className="field"><span>Delivery Fee (E)</span><input type="number" min={0} value={form.deliveryFee} onChange={(e) => update("deliveryFee", e.target.value)} /></label>
                 <label className="field"><span>Free delivery above (E)</span><input type="number" min={0} value={form.freeDeliveryThreshold} onChange={(e) => update("freeDeliveryThreshold", e.target.value)} /></label>
                 <div className="field field-full" style={{ padding: 12, background: "var(--green-50)", borderRadius: 8, fontSize: ".8rem" }}>
-                  <strong>{BUSINESS.deliveryFree}</strong><br />{BUSINESS.deliveryOther}<br />Cloudinary: dhad95cch / branch_farm_unsigned — no folders.
+                  <strong>{BUSINESS.deliveryFree}</strong><br />{BUSINESS.deliveryOther}<br />Cloudinary: dhad95cch / branch_farm — no folders.
                 </div>
               </div>
             </section>

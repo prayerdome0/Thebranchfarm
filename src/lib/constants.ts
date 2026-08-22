@@ -20,7 +20,7 @@ export const BUSINESS = {
   whatsappDisplay: "+268 76581804",
   whatsappLink: "26876581804",
   currency: "E",
-  email: "info@thebranchfarm.sz",
+  email: "seedwellmasuku@gmail.com",
   deliveryFree: "Free delivery currently around Manzini and Matsapha.",
   deliveryOther: "Other locations: Arranged depending on location.",
   deliveryFee: 30,
@@ -138,12 +138,12 @@ export const DOCUMENT_TYPE_LABELS: Record<string, string> = DOCUMENT_TYPES.reduc
  * Cloudinary unsigned uploads for all farm media and downloadable files.
  * Exact spec:
  *  cloud_name: dhad95cch
- *  upload_preset: branch_farm_unsigned (unsigned)
+ *  upload_preset: branch_farm (unsigned)
  *  No folders - application/database identifies what file belongs to.
  */
 export const CLOUDINARY = {
   cloudName: "dhad95cch",
-  uploadPreset: "branch_farm_unsigned",
+  uploadPreset: "branch_farm",
   cloudNameEnv: "NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME",
   presetEnv: "NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET",
   /** No folders - all uploads go to root, recordType + recordId identify ownership */
