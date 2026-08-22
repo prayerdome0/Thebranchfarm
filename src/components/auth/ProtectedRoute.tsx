@@ -7,8 +7,17 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Loading } from "@/components/ui/Loading";
 import type { AppRole } from "@/types";
 
-export function ProtectedRoute({ roles, children }: { roles: AppRole[]; children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+export function ProtectedRoute({
+  roles,
+  permission,
+  children,
+}: {
+  roles: AppRole[];
+  /** Optional area permission (e.g. "Orders") the member must have. */
+  permission?: string;
+  children: React.ReactNode;
+}) {
+  const { user, loading, can } = useAuth();
   const pathname = usePathname();
   if (loading) {
     return (
@@ -41,12 +50,15 @@ export function ProtectedRoute({ roles, children }: { roles: AppRole[]; children
       </section>
     );
   }
-  if (!roles.includes(user.role)) {
+  if (!roles.includes(user.role) || (permission && !can(permission))) {
     return (
       <section className="access-state page-shell">
         <span><LockKeyhole size={28} /></span>
         <h1>Access not authorized</h1>
-        <p>Your account does not have permission to view this area.</p>
+        <p>
+          Your account does not have permission to view this area
+          {permission ? ` (${permission})` : ""}. Ask a farm administrator to grant it on the Staff page.
+        </p>
         <Link className="button button-secondary" href="/dashboard">
           Return to dashboard
         </Link>

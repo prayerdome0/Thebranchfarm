@@ -96,8 +96,12 @@ service cloud.firestore {
         && request.resource.data.phone is string
         && request.resource.data.phone.size() <= 24;
       allow read: if own(uid) || admin();
-      allow update: if own(uid)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['fullName', 'phone', 'photoURL', 'updatedAt', 'lastLoginAt'])
+      // Members maintain their own contact details; administrators may also fix
+      // a colleague's name, phone or job title. Role, status and permissions
+      // stay callable-only (admin Cloud Functions) so access cannot be
+      // escalated from the client.
+      allow update: if (own(uid) || admin())
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['fullName', 'phone', 'title', 'photoURL', 'updatedAt', 'lastLoginAt'])
         && request.resource.data.role == resource.data.role
         && request.resource.data.status == resource.data.status;
       allow delete: if false;

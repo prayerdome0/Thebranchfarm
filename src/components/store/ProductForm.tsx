@@ -43,6 +43,8 @@ export function ProductForm({
     imagePath: initial?.imagePath,
     images: initial?.images || [],
     imagePaths: initial?.imagePaths || [],
+    videoUrl: initial?.videoUrl || "",
+    videoPosterUrl: initial?.videoPosterUrl || "",
     fileUrl: initial?.fileUrl,
     publicId: initial?.publicId,
   } as any));
@@ -178,6 +180,26 @@ export function ProductForm({
           onChange={(result) => { update("image", result.url); update("imagePath", result.path); (update as any)("fileUrl", result.url); (update as any)("publicId", (result.path || "").replace("cloudinary:", "")); }}
           hint={`Primary product image. Uploaded to Cloudinary ${CLOUDINARY.cloudName} with preset ${CLOUDINARY.uploadPreset}, no folders. fileUrl + publicId saved, recordType product.`}
         />
+        <div className="auth-field-grid">
+          <label className="field">
+            <span>Product video URL (optional)</span>
+            <input
+              value={form.videoUrl || ""}
+              onChange={(e) => update("videoUrl", e.target.value)}
+              placeholder="https://… .mp4 or /media/videos/dairy-morning.mp4"
+            />
+            <small>Shown on the product card (plays on hover) and on the product page.</small>
+          </label>
+          <label className="field">
+            <span>Video poster image URL (optional)</span>
+            <input
+              value={form.videoPosterUrl || ""}
+              onChange={(e) => update("videoPosterUrl", e.target.value)}
+              placeholder="Falls back to the main product image"
+            />
+          </label>
+        </div>
+
         <div>
           <span style={{ fontSize: ".76rem", fontWeight: 750 }}>Additional gallery images</span>
           <div className="product-gallery-editor">

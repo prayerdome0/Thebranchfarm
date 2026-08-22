@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Minus, Plus, ShoppingBag, MessageCircle, Eye } from "lucide-react";
+import { Minus, Plus, ShoppingBag, MessageCircle, Eye, Video } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { BLUR_PLACEHOLDER } from "@/lib/blur";
@@ -22,6 +22,8 @@ export function ProductCard({ product }: { product: Product }) {
   const preOrder = soldOut && product.allowBackorder;
   const price = product.salePrice != null && product.salePrice > 0 ? product.salePrice : product.price;
   const available = !comingSoon && (!soldOut || preOrder);
+  const clip = product.videoUrl;
+  const [showVideo, setShowVideo] = useState(false);
 
   const handleAdd = () => {
     add(product, qty);
@@ -34,7 +36,33 @@ export function ProductCard({ product }: { product: Product }) {
 
   return (
     <article className="product-card">
-      <Link href={`/shop/${product.id}`} className="product-image-wrap" aria-label={product.name}>
+      <Link
+        href={`/shop/${product.id}`}
+        className="product-image-wrap"
+        aria-label={product.name}
+        onMouseEnter={() => clip && setShowVideo(true)}
+        onMouseLeave={() => setShowVideo(false)}
+      >
+        {clip && (
+          <video
+            className={`product-card-video ${showVideo ? "is-playing" : ""}`}
+            src={clip}
+            poster={product.videoPosterUrl || product.image}
+            muted
+            loop
+            playsInline
+            preload="none"
+            aria-hidden="true"
+            ref={(node) => {
+              if (!node) return;
+              if (showVideo) node.play().catch(() => {});
+              else {
+                node.pause();
+                node.currentTime = 0;
+              }
+            }}
+          />
+        )}
         {product.image ? (
           <Image
             className="product-image"
@@ -50,9 +78,14 @@ export function ProductCard({ product }: { product: Product }) {
             <ShoppingBag size={40} />
           </span>
         )}
-        <span className={`availability-pill ${comingSoon ? "coming" : available ? "available" : ""}`} style={{ position: "absolute", top: 12, left: 12, zIndex: 2 }}>
+        <span className={`availability-pill ${comingSoon ? "coming" : available ? "available" : ""}`} style={{ position: "absolute", top: 12, left: 12, zIndex: 3 }}>
           {comingSoon ? "Coming soon" : soldOut ? (preOrder ? "Pre-order" : "Out of stock") : "Available"}
         </span>
+        {clip && (
+          <span className="product-video-pill" aria-hidden="true">
+            <Video size={12} /> Video
+          </span>
+        )}
       </Link>
       <div className="product-card-body">
         <div className="product-card-meta">

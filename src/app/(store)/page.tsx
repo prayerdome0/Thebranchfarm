@@ -19,23 +19,26 @@ import {
   Tractor,
   Truck,
   Play,
-  Camera,
   Heart,
   ShoppingBag,
 } from "lucide-react";
+import { InlineVideo } from "@/components/store/InlineVideo";
 import { ProductCard } from "@/components/store/ProductCard";
+import { VideoCard } from "@/components/store/VideoCard";
 import { Reveal } from "@/components/ui/Reveal";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
-import { getProducts } from "@/lib/firebase/data";
+import { getProducts, getVideos } from "@/lib/firebase/data";
 import { BUSINESS } from "@/lib/constants";
-import type { Product } from "@/types";
+import type { FarmVideo, Product } from "@/types";
 
 export default function HomePage() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [videos, setVideos] = useState<FarmVideo[]>([]);
   const { formatMoney, freeDeliveryThreshold } = useStoreConfig();
 
   useEffect(() => {
     getProducts().then((list) => setProducts(list.slice(0, 12)));
+    getVideos().then((list) => setVideos(list.slice(0, 6)));
   }, []);
 
   const featured = products.filter((p) => p.featured).slice(0, 4);
@@ -58,6 +61,18 @@ export default function HomePage() {
             sizes="100vw"
             className="hero-image"
           />
+          <video
+            className="hero-video"
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="metadata"
+            poster="/media/farm-hero.jpg"
+            aria-hidden="true"
+          >
+            <source src="/media/videos/farm-tour.mp4" type="video/mp4" />
+          </video>
           <div className="hero-image-overlay" />
         </div>
 
@@ -89,6 +104,45 @@ export default function HomePage() {
               <span><ShieldCheck size={15} /> Pay on collection/delivery</span>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* 1b. What is on sale right now */}
+      <section className="section availability-section">
+        <div className="container">
+          <Reveal>
+            <div className="section-heading section-heading-center">
+              <div>
+                <span className="eyebrow">Price list</span>
+                <h2>On sale right now</h2>
+                <p>These three lines are available today. Everything else on the farm is coming soon.</p>
+              </div>
+            </div>
+          </Reveal>
+          <div className="price-strip">
+            {[
+              { name: "Fresh milk", price: "E16", unit: "per litre", video: "/media/videos/dairy-morning.mp4", poster: "/media/raw-milk.jpg" },
+              { name: "Sour milk — Latsambile", price: "E20", unit: "per 500 ml tub", video: "/media/videos/dairy-morning.mp4", poster: "/media/latsambile.jpg" },
+              { name: "Sour milk — Lashubile", price: "E35", unit: "per 1 litre tub", video: "/media/videos/dairy-morning.mp4", poster: "/media/lashubile.jpg" },
+            ].map((item, index) => (
+              <Reveal key={item.name} delay={index * 80}>
+                <article className="price-card">
+                  <InlineVideo src={item.video} poster={item.poster} label={item.name} playOnHoverOnly showSound={false} />
+                  <div className="price-card-body">
+                    <span className="availability-pill available">Available now</span>
+                    <h3>{item.name}</h3>
+                    <strong>{item.price}</strong>
+                    <small>{item.unit}</small>
+                  </div>
+                </article>
+              </Reveal>
+            ))}
+          </div>
+          <Reveal delay={120}>
+            <p className="coming-note">
+              <BadgeCheck size={15} /> Eggs, chicken, cattle, goats, pigs and vegetables are <strong>coming soon</strong> — they are listed on the shop so you can see them, but they cannot be ordered yet. Call or WhatsApp us to be told first when they open.
+            </p>
+          </Reveal>
         </div>
       </section>
 
@@ -129,6 +183,11 @@ export default function HomePage() {
               </div>
             </div>
           </Reveal>
+          <Reveal delay={60}>
+            <div className="section-video section-video-wide">
+              <InlineVideo src="/media/videos/farm-tour.mp4" poster="/media/videos/farm-tour.jpg" label="A walk around The Branch Farm" />
+            </div>
+          </Reveal>
           <div className="activity-grid">
             <article className="activity-card">
               <span className="activity-icon"><Leaf size={20} /></span>
@@ -155,7 +214,18 @@ export default function HomePage() {
           <Reveal className="story-visual-reveal">
             <div className="motion-story">
               <div className="motion-shot">
-                <Image src="/media/farm-sunset.jpg" alt="The Branch Farm at sunset" fill sizes="52vw" />
+                <video
+                  className="motion-video"
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  preload="none"
+                  poster="/media/farm-sunset.jpg"
+                  aria-label="The Branch Farm at work"
+                >
+                  <source src="/media/videos/farm-tour.mp4" type="video/mp4" />
+                </video>
               </div>
               <div className="motion-vignette" />
               <div className="motion-title">
@@ -197,6 +267,11 @@ export default function HomePage() {
               </div>
             </div>
           </Reveal>
+          <Reveal delay={80}>
+            <div className="section-video">
+              <InlineVideo src="/media/videos/the-herd.mp4" poster="/media/videos/the-herd.jpg" label="The herd out at graze" />
+            </div>
+          </Reveal>
           <div className="product-grid" style={{ marginTop: 20 }}>
             {livestock.length ? livestock.map((p) => (
               <ProductCard key={p.id} product={p} />
@@ -224,6 +299,11 @@ export default function HomePage() {
               <Link className="text-link" href="/shop?kind=produce">Shop produce <ArrowRight size={15} /></Link>
             </div>
           </Reveal>
+          <Reveal delay={80}>
+            <div className="section-video">
+              <InlineVideo src="/media/videos/dairy-morning.mp4" poster="/media/videos/dairy-morning.jpg" label="Dairy morning — parlour to bottle" />
+            </div>
+          </Reveal>
           <div className="product-grid" style={{ marginTop: 20 }}>
             {freshProducts.length ? freshProducts.map((p) => (
               <ProductCard key={p.id} product={p} />
@@ -245,6 +325,11 @@ export default function HomePage() {
               <Link className="text-link" href="/gallery">View gallery <ArrowRight size={15} /></Link>
             </div>
           </Reveal>
+          <Reveal delay={70}>
+            <div className="section-video">
+              <InlineVideo src="/media/videos/harvest-day.mp4" poster="/media/videos/harvest-day.jpg" label="Harvest day — eggs and greens" />
+            </div>
+          </Reveal>
           <div className="gallery-grid" style={{ marginTop: 20 }}>
             {[
               { src: "/media/cattle.jpg", caption: "Our dairy herd", tag: "Livestock" },
@@ -264,7 +349,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 8. Video preview */}
+      {/* 8. Videos — the farm on film */}
       <section className="section films-section">
         <div className="container">
           <Reveal>
@@ -272,15 +357,29 @@ export default function HomePage() {
               <div>
                 <span className="eyebrow">In motion</span>
                 <h2>The farm on film</h2>
-                <p>Short clips of daily life and farm work.</p>
+                <p>Every part of the farm has a clip — the dairy, the herd, harvest day and a walk around Mahlabane.</p>
               </div>
-              <Link className="text-link" href="/gallery">Watch more <ArrowRight size={15} /></Link>
+              <div className="section-heading-action">
+                <Link className="text-link" href="/videos">Watch all videos <ArrowRight size={15} /></Link>
+              </div>
             </div>
           </Reveal>
+
+          <div className="farm-video-grid farm-video-grid-preview" style={{ marginTop: 28 }}>
+            {videos.map((video, index) => (
+              <Reveal key={video.id} delay={(index % 3) * 80}>
+                <VideoCard video={video} priority={index < 2} />
+              </Reveal>
+            ))}
+          </div>
+
           <Reveal delay={90}>
-            <Link href="/gallery" className="video-banner" aria-label="Watch farm videos">
+            <Link href="/videos" className="video-banner" style={{ marginTop: 28 }} aria-label="Watch farm videos">
               <span className="video-banner-frame">
                 <Image src="/media/farm-operations.jpg" alt="Farm operations" fill sizes="100vw" />
+                <video className="video-banner-video" autoPlay muted loop playsInline preload="none" poster="/media/farm-operations.jpg" aria-hidden="true">
+                  <source src="/media/videos/harvest-day.mp4" type="video/mp4" />
+                </video>
               </span>
               <span className="video-banner-play"><Play size={26} fill="currentColor" /></span>
               <span className="video-banner-copy">

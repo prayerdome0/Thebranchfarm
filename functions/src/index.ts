@@ -161,6 +161,38 @@ export const trackOrder = onCall({ region: REGION }, async (request) => {
   };
 });
 
+/** Workspace areas an administrator can grant to a staff member. */
+const STAFF_PERMISSIONS = [
+  "Orders",
+  "Products",
+  "Animals",
+  "Customers",
+  "Media",
+  "Documents",
+  "Photos",
+  "Videos",
+  "Gallery",
+] as const;
+
+/** Administrator updates the explicit area permissions of a member. */
+export const setUserPermissions = onCall({ region: REGION }, async (request) => {
+  await actor(request.auth?.uid, ["admin"]);
+  const input = z
+    .object({
+      uid: z.string().min(10).max(128),
+      permissions: z.array(z.enum(STAFF_PERMISSIONS)).max(20),
+    })
+    .parse(request.data);
+  const ref = db.doc(`users/${input.uid}`);
+  const target = await ref.get();
+  if (!target.exists) throw new HttpsError("not-found", "User not found.");
+  await ref.update({
+    permissions: Array.from(new Set(input.permissions)),
+    updatedAt: FieldValue.serverTimestamp(),
+  });
+  return { ok: true };
+});
+
 export const setUserRole = onCall({ region: REGION }, async (request) => {
   const current = await actor(request.auth?.uid, ["admin"]);
   const input = z.object({ uid: z.string().min(10).max(128), role: z.enum(VALID_ROLES) }).parse(request.data);
@@ -169,8 +201,11 @@ export const setUserRole = onCall({ region: REGION }, async (request) => {
   const target = await ref.get();
   if (!target.exists) throw new HttpsError("not-found", "User not found.");
   const existing = await getAuth().getUser(input.uid);
+  // Keep saved permissions in step with the role: admins hold everything.
+  const currentPermissions = (target.data()?.permissions as string[] | undefined) || [];
+  const permissions = input.role === "admin" ? [...STAFF_PERMISSIONS] : currentPermissions;
   await Promise.all([
-    ref.update({ role: input.role, updatedAt: FieldValue.serverTimestamp() }),
+    ref.update({ role: input.role, permissions, updatedAt: FieldValue.serverTimestamp() }),
     getAuth().setCustomUserClaims(input.uid, { ...existing.customClaims, role: input.role }),
   ]);
   return { ok: true };
@@ -203,8 +238,13 @@ export const createStaffAccount = onCall({ region: REGION }, async (request) => 
       phone: z.string().trim().min(8).max(24),
       title: z.string().trim().max(100).optional().default(""),
       role: z.enum(["staff", "admin"]),
+      permissions: z.array(z.enum(STAFF_PERMISSIONS)).max(20).optional().default([]),
     })
     .parse(request.data);
+
+  // Admins implicitly hold every permission; staff get exactly what was ticked.
+  const permissions =
+    input.role === "admin" ? [...STAFF_PERMISSIONS] : Array.from(new Set(input.permissions));
 
   const tempPassword = `TBF-${randomBytes(6).toString("hex").slice(0, 10)}`;
   const user = await getAuth().createUser({
@@ -223,6 +263,7 @@ export const createStaffAccount = onCall({ region: REGION }, async (request) => 
       phone: input.phone,
       title: input.title,
       role: input.role,
+      permissions,
       status: "active",
       createdBy: current.uid,
       createdAt: FieldValue.serverTimestamp(),

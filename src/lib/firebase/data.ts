@@ -233,6 +233,7 @@ export async function createStaffAccount(values: {
   phone: string;
   title?: string;
   role: "staff" | "admin";
+  permissions?: string[];
 }) {
   const callable = httpsCallable<typeof values, { uid: string; tempPassword: string }>(
     functions,
@@ -240,6 +241,31 @@ export async function createStaffAccount(values: {
   );
   const result = await callable(values);
   return result.data;
+}
+
+/**
+ * Save the explicit area permissions for a staff member. Written through the
+ * callable so only administrators can change access, and mirrored into the
+ * user profile document the workspace reads.
+ */
+export async function setUserPermissions(uid: string, permissions: string[]) {
+  const callable = httpsCallable<{ uid: string; permissions: string[] }, { ok: boolean }>(
+    functions,
+    "setUserPermissions",
+  );
+  await callable({ uid, permissions });
+}
+
+/** Update a staff member's contact details (name, phone, job title). */
+export async function updateStaffProfile(
+  uid: string,
+  values: { fullName: string; phone: string; title?: string },
+) {
+  await setDoc(
+    doc(db, "users", uid),
+    cleanFirestoreData({ ...values, updatedAt: new Date().toISOString() }),
+    { merge: true },
+  );
 }
 
 /* ----------------------------- Documents ----------------------------- */

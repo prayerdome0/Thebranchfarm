@@ -14,6 +14,7 @@ import {
   Truck,
   MessageCircle,
 } from "lucide-react";
+import { InlineVideo } from "@/components/store/InlineVideo";
 import { ProductCard } from "@/components/store/ProductCard";
 import { Loading } from "@/components/ui/Loading";
 import { useCart } from "@/contexts/CartContext";
@@ -122,6 +123,16 @@ function ProductDetail({ id }: { id: string }) {
                   {comingSoon ? "Coming soon" : soldOut ? (preOrder ? "Pre-order" : "Out of stock") : "Available"}
                 </span>
               </div>
+              {product.videoUrl && (
+                <div className="product-detail-video">
+                  <span className="eyebrow">Watch it</span>
+                  <InlineVideo
+                    src={product.videoUrl}
+                    poster={product.videoPosterUrl || product.image}
+                    label={`${product.name} on film`}
+                  />
+                </div>
+              )}
               {gallery.length > 1 && (
                 <div className="product-thumbs">
                   {gallery.map((url, index) => (

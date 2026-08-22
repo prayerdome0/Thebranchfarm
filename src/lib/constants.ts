@@ -311,3 +311,41 @@ export const STATUS_LABELS: Record<string, string> = {
   ...FULFILLMENT_LABELS,
   ...QUOTATION_STATUS_LABELS,
 };
+
+/* ------------------------------- Staff -------------------------------- */
+
+/**
+ * Explicit workspace permissions. Administrators always have everything;
+ * staff members only see the areas an admin has ticked for them. A staff
+ * member with no permissions saved yet falls back to DEFAULT_STAFF_PERMISSIONS
+ * so nobody is locked out of the workspace by accident.
+ */
+export const STAFF_PERMISSIONS = [
+  "Orders",
+  "Products",
+  "Animals",
+  "Customers",
+  "Media",
+  "Documents",
+  "Photos",
+  "Videos",
+  "Gallery",
+] as const;
+
+export type StaffPermission = (typeof STAFF_PERMISSIONS)[number];
+
+export const DEFAULT_STAFF_PERMISSIONS: StaffPermission[] = [
+  "Orders",
+  "Products",
+  "Animals",
+  "Customers",
+  "Media",
+  "Documents",
+];
+
+/** Permissions preset when an admin picks a role in the Add staff form. */
+export const ROLE_PERMISSION_PRESETS: Record<string, StaffPermission[]> = {
+  admin: [...STAFF_PERMISSIONS],
+  staff: DEFAULT_STAFF_PERMISSIONS,
+  content: ["Photos", "Videos", "Gallery", "Media"],
+};

@@ -14,7 +14,9 @@ export interface UserProfile {
   createdAt: TimestampValue;
   updatedAt: TimestampValue;
   lastLoginAt?: TimestampValue;
+  /** Explicit area permissions, e.g. ["Orders", "Products"]. Admins get all. */
   permissions?: string[];
+  createdBy?: string;
 }
 
 export type AnimalType = "cattle" | "pig" | "chicken" | "goat" | "sheep" | "other";
@@ -329,6 +331,10 @@ export interface Product {
   imagePath?: string;
   images?: string[];
   imagePaths?: string[];
+  /** Optional short clip shown on the product card and product page. */
+  videoUrl?: string;
+  videoPath?: string;
+  videoPosterUrl?: string;
   active: boolean;
   published?: boolean;
   featured?: boolean;

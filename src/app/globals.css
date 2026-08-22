@@ -354,6 +354,50 @@
   .video-banner-copy { position: absolute; left: 30px; bottom: 26px; display: grid; }
   .video-banner-copy small { color: var(--gold-light); font-size: .64rem; font-weight: 850; letter-spacing: .16em; text-transform: uppercase; }
   .video-banner-copy strong { margin-top: 5px; font-family: var(--serif); font-size: 1.6rem; }
+  .video-banner-video { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; object-fit: cover; }
+
+  /* --- Homepage video blocks --- */
+  .hero-video { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; object-fit: cover; opacity: .92; }
+  .inline-video { position: relative; display: block; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; background: var(--green-950); }
+  .inline-video-rounded { border-radius: var(--radius-lg); box-shadow: var(--shadow); }
+  .inline-video video { width: 100%; height: 100%; display: block; object-fit: cover; cursor: pointer; }
+  .inline-video-play { position: absolute; top: 50%; left: 50%; width: 54px; height: 54px; display: grid; place-items: center; color: var(--green-950); background: var(--gold-light); border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; box-shadow: 0 10px 24px rgba(7,30,19,.25); }
+  .inline-video-sound { position: absolute; right: 12px; top: 12px; z-index: 3; width: 32px; height: 32px; display: grid; place-items: center; color: #fff; background: rgba(6,25,16,.55); border: 0; border-radius: 50%; cursor: pointer; transition: background .2s; }
+  .inline-video-sound:hover { background: rgba(6,25,16,.85); }
+  .inline-video-label { position: absolute; left: 14px; bottom: 12px; z-index: 2; padding: 6px 11px; color: #fff; background: rgba(6,25,16,.6); border-radius: 999px; font-size: .64rem; font-weight: 700; letter-spacing: .02em; }
+  .section-video { margin-top: 24px; }
+  .section-video .inline-video { aspect-ratio: 21 / 9; }
+  .section-video-wide { margin-bottom: 30px; }
+
+  /* --- Price strip (available now) --- */
+  .availability-section { background: #fff; }
+  .price-strip { margin-top: 30px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+  .price-card { overflow: hidden; height: 100%; background: #fff; border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow-sm); }
+  .price-card .inline-video { aspect-ratio: 16 / 10; border-radius: 0; box-shadow: none; }
+  .price-card-body { padding: 18px 19px 20px; display: grid; gap: 4px; }
+  .price-card-body h3 { margin-top: 8px; color: var(--green-950); font-family: var(--serif); font-size: 1.25rem; }
+  .price-card-body strong { color: var(--green-700); font-size: 1.55rem; }
+  .price-card-body small { color: var(--muted); font-size: .72rem; }
+  .price-card-body .availability-pill { justify-self: start; }
+  .coming-note { margin-top: 26px; padding: 15px 18px; display: flex; align-items: flex-start; gap: 10px; color: var(--green-700); background: var(--green-50); border: 1px solid var(--line); border-radius: 12px; font-size: .8rem; }
+  .coming-note strong { color: var(--green-950); }
+  .shop-price-note { margin-top: 14px; max-width: 640px; padding: 12px 16px; color: #f2f7f1; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.22); border-radius: 12px; font-size: .8rem; }
+  .shop-price-note strong { color: var(--gold-light); }
+
+  /* --- Product card video --- */
+  .product-card-video { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .35s; pointer-events: none; }
+  .product-card-video.is-playing { opacity: 1; }
+  .product-video-pill { position: absolute; right: 12px; top: 12px; z-index: 3; display: inline-flex; align-items: center; gap: 5px; padding: 5px 9px; color: var(--green-950); background: var(--gold-light); border-radius: 999px; font-size: .58rem; font-weight: 850; letter-spacing: .06em; text-transform: uppercase; }
+  .product-detail-video { margin-top: 18px; display: grid; gap: 8px; }
+  .product-detail-video .inline-video { aspect-ratio: 16 / 9; }
+
+  @media (max-width: 980px) {
+    .price-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .section-video .inline-video { aspect-ratio: 16 / 9; }
+  }
+  @media (max-width: 680px) {
+    .price-strip { grid-template-columns: 1fr; }
+  }
   .activities-section { background: #fff; }
   .activity-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
   .activity-card { position: relative; min-height: 190px; padding: 25px; background: #fafbf8; border: 1px solid var(--line); border-radius: 16px; transition: .2s; }
@@ -1057,6 +1101,18 @@
   .people-panel { overflow-x: auto; }
   .people-table { min-width: 840px; }
   .people-table .table-head, .people-table > article { display: grid; grid-template-columns: 1.5fr .75fr .65fr .5fr .55fr 1fr; align-items: center; gap: 10px; }
+  .people-table-wide { min-width: 1080px; }
+  .people-table-wide .table-head, .people-table-wide > article { grid-template-columns: 1.4fr .7fr .6fr 1.5fr .5fr .55fr 1.15fr; }
+  .perm-cell { display: flex; flex-wrap: wrap; gap: 5px; }
+  .perm-chip { padding: 3px 8px; color: var(--green-700); background: var(--green-50); border: 1px solid var(--line); border-radius: 999px; font-size: .6rem; font-style: normal; font-weight: 700; }
+  .perm-chip-all { color: #155a35; background: #dcf4e5; border-color: #b8e3c8; }
+  .perm-chip-none { color: #955; background: #fdeaea; border-color: #f2cccc; }
+  .permission-grid { margin-top: 8px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .staff-stat-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  @media (max-width: 900px) {
+    .permission-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .staff-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
   .people-table > article { min-height: 65px; border-top: 1px solid #edf0ed; font-size: .65rem; }
   .person-cell { display: flex; align-items: center; gap: 9px; }
   .person-cell > i { width: 36px; height: 36px; display: grid; place-items: center; flex: 0 0 auto; color: #fff; background: var(--green-700); border-radius: 50%; font-size: .58rem; font-style: normal; }
