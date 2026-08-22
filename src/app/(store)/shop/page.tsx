@@ -96,6 +96,11 @@ function ShopCatalogContent({
           <p>
             Fresh eggs, milk, emasi, vegetables and healthy livestock from Mahlabane. {BUSINESS.deliveryFree} {BUSINESS.deliveryOther}
           </p>
+          <p className="shop-price-note">
+            <strong>On sale now:</strong> Fresh milk E16 a litre · Sour milk Latsambile E20 · Sour milk
+            Lashubile E35. Everything else below is marked <strong>Coming soon</strong> and cannot be
+            ordered yet.
+          </p>
           <div className="shop-status-pills">
             <span><Leaf size={14} /> Farm-direct</span>
             <span><Truck size={14} /> {BUSINESS.deliveryFree}</span>

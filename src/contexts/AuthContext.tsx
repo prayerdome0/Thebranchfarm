@@ -18,6 +18,7 @@ import {
   registerUser,
   resetUserPassword,
 } from "@/lib/firebase/auth";
+import { DEFAULT_STAFF_PERMISSIONS, STAFF_PERMISSIONS } from "@/lib/constants";
 import type { UserProfile } from "@/types";
 
 interface AuthContextValue {
@@ -26,6 +27,10 @@ interface AuthContextValue {
   loading: boolean;
   isAdmin: boolean;
   isStaff: boolean;
+  /** Effective permissions for the signed-in member (admins get everything). */
+  permissions: string[];
+  /** True when the signed-in member may use the given workspace area. */
+  can: (permission: string) => boolean;
   login: (email: string, password: string) => Promise<UserProfile | null>;
   register: (values: { fullName: string; email: string; phone: string; password: string }) => Promise<void>;
   logout: () => Promise<void>;
@@ -138,6 +143,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setFirebaseUser(null);
   }, []);
 
+  const permissions = useMemo<string[]>(() => {
+    if (!user) return [];
+    if (user.role === "admin") return [...STAFF_PERMISSIONS];
+    if (user.role !== "staff") return [];
+    const saved = (user.permissions || []).filter(Boolean);
+    return saved.length ? saved : [...DEFAULT_STAFF_PERMISSIONS];
+  }, [user]);
+
+  const can = useCallback(
+    (permission: string) => {
+      if (!user) return false;
+      if (user.role === "admin") return true;
+      return permissions.includes(permission);
+    },
+    [user, permissions],
+  );
+
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
@@ -145,13 +167,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       isAdmin: user?.role === "admin",
       isStaff: user?.role === "staff" || user?.role === "admin",
+      permissions,
+      can,
       login,
       register,
       logout,
       resetPassword: resetUserPassword,
       refreshToken,
     }),
-    [user, firebaseUser, loading, login, register, logout, refreshToken],
+    [user, firebaseUser, loading, permissions, can, login, register, logout, refreshToken],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
