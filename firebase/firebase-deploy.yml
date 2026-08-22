@@ -73,7 +73,7 @@ jobs:
       - name: Verify callable functions respond
         run: |
           set -e
-          for fn in setUserRole setUserStatus createStaffAccount; do
+          for fn in setUserRole setUserStatus createStaffAccount trackOrder; do
             status=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
               "https://us-central1-thebranchfarm.cloudfunctions.net/${fn}" \
               -H "content-type: application/json" -d '{"data":{}}')

@@ -1,6 +1,7 @@
 import type { FarmVideo, Order, Product } from "@/types";
 
 const DEMO_ORDERS_KEY = "thebranchfarm:demo-orders";
+const MY_ORDERS_KEY = "thebranchfarm:my-orders";
 
 /**
  * Sample catalog. These only appear when Firestore is unreachable (e.g. a
@@ -214,6 +215,44 @@ function writeDemoOrders(orders: Order[]) {
   } catch {
     /* ignore quota errors */
   }
+}
+
+/**
+ * Orders placed from this browser are cached locally so the customer always
+ * sees their order reference and details right after checkout — even when the
+ * live backend is unreachable or a signed-in staff session is required to
+ * read orders from Firestore.
+ */
+function readMyOrders(): Order[] {
+  try {
+    const raw = window.localStorage.getItem(MY_ORDERS_KEY);
+    return raw ? (JSON.parse(raw) as Order[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeMyOrders(orders: Order[]) {
+  try {
+    // Keep the most recent 20 orders only.
+    window.localStorage.setItem(MY_ORDERS_KEY, JSON.stringify(orders.slice(0, 20)));
+  } catch {
+    /* ignore quota errors */
+  }
+}
+
+export function saveLocalOrder(order: Order) {
+  const orders = [order, ...readMyOrders().filter((item) => item.reference !== order.reference)];
+  writeMyOrders(orders);
+  return order;
+}
+
+export function getLocalOrder(reference: string): Order | null {
+  return readMyOrders().find((order) => order.reference === reference) || null;
+}
+
+export function listLocalOrders(): Order[] {
+  return readMyOrders();
 }
 
 export const demoOrders = {

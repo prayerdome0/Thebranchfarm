@@ -22,8 +22,16 @@ import {
 import { httpsCallable } from "firebase/functions";
 import { auth, db, functions } from "./config";
 import { BUSINESS, CLOUDINARY, STORE } from "@/lib/constants";
+import { cleanFirestoreData } from "@/lib/firestoreUtils";
 import { deleteStorageObject } from "./storage";
-import { DEMO_PRODUCTS, DEMO_VIDEOS, demoOrders, generateOrderReference } from "@/lib/store";
+import {
+  DEMO_PRODUCTS,
+  DEMO_VIDEOS,
+  demoOrders,
+  generateOrderReference,
+  getLocalOrder,
+  saveLocalOrder,
+} from "@/lib/store";
 import type {
   ActivityRecord,
   Animal,
@@ -128,11 +136,11 @@ export function watchAnimal(id: string, callback: (animal: Animal | null) => voi
 }
 
 export async function createAnimal(values: Omit<Animal, "id" | keyof ReturnType<typeof stamp>>) {
-  return addDoc(collection(db, "animals"), { ...values, ...stamp() });
+  return addDoc(collection(db, "animals"), cleanFirestoreData({ ...values, ...stamp() }));
 }
 
 export async function updateAnimal(id: string, values: Omit<Animal, "id">) {
-  return setDoc(doc(db, "animals", id), { ...values, ...updateStamp() });
+  return setDoc(doc(db, "animals", id), cleanFirestoreData({ ...values, ...updateStamp() }));
 }
 
 export async function deleteAnimal(id: string) {
@@ -179,11 +187,11 @@ export function watchHealthRecords(
 }
 
 export async function addHealthRecord(values: Omit<HealthRecord, "id" | keyof ReturnType<typeof stamp>>) {
-  return addDoc(collection(db, "animalHealth"), { ...values, ...stamp() });
+  return addDoc(collection(db, "animalHealth"), cleanFirestoreData({ ...values, ...stamp() }));
 }
 
 export async function updateHealthRecord(id: string, values: Omit<HealthRecord, "id">) {
-  return setDoc(doc(db, "animalHealth", id), { ...values, ...updateStamp() });
+  return setDoc(doc(db, "animalHealth", id), cleanFirestoreData({ ...values, ...updateStamp() }));
 }
 
 export async function deleteHealthRecord(id: string) {
@@ -248,7 +256,7 @@ export async function getFarmDocuments(): Promise<FarmDocument[]> {
 }
 
 export async function createFarmDocument(values: Omit<FarmDocument, "id" | keyof ReturnType<typeof stamp>>) {
-  return addDoc(collection(db, "farmDocuments"), { ...values, ...stamp() });
+  return addDoc(collection(db, "farmDocuments"), cleanFirestoreData({ ...values, ...stamp() }));
 }
 
 export async function deleteFarmDocument(id: string) {
@@ -276,7 +284,7 @@ export function watchQuotations(cb: (list: Quotation[]) => void): Unsubscribe {
   }
 }
 export async function createQuotation(values: Omit<Quotation, "id" | keyof ReturnType<typeof stamp>>) {
-  return addDoc(collection(db, "quotations"), { ...values, ...stamp() });
+  return addDoc(collection(db, "quotations"), cleanFirestoreData({ ...values, ...stamp() }));
 }
 
 /* ----------------------------- Invoices ----------------------------- */
@@ -293,7 +301,7 @@ export function watchInvoices(cb: (list: Invoice[]) => void): Unsubscribe {
   } catch { cb([]); return () => {}; }
 }
 export async function createInvoice(values: Omit<Invoice, "id" | keyof ReturnType<typeof stamp>>) {
-  return addDoc(collection(db, "invoices"), { ...values, ...stamp() });
+  return addDoc(collection(db, "invoices"), cleanFirestoreData({ ...values, ...stamp() }));
 }
 
 /* ----------------------------- Receipts ----------------------------- */
@@ -310,7 +318,7 @@ export function watchReceipts(cb: (list: Receipt[]) => void): Unsubscribe {
   } catch { cb([]); return () => {}; }
 }
 export async function createReceipt(values: Omit<Receipt, "id" | keyof ReturnType<typeof stamp>>) {
-  return addDoc(collection(db, "receipts"), { ...values, ...stamp() });
+  return addDoc(collection(db, "receipts"), cleanFirestoreData({ ...values, ...stamp() }));
 }
 
 /* ----------------------------- Customers ----------------------------- */
@@ -348,7 +356,7 @@ export async function createOrUpdateCustomerFromOrder(order: Order) {
     const existing = await getCustomerByPhone(order.customer.phone);
     if (existing) {
       const totalSpent = (existing.totalSpent || 0) + order.total;
-      await updateDoc(doc(db, "customers", existing.id), {
+      await updateDoc(doc(db, "customers", existing.id), cleanFirestoreData({
         name: order.customer.name,
         email: order.customer.email || existing.email,
         totalSpent,
@@ -356,10 +364,10 @@ export async function createOrUpdateCustomerFromOrder(order: Order) {
         deliveryLocation: order.deliveryAddress || order.deliveryLocation || existing.deliveryLocation,
         orders: increment(1),
         updatedAt: serverTimestamp(),
-      });
+      }));
       return existing.id;
     } else {
-      const ref = await addDoc(collection(db, "customers"), {
+      const ref = await addDoc(collection(db, "customers"), cleanFirestoreData({
         name: order.customer.name,
         phone: order.customer.phone,
         email: order.customer.email || "",
@@ -375,7 +383,7 @@ export async function createOrUpdateCustomerFromOrder(order: Order) {
         createdByName: "System",
         updatedBy: "system",
         updatedByName: "System",
-      });
+      }));
       return ref.id;
     }
   } catch {
@@ -400,7 +408,7 @@ export function watchFarmMedia(cb: (list: FarmMedia[]) => void): Unsubscribe {
 }
 
 export async function createFarmMedia(values: Omit<FarmMedia, "id" | keyof ReturnType<typeof stamp>>) {
-  return addDoc(collection(db, "media"), { ...values, ...stamp() });
+  return addDoc(collection(db, "media"), cleanFirestoreData({ ...values, ...stamp() }));
 }
 
 export async function deleteFarmMedia(id: string) {
@@ -408,7 +416,7 @@ export async function deleteFarmMedia(id: string) {
 }
 
 export async function updateFarmMedia(id: string, patch: Partial<FarmMedia>) {
-  return updateDoc(doc(db, "media", id), { ...patch, ...updateStamp() });
+  return updateDoc(doc(db, "media", id), cleanFirestoreData({ ...patch, ...updateStamp() }));
 }
 
 /* ----------------------------- Activities ----------------------------- */
@@ -425,7 +433,7 @@ export async function getActivities(): Promise<ActivityRecord[]> {
 }
 
 export async function addActivity(values: Omit<ActivityRecord, "id" | keyof ReturnType<typeof stamp>>) {
-  return addDoc(collection(db, "farmActivities"), { ...values, ...stamp() });
+  return addDoc(collection(db, "farmActivities"), cleanFirestoreData({ ...values, ...stamp() }));
 }
 
 export async function deleteActivity(id: string) {
@@ -469,7 +477,7 @@ export async function getFarmSettings(): Promise<FarmSettings> {
 }
 
 export async function saveFarmSettings(values: FarmSettings) {
-  return setDoc(doc(db, "settings", "farm"), { ...values, ...updateStamp() });
+  return setDoc(doc(db, "settings", "farm"), cleanFirestoreData({ ...values, ...updateStamp() }));
 }
 
 /* ------------------------------ Storefront ------------------------------ */
@@ -543,11 +551,11 @@ export async function getProduct(id: string): Promise<Product | null> {
 }
 
 export async function createProduct(values: Omit<Product, "id">) {
-  return addDoc(collection(db, "products"), { ...values, ...stamp() });
+  return addDoc(collection(db, "products"), cleanFirestoreData({ ...values, ...stamp() }));
 }
 
 export async function updateProduct(id: string, values: Omit<Product, "id">) {
-  return setDoc(doc(db, "products", id), { ...values, ...updateStamp() });
+  return setDoc(doc(db, "products", id), cleanFirestoreData({ ...values, ...updateStamp() }));
 }
 
 export async function deleteProduct(id: string) {
@@ -561,7 +569,7 @@ export async function seedDemoProducts(): Promise<number> {
   const batch = writeBatch(db);
   const ref = collection(db, "products");
   DEMO_PRODUCTS.forEach((product) => {
-    batch.set(doc(ref), { ...product, ...stamp() });
+    batch.set(doc(ref), cleanFirestoreData({ ...product, ...stamp() }));
   });
   await batch.commit();
   return DEMO_PRODUCTS.length;
@@ -609,14 +617,17 @@ export async function createOrder(values: {
         }
       }
       const orderRef = doc(collection(db, "orders"));
-      transaction.set(orderRef, order);
+      transaction.set(orderRef, cleanFirestoreData(order));
       return orderRef;
     });
 
     const created: Order = { ...order, id: ref.id, createdAt: new Date(), updatedAt: new Date() } as Order;
+    // Keep a local copy so the success page and /track can show this order
+    // instantly — guests cannot read orders straight from Firestore.
+    saveLocalOrder(created);
     // Create customer record async (don't block)
     createOrUpdateCustomerFromOrder(created).catch(() => {});
-    return { ...order, id: ref.id } as Order;
+    return created;
   } catch (cause) {
     const message = cause instanceof Error ? cause.message : "";
     if (message.startsWith("insufficient-stock:")) {
@@ -628,6 +639,7 @@ export async function createOrder(values: {
       createdAt: new Date(),
       updatedAt: new Date(),
     } as Order;
+    saveLocalOrder(fallback);
     return demoOrders.add(fallback);
   }
 }
@@ -666,14 +678,18 @@ export async function getOrder(id: string): Promise<Order | null> {
 }
 
 export async function getOrderByReference(reference: string): Promise<Order | null> {
+  const normalized = reference.trim().toUpperCase();
+  // Orders placed from this browser are always visible locally — guests cannot
+  // read the orders collection straight from Firestore.
+  const local = getLocalOrder(normalized) || (demoOrders.get(normalized) as Order | null);
   try {
     const snapshot = await getDocs(
-      query(collection(db, "orders"), where("reference", "==", reference), limit(1)),
+      query(collection(db, "orders"), where("reference", "==", normalized), limit(1)),
     );
     const first = snapshot.docs[0];
-    return first ? mapped<Order>(first) : null;
+    return first ? mapped<Order>(first) : local;
   } catch {
-    return demoOrders.get(reference);
+    return local;
   }
 }
 
@@ -682,12 +698,110 @@ export async function updateOrder(
   patch: Partial<Pick<Order, "status" | "paymentStatus" | "notes" | "signature" | "signedByName" | "signedAt" | "deliveryAddress">>,
 ) {
   try {
-    await updateDoc(doc(db, "orders", id), { ...patch, ...updateStamp() });
+    await updateDoc(doc(db, "orders", id), cleanFirestoreData({ ...patch, ...updateStamp() }));
     return true;
   } catch {
     demoOrders.update(id, { ...patch, updatedAt: new Date() });
     return true;
   }
+}
+
+/* --------------------------- Public order tracking --------------------------- */
+
+export interface TrackOrderPayload {
+  reference: string;
+  status: Order["status"];
+  paymentStatus: Order["paymentStatus"];
+  total: number;
+  subtotal: number;
+  deliveryFee: number;
+  fulfillment: Order["fulfillment"];
+  items: { name: string; quantity: number; unit?: string; price?: number }[];
+  customerName?: string;
+  deliveryAddress?: string;
+  deliveryLocation?: string;
+  notes?: string;
+  paymentMethod?: string;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+  receiptUrl?: string;
+}
+
+export type LookupOrderResult =
+  | { status: "found"; order: Order }
+  | { status: "not-found" }
+  | { status: "unavailable"; message?: string };
+
+function isTrackPayload(value: unknown): value is TrackOrderPayload {
+  return Boolean(value && typeof value === "object" && "reference" in value && "status" in value);
+}
+
+/**
+ * Public order lookup by TB-XXXXXX reference.
+ *
+ * Guests cannot read the `orders` collection from the browser (Firestore rules
+ * limit it to staff), so the live lookup goes through the `trackOrder` Cloud
+ * Function, which returns only the details a customer may see. When the
+ * backend is unreachable it falls back to the local copy of orders placed on
+ * this device and to the legacy Firestore path (staff sessions / demo mode).
+ */
+export async function lookupOrderByReference(reference: string): Promise<LookupOrderResult> {
+  const normalized = reference.trim().toUpperCase();
+
+  try {
+    const callable = httpsCallable<{ reference: string }, TrackOrderPayload>(functions, "trackOrder");
+    const response = await callable({ reference: normalized });
+    if (isTrackPayload(response.data)) {
+      const order: Order = {
+        id: response.data.reference,
+        reference: response.data.reference,
+        status: response.data.status,
+        paymentStatus: response.data.paymentStatus,
+        total: response.data.total,
+        subtotal: response.data.subtotal,
+        deliveryFee: response.data.deliveryFee,
+        fulfillment: response.data.fulfillment,
+        items: (response.data.items || []).map((item, index) => ({
+          productId: `track-${index}`,
+          name: item.name,
+          unit: item.unit || "",
+          price: item.price ?? 0,
+          quantity: item.quantity,
+        })),
+        customer: { name: response.data.customerName || "", phone: "", email: undefined },
+        deliveryAddress: response.data.deliveryAddress,
+        deliveryLocation: response.data.deliveryLocation,
+        notes: response.data.notes,
+        paymentMethod: response.data.paymentMethod,
+        createdAt: response.data.createdAt ?? null,
+        updatedAt: response.data.updatedAt ?? null,
+      };
+      return { status: "found", order };
+    }
+  } catch (cause) {
+    const code = String((cause as { code?: string })?.code || "");
+    const message = cause instanceof Error ? cause.message : String(cause || "");
+    // A deployed `trackOrder` function answers `not-found` when the reference
+    // does not exist. A MISSING deployment answers 404 "Function not found",
+    // which is not the same thing — treat that as "could not check".
+    const backendMissing = /function\s+not\s+found|no\s+function|cloud\s+functions\b/i.test(message);
+    if (/not-found/.test(code) && !backendMissing) {
+      return { status: "not-found" };
+    }
+    // Otherwise the backend is unavailable/not deployed — fall through to the
+    // local copy and legacy paths so a customer still sees their own order.
+  }
+
+  try {
+    const order = await getOrderByReference(normalized);
+    if (order) return { status: "found", order };
+  } catch {
+    /* fall through */
+  }
+
+  // We could not positively confirm the order exists and found no local copy —
+  // say "couldn't check" instead of a false "order not found".
+  return { status: "unavailable", message: "Order tracking is temporarily unavailable. Please try again or contact the farm." };
 }
 
 /* -------------------------------- Videos ------------------------------- */
@@ -738,14 +852,14 @@ export function watchManagedVideos(callback: (videos: FarmVideo[]) => void): Uns
 }
 
 export async function createVideo(values: Omit<FarmVideo, "id" | keyof ReturnType<typeof stamp>>) {
-  return addDoc(collection(db, "videos"), { ...values, ...stamp() });
+  return addDoc(collection(db, "videos"), cleanFirestoreData({ ...values, ...stamp() }));
 }
 
 export async function seedDemoVideos(): Promise<number> {
   const batch = writeBatch(db);
   const ref = collection(db, "videos");
   DEMO_VIDEOS.forEach((video) => {
-    batch.set(doc(ref), { ...video, ...stamp() });
+    batch.set(doc(ref), cleanFirestoreData({ ...video, ...stamp() }));
   });
   await batch.commit();
   return DEMO_VIDEOS.length;
@@ -763,6 +877,9 @@ export async function deleteVideo(id: string) {
 
 export function animalLabel(animal: Animal | null | undefined, fallback = "") {
   if (!animal) return fallback;
-  const typeLabel = animal.animalType.charAt(0).toUpperCase() + animal.animalType.slice(1);
+  const rawType = String((animal as { animalType?: unknown; species?: unknown }).animalType
+    || (animal as { species?: unknown }).species
+    || "Animal");
+  const typeLabel = rawType.charAt(0).toUpperCase() + rawType.slice(1);
   return [typeLabel, animal.animalId, animal.name].filter(Boolean).join(" · ");
 }

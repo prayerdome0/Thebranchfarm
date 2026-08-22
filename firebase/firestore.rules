@@ -160,6 +160,22 @@ service cloud.firestore {
       allow delete: if admin();
     }
 
+    // Customers: a guest's order auto-creates the customer record; staff
+    // maintain the list. Only minimal, validated fields may be written by an
+    // anonymous checkout so the collection cannot be used for spam.
+    function validCustomer() {
+      return safeString(request.resource.data.phone, 30)
+        && safeString(request.resource.data.name, 120)
+        && (request.resource.data.orders == null || (request.resource.data.orders is number && request.resource.data.orders >= 0))
+        && (request.resource.data.totalSpent == null || (request.resource.data.totalSpent is number && request.resource.data.totalSpent >= 0));
+    }
+    match /customers/{id} {
+      allow read: if staff();
+      allow create: if validCustomer();
+      allow update: if staff();
+      allow delete: if false;
+    }
+
     // Orders: guests place orders (no sign-in); only staff can list/update.
     match /orders/{id} {
       allow read: if staff();

@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { HealthRecordCard } from "@/components/farm/HealthRecordCard";
 import { HealthRecordForm, type HealthRecordValues } from "@/components/farm/HealthRecordForm";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { Loading } from "@/components/ui/Loading";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/contexts/ToastContext";
@@ -148,17 +149,19 @@ export default function HealthPage() {
       {loading ? (
         <Loading label="Loading health records…" />
       ) : visible.length ? (
-        <div className="health-record-list">
-          {visible.map((record) => (
-            <HealthRecordCard
-              key={record.id}
-              record={record}
-              showAnimal
-              canDelete={isAdmin}
-              onDelete={remove}
-            />
-          ))}
-        </div>
+        <ErrorBoundary label="Some health records could not be displayed. Refresh and try again.">
+          <div className="health-record-list">
+            {visible.map((record) => (
+              <HealthRecordCard
+                key={record.id}
+                record={record}
+                showAnimal
+                canDelete={isAdmin}
+                onDelete={remove}
+              />
+            ))}
+          </div>
+        </ErrorBoundary>
       ) : (
         <EmptyState
           icon={Stethoscope}
@@ -185,12 +188,14 @@ export default function HealthPage() {
                 <X size={20} />
               </button>
             </header>
-            <HealthRecordForm
-              animals={animals}
-              onSubmit={save}
-              saving={saving}
-              onCancel={() => setShowForm(false)}
-            />
+            <ErrorBoundary label="The health record form could not be opened. Refresh and try again.">
+              <HealthRecordForm
+                animals={animals}
+                onSubmit={save}
+                saving={saving}
+                onCancel={() => setShowForm(false)}
+              />
+            </ErrorBoundary>
           </div>
         </div>
       )}

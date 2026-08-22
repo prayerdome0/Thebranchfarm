@@ -99,6 +99,68 @@ export const notifyOrderCreated = onDocumentCreated(
   },
 );
 
+/**
+ * Public order tracking by TB-XXXXXX reference.
+ *
+ * Guests cannot read the `orders` collection directly (Firestore rules limit
+ * reads to staff), so tracking goes through this callable. It returns only the
+ * details a customer may see — never phone, email or the delivery signature.
+ */
+export const trackOrder = onCall({ region: REGION }, async (request) => {
+  const input = z
+    .object({ reference: z.string().trim().min(1).max(40) })
+    .parse(request.data ?? {});
+  const reference = input.reference.toUpperCase();
+
+  const snapshot = await db
+    .collection("orders")
+    .where("reference", "==", reference)
+    .limit(1)
+    .get();
+  const doc = snapshot.docs[0];
+  if (!doc) {
+    throw new HttpsError("not-found", "No order with that reference.");
+  }
+  const order = doc.data() as Record<string, unknown>;
+  const asIso = (value: unknown) => {
+    if (!value) return null;
+    if (typeof value === "object" && value && "toDate" in value && typeof (value as { toDate: () => Date }).toDate === "function") {
+      return (value as { toDate: () => Date }).toDate().toISOString();
+    }
+    if (typeof value === "object" && value && "seconds" in value) {
+      return new Date(Number(value.seconds) * 1000).toISOString();
+    }
+    return String(value);
+  };
+  const items = Array.isArray(order.items)
+    ? order.items.map((item: Record<string, unknown>) => ({
+        name: String(item.name ?? "Item"),
+        quantity: Number(item.quantity ?? 1),
+        unit: typeof item.unit === "string" ? item.unit : "",
+        price: typeof item.price === "number" ? item.price : 0,
+      }))
+    : [];
+  const customer = (order.customer || {}) as Record<string, unknown>;
+
+  return {
+    reference: String(order.reference ?? reference),
+    status: String(order.status ?? "pending"),
+    paymentStatus: String(order.paymentStatus ?? "unpaid"),
+    subtotal: Number(order.subtotal ?? 0),
+    deliveryFee: Number(order.deliveryFee ?? 0),
+    total: Number(order.total ?? 0),
+    fulfillment: String(order.fulfillment ?? "pickup"),
+    items,
+    customerName: typeof customer.name === "string" ? customer.name : "",
+    deliveryAddress: typeof order.deliveryAddress === "string" ? order.deliveryAddress : undefined,
+    deliveryLocation: typeof order.deliveryLocation === "string" ? order.deliveryLocation : undefined,
+    notes: typeof order.notes === "string" ? order.notes : undefined,
+    paymentMethod: typeof order.paymentMethod === "string" ? order.paymentMethod : undefined,
+    createdAt: asIso(order.createdAt),
+    updatedAt: asIso(order.updatedAt),
+  };
+});
+
 export const setUserRole = onCall({ region: REGION }, async (request) => {
   const current = await actor(request.auth?.uid, ["admin"]);
   const input = z.object({ uid: z.string().min(10).max(128), role: z.enum(VALID_ROLES) }).parse(request.data);

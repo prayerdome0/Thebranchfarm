@@ -6,6 +6,7 @@ import { Pencil, Plus, Stethoscope, Trash2, X, HeartPulse, FileText } from "luci
 import { useEffect, useState } from "react";
 import { HealthRecordCard } from "@/components/farm/HealthRecordCard";
 import { HealthRecordForm, type HealthRecordValues } from "@/components/farm/HealthRecordForm";
+import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { Loading } from "@/components/ui/Loading";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/contexts/ToastContext";
@@ -171,7 +172,9 @@ export default function AnimalDetailPage() {
         </div>
         <div className="health-record-list" style={{ marginTop: 18 }}>
           {health.length ? health.map((record) => (
-            <HealthRecordCard key={record.id} record={record} canDelete={isAdmin} onDelete={removeHealth} />
+            <ErrorBoundary key={record.id} label="This health record could not be displayed.">
+              <HealthRecordCard record={record} canDelete={isAdmin} onDelete={removeHealth} />
+            </ErrorBoundary>
           )) : (
             <div className="empty-state compact"><span className="empty-icon"><HeartPulse size={25} /></span><h3>No health records</h3><p>Health records belong inside animal record. Add first.</p></div>
           )}
@@ -183,7 +186,9 @@ export default function AnimalDetailPage() {
           <button className="modal-scrim" onClick={() => setShowHealthForm(false)} />
           <div className="record-modal">
             <header><div><span className="eyebrow">Animal Health</span><h2>Add Health Record</h2></div><button className="icon-button" onClick={() => setShowHealthForm(false)}><X size={20} /></button></header>
-            <HealthRecordForm animals={[animal]} lockedAnimalId={animal.id} onSubmit={saveHealth} saving={savingHealth} onCancel={() => setShowHealthForm(false)} />
+            <ErrorBoundary label="The health record form could not be opened. Refresh and try again.">
+              <HealthRecordForm animals={[animal]} lockedAnimalId={animal.id} onSubmit={saveHealth} saving={savingHealth} onCancel={() => setShowHealthForm(false)} />
+            </ErrorBoundary>
           </div>
         </div>
       )}
