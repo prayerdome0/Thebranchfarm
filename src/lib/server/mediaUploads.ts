@@ -27,26 +27,66 @@ export class MediaUploadError extends Error {
   }
 }
 
-function parseCloudinaryUrl(raw: string): MediaUploadCredentials | null {
-  const match = raw.match(/^cloudinary:\/\/([^:]+):([^@]+)@([\w.-]+)$/);
+export function parseCloudinaryUrl(raw: string): MediaUploadCredentials | null {
+  const cleaned = raw.trim().replace(/^['"]|['"]$/g, "").trim();
+  if (!cleaned) return null;
+  try {
+    const u = new URL(cleaned);
+    if (u.protocol === "cloudinary:") {
+      const apiKey = decodeURIComponent(u.username);
+      const apiSecret = decodeURIComponent(u.password);
+      const cloudName = decodeURIComponent(u.hostname || u.host);
+      if (apiKey && apiSecret && cloudName) {
+        return { apiKey, apiSecret, cloudName };
+      }
+    }
+  } catch {
+    // fallback regex for malformed url strings
+  }
+  const match = cleaned.match(/^cloudinary:\/\/([^:]+):([^@]+)@([\w.-]+)(?:\/.*)?$/);
   if (!match) return null;
   return { apiKey: match[1], apiSecret: match[2], cloudName: match[3] };
 }
 
 export function mediaCredentials(): MediaUploadCredentials | null {
-  const url = (process.env.CLOUDINARY_URL || "").trim();
-  if (url && !/SET_API_KEY|your/i.test(url)) {
+  const url = (
+    process.env.CLOUDINARY_URL ||
+    process.env.NEXT_PUBLIC_CLOUDINARY_URL ||
+    ""
+  ).trim();
+  if (url && !/SET_API_KEY|YOUR_API_KEY|your|choose_a|example/i.test(url)) {
     const parsed = parseCloudinaryUrl(url);
     if (parsed) return parsed;
   }
-  const cloudName = (process.env.CLOUDINARY_CLOUD_NAME || "").trim();
-  const apiKey = (process.env.CLOUDINARY_API_KEY || "").trim();
-  const apiSecret = (process.env.CLOUDINARY_API_SECRET || "").trim();
-  if (cloudName && apiKey && apiSecret) return { cloudName, apiKey, apiSecret };
+  const cloudName = (
+    process.env.CLOUDINARY_CLOUD_NAME ||
+    process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME ||
+    ""
+  ).trim();
+  const apiKey = (
+    process.env.CLOUDINARY_API_KEY ||
+    process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY ||
+    ""
+  ).trim();
+  const apiSecret = (
+    process.env.CLOUDINARY_API_SECRET ||
+    process.env.NEXT_PUBLIC_CLOUDINARY_API_SECRET ||
+    ""
+  ).trim();
+  if (
+    cloudName &&
+    apiKey &&
+    apiSecret &&
+    !/YOUR_CLOUD_NAME|your|choose_a|example/i.test(cloudName) &&
+    !/YOUR_API_KEY|your|choose_a|example/i.test(apiKey) &&
+    !/YOUR_API_SECRET|your|choose_a|example/i.test(apiSecret)
+  ) {
+    return { cloudName, apiKey, apiSecret };
+  }
   return null;
 }
 
-export function uploadsConfigured() {
+export function uploadsConfigured(): boolean {
   return mediaCredentials() !== null;
 }
 
@@ -65,3 +105,4 @@ export function signUploadParams(
     .join("&");
   return createHash("sha1").update(`${toSign}${apiSecret}`, "utf8").digest("hex");
 }
+

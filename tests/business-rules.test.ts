@@ -3,11 +3,37 @@ import assert from "node:assert/strict";
 import { BUSINESS, ANIMAL_STATUS_LABELS, CLOUDINARY, HEALTH_STATUS_LABELS } from "../src/lib/constants";
 import { animalSchema, healthRecordSchema, registerSchema } from "../src/lib/validation";
 import { documentCategory, friendlyError, money } from "../src/lib/utils";
+import { parseCloudinaryUrl, signUploadParams } from "../src/lib/server/mediaUploads";
 
 test("farm identity and currency stay on the official configuration", () => {
   assert.equal(BUSINESS.name, "The Branch Farm");
   assert.equal(BUSINESS.slogan, "Nayi Plug");
   assert.equal(BUSINESS.currency, "E");
+});
+
+test("parseCloudinaryUrl handles standard and formatted Cloudinary URLs", () => {
+  const parsed1 = parseCloudinaryUrl("cloudinary://123456789012345:abcdefghijklmnopqrstuvw@thebranchfarm");
+  assert.deepEqual(parsed1, {
+    apiKey: "123456789012345",
+    apiSecret: "abcdefghijklmnopqrstuvw",
+    cloudName: "thebranchfarm",
+  });
+
+  const parsed2 = parseCloudinaryUrl('"cloudinary://987654321:secret_key_123@my-farm-cloud/"');
+  assert.deepEqual(parsed2, {
+    apiKey: "987654321",
+    apiSecret: "secret_key_123",
+    cloudName: "my-farm-cloud",
+  });
+
+  assert.equal(parseCloudinaryUrl(""), null);
+  assert.equal(parseCloudinaryUrl("invalid-url"), null);
+});
+
+test("signUploadParams correctly signs upload parameters", () => {
+  const sig = signUploadParams({ timestamp: 1700000000 }, "test_secret");
+  assert.equal(typeof sig, "string");
+  assert.equal(sig.length, 40); // SHA-1 hex is 40 characters
 });
 
 test("currency formatting uses Eswatini E", () => {

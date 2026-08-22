@@ -99,11 +99,38 @@ export async function requireStaff(
     const decoded = await admin.auth.verifyIdToken(token);
     const profile = await admin.db.doc(`users/${decoded.uid}`).get();
     const data = profile.data();
-    const role = (data?.role as Actor["role"]) || "user";
-    const status = (data?.status as string) || "active";
+
+    // Check role from claims, Firestore profile, and initial admin email allowlist
+    const claimsRole =
+      decoded.role === "admin" || decoded.admin === true
+        ? "admin"
+        : decoded.role === "staff"
+          ? "staff"
+          : undefined;
+
+    const initialEmails = (process.env.INITIAL_ADMIN_EMAILS || "")
+      .split(",")
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean);
+    const email = String(decoded.email || data?.email || "").toLowerCase();
+    const isInitialAdmin = email ? initialEmails.includes(email) : false;
+
+    const role: Actor["role"] =
+      (data?.role as Actor["role"]) ||
+      claimsRole ||
+      (isInitialAdmin ? "admin" : "user");
+
+    const status = (data?.status as string) || (decoded.disabled ? "disabled" : "active");
     if (status !== "active" || !roles.includes(role as "staff" | "admin")) {
       throw new ApiError(403, "This account is not authorized for this action.");
     }
+
+    // Ensure Firestore profile and custom claims stay in sync if promoted as admin
+    if ((isInitialAdmin || claimsRole === "admin") && data?.role !== "admin") {
+      admin.db.doc(`users/${decoded.uid}`).set({ role: "admin" }, { merge: true }).catch(() => {});
+      admin.auth.setCustomUserClaims(decoded.uid, { role: "admin" }).catch(() => {});
+    }
+
     return {
       db: admin.db,
       auth: admin.auth,

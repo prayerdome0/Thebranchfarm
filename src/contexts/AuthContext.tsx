@@ -40,13 +40,13 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-function profileFromFirebaseUser(current: FirebaseUser): UserProfile {
+function profileFromFirebaseUser(current: FirebaseUser, customRole?: "user" | "staff" | "admin"): UserProfile {
   return {
     uid: current.uid,
     fullName: current.displayName || "Member",
     email: current.email || "",
     phone: "",
-    role: "user",
+    role: customRole || "user",
     status: "active",
     createdAt: null,
     updatedAt: null,
@@ -71,7 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!cancelled) setLoading(false);
     }, 8000);
 
-    const stopAuth = onAuthStateChanged(auth, (current) => {
+    const stopAuth = onAuthStateChanged(auth, async (current) => {
       stopProfile?.();
       stopProfile = undefined;
       setFirebaseUser(current);
@@ -82,9 +82,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
+      let tokenRole: "user" | "staff" | "admin" = "user";
+      try {
+        const tokenResult = await current.getIdTokenResult();
+        if (tokenResult.claims.role === "admin" || tokenResult.claims.admin === true) {
+          tokenRole = "admin";
+        } else if (tokenResult.claims.role === "staff") {
+          tokenRole = "staff";
+        }
+      } catch {
+        // Token read fallback
+      }
+
       // A signed-in Firebase user is a real session even before the Firestore
       // profile snapshot arrives (or if that document is still being created).
-      setUser((existing) => existing?.uid === current.uid ? existing : profileFromFirebaseUser(current));
+      setUser((existing) => (existing?.uid === current.uid ? existing : profileFromFirebaseUser(current, tokenRole)));
 
       try {
         stopProfile = onSnapshot(
@@ -92,21 +104,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           (snapshot) => {
             if (cancelled) return;
             if (snapshot.exists()) {
-              const profile = { uid: snapshot.id, ...snapshot.data() } as UserProfile;
+              const data = snapshot.data();
+              const profileRole =
+                (data.role as "user" | "staff" | "admin") || tokenRole;
+              const profile = { uid: snapshot.id, ...data, role: profileRole } as UserProfile;
               setUser(profile.status === "disabled" ? null : profile);
             } else {
-              setUser(profileFromFirebaseUser(current));
+              setUser(profileFromFirebaseUser(current, tokenRole));
             }
             setLoading(false);
           },
           () => {
             if (cancelled) return;
-            setUser(profileFromFirebaseUser(current));
+            setUser(profileFromFirebaseUser(current, tokenRole));
             setLoading(false);
           },
         );
       } catch {
-        setUser(profileFromFirebaseUser(current));
+        setUser(profileFromFirebaseUser(current, tokenRole));
         setLoading(false);
       }
     });
