@@ -1,11 +1,12 @@
 import {
   BUSINESS,
+  INVOICE_NUMBER_PREFIX,
   QUOTATION_NUMBER_PREFIX,
   QUOTATION_STATUS_LABELS,
   RECEIPT_NUMBER_PREFIX,
 } from "@/lib/constants";
 import type { PrintableDocumentInput } from "@/lib/server/printable";
-import type { Quotation, QuotationLine, QuotationStatus, Receipt } from "@/types";
+import type { Invoice, Quotation, QuotationLine, QuotationStatus, Receipt } from "@/types";
 
 export function round2(value: number) {
   return Math.round((Number(value) + Number.EPSILON) * 100) / 100;
@@ -87,6 +88,10 @@ export function generateReceiptNumber(existing: Array<string | undefined | null>
   return nextDocumentNumber(RECEIPT_NUMBER_PREFIX, existing);
 }
 
+export function generateInvoiceNumber(existing: Array<string | undefined | null>) {
+  return nextDocumentNumber(INVOICE_NUMBER_PREFIX, existing);
+}
+
 /** Record shape without the Firestore bookkeeping fields (added on write). */
 export type QuotationRecord = Omit<
   Quotation,
@@ -159,6 +164,32 @@ export function buildQuotationDocumentInput(
     validUntil: q.validUntil ? new Date(`${q.validUntil}T23:59:59`) : undefined,
     preparedBy: q.authorizedBy,
     status: quotationStatusLabel(q.status),
+  };
+}
+
+/** Map a stored invoice onto the printable document model. */
+export function buildInvoiceDocumentInput(
+  inv: Invoice,
+  currency: string = BUSINESS.currency,
+): PrintableDocumentInput {
+  return {
+    kind: "invoice",
+    reference: inv.invoiceNumber,
+    date: inv.date,
+    lines: (inv.items || []).map((line) => ({
+      name: line.name,
+      quantity: Number(line.quantity) || 0,
+      price: Number(line.price) || 0,
+      unit: line.unit,
+    })),
+    subtotal: Number(inv.subtotal ?? 0),
+    discount: Number(inv.discount ?? 0),
+    deliveryFee: Number(inv.delivery ?? 0),
+    total: Number(inv.total ?? 0),
+    currency,
+    customer: { name: inv.customer },
+    paymentStatus: inv.paymentStatus,
+    notes: inv.notes,
   };
 }
 
