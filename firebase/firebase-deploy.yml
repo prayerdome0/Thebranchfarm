@@ -58,6 +58,18 @@ jobs:
           npm ci
           npm run build
 
+      - name: Configure function parameters
+        working-directory: functions
+        env:
+          INITIAL_ADMIN_EMAILS: ${{ vars.INITIAL_ADMIN_EMAILS }}
+          NOTIFICATION_WEBHOOK_URL: ${{ vars.NOTIFICATION_WEBHOOK_URL }}
+        run: |
+          {
+            echo "INITIAL_ADMIN_EMAILS=${INITIAL_ADMIN_EMAILS}"
+            echo "NOTIFICATION_WEBHOOK_URL=${NOTIFICATION_WEBHOOK_URL}"
+          } > .env
+          echo "::notice::INITIAL_ADMIN_EMAILS=${INITIAL_ADMIN_EMAILS:-<unset — no account will be promoted to admin>}"
+
       - name: Write Firebase credentials
         run: echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > "$RUNNER_TEMP/firebase-service-account.json"
 

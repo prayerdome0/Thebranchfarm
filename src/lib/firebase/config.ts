@@ -9,29 +9,51 @@ import {
 import { getFirestore, type Firestore } from "firebase/firestore";
 import { getFunctions, type Functions } from "firebase/functions";
 
-// Firebase web identifiers come ONLY from server-provided environment
-// variables — no credentials are hardcoded in this repository. Authorization
-// is enforced by Auth, Firestore Rules and callable functions — never by
-// keeping this object secret. Deployments may set NEXT_PUBLIC_FIREBASE_*
-// (see .env.example); without them the storefront falls back to demo data.
-const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY?.trim() || "",
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN?.trim() || "",
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID?.trim() || "",
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET?.trim() || "",
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID?.trim() || "",
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID?.trim() || "",
+// The Firebase web identifiers for the production `thebranchfarm` app.
+//
+// These are PUBLIC client configuration, not secrets — every visitor's
+// browser receives them with the JavaScript bundle (they are also committed
+// in apphosting.yaml). Authorization is enforced by Auth, Firestore Rules and
+// callable functions — never by keeping this object secret.
+//
+// They act as the default configuration when the NEXT_PUBLIC_FIREBASE_*
+// environment variables are absent (local development, previews, or a
+// deployment where the variables were never set). This is what makes sign-in
+// work out of the box instead of failing with "Firebase Authentication is not
+// fully configured yet." Environment variables still win per key, so pointing
+// the app at a different project requires no code changes.
+const DEFAULT_FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBKPQDWy2wXKZL0Ffzk2zMbORxmIv_dKq0",
+  authDomain: "thebranchfarm.firebaseapp.com",
+  projectId: "thebranchfarm",
+  storageBucket: "thebranchfarm.firebasestorage.app",
+  messagingSenderId: "971662070100",
+  appId: "1:971662070100:web:f4406c1e90de3ccc9678c1",
 };
 
 function isPlaceholder(value: string) {
   return /^(your[_-]|<|\[|replace[_-]?me)/i.test(value);
 }
 
-// Do not let an unset (or copied, placeholder) environment variable create a
-// Firebase app. `initializeApp({ apiKey: "" })` succeeds, but `getAuth()`
-// validates the key immediately and throws during Next.js prerendering. The
-// client modules still import the typed SDK handles below; they remain inert
-// until a real Firebase configuration is available.
+/** Env-var suffix, e.g. "API_KEY" → NEXT_PUBLIC_FIREBASE_API_KEY. */
+function configuredValue(key: string, fallback: string) {
+  const raw = process.env[`NEXT_PUBLIC_FIREBASE_${key}`]?.trim() || "";
+  if (!raw || isPlaceholder(raw)) return fallback;
+  return raw;
+}
+
+const firebaseConfig = {
+  apiKey: configuredValue("API_KEY", DEFAULT_FIREBASE_CONFIG.apiKey),
+  authDomain: configuredValue("AUTH_DOMAIN", DEFAULT_FIREBASE_CONFIG.authDomain),
+  projectId: configuredValue("PROJECT_ID", DEFAULT_FIREBASE_CONFIG.projectId),
+  storageBucket: configuredValue("STORAGE_BUCKET", DEFAULT_FIREBASE_CONFIG.storageBucket),
+  messagingSenderId: configuredValue("MESSAGING_SENDER_ID", DEFAULT_FIREBASE_CONFIG.messagingSenderId),
+  appId: configuredValue("APP_ID", DEFAULT_FIREBASE_CONFIG.appId),
+};
+
+// Only true for deployments that point at some other project but left the
+// environment incomplete. The default configuration above is always complete,
+// so authentication works everywhere without any environment setup.
 export const firebaseConfigured =
   Boolean(firebaseConfig.apiKey && firebaseConfig.projectId) &&
   !isPlaceholder(firebaseConfig.apiKey) &&

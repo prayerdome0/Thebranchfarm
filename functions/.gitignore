@@ -1,0 +1,7 @@
+# Cloud Functions build output
+lib/
+
+# Local parameter values written by `firebase deploy` / the CI workflow.
+# Keep the owner allowlist in GitHub repository variables instead.
+.env
+.env.*
