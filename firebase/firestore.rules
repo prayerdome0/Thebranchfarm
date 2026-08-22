@@ -184,6 +184,25 @@ service cloud.firestore {
       allow delete: if admin();
     }
 
+    // Business documents: quotations, receipts and invoices are managed by
+    // staff. The browser stores the full record (items, totals, signature
+    // data-URL, Cloudinary URL and public ID); deletion is admin-only.
+    match /quotations/{id} {
+      allow read: if staff();
+      allow create, update: if staff();
+      allow delete: if admin();
+    }
+    match /receipts/{id} {
+      allow read: if staff();
+      allow create, update: if staff();
+      allow delete: if admin();
+    }
+    match /invoices/{id} {
+      allow read: if staff();
+      allow create, update: if staff();
+      allow delete: if admin();
+    }
+
     match /{document=**} { allow read, write: if false; }
   }
 }

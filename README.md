@@ -47,10 +47,28 @@ staff — there is no payment gateway.
   Four sample **photo-films** (cinematic slideshows cut from gallery stills) ship in
   `public/media/videos/` and play out of the box; admins can seed them into Firestore from
   **Videos → Add sample videos**.
-- **Quotations, receipts & invoices** — the cart has a *Download quotation* button
-  (`POST /api/quotations` renders a printable quote); staff can print a **receipt** or
-  **invoice** for any order from the order page (`/api/orders/{id}/receipt|invoice`); and
-  supporting paperwork files are uploaded through **Cloudinary** (below).
+- **Quotations, receipts & invoices — fully functional documents.**
+  * **Quotations** (`/documents/quotations`): pick a customer (from the customer book or a
+    new one) and products from the farm/store catalogue, set quantity, price, discount and
+    tax — subtotal, tax, total and balance calculate live. Professional numbers
+    (`QF-YYYY-NNNN`) are generated automatically. The document is saved to Firebase and a
+    printable copy is stored in **Cloudinary** (URL + public ID recorded on the record).
+    Status flow is enforced: **Draft → Sent → Accepted/Rejected → Converted**, with view,
+    edit, print/save-PDF and download on every quotation.
+  * **Convert to receipt/order**: an *Accepted* quotation converts in one click — its
+    customer, items, totals and notes are copied into a new receipt (nothing re-entered),
+    optionally creating the matching order (with the stock transaction), and the quotation
+    is marked **Converted** with links to the new receipt/order.
+  * **Receipts** (`/documents/receipts`): automatic `RCP-YYYY-NNNN` numbers, start from an
+    existing order or accepted quotation, full items, subtotal, discount, tax, total,
+    **amount paid**, **balance due**, payment method, notes and the authorized person.
+    A **mobile-first signature pad** (sign with your finger — Clear / Undo / Save) captures
+    the signature on the device; it is stored on the receipt and printed on the document as
+    *Authorized Signature · [signed digitally] · Authorized by: …*.
+  * **Customer history**: opening a customer (`/customers/{id}`) shows their orders,
+    quotations and receipts together with total spent and outstanding balance.
+  * The cart's *Download quotation* button (`POST /api/quotations`) and the order page's
+    printable **receipt/invoice** (`/api/orders/{id}/receipt|invoice`) still work as before.
 - **Animations** — scroll-reveal fades and cinematic stills are used across the homepage, shop
   and videos pages (with `prefers-reduced-motion` respected).
 - **Store settings** — currency, delivery fee, free-delivery threshold, a promo code and the
@@ -107,6 +125,8 @@ endpoints answer `503` — nothing breaks.
 | `GET /api/orders/{id}/invoice` | Printable invoice (by id or `?reference=TB-…`). |
 | `POST /api/quotations` | Printable quotation for a list of items (cart button uses this). |
 | `GET /api/quotations` | Staff: list archived quotations. |
+| `GET /api/quotations/{id}/print` | Staff: printable view of a stored quotation (Bearer token or `?token=`). |
+| `GET /api/receipts/{id}/print` | Staff: printable view of a stored receipt, signature included. |
 | `GET /api/videos` · `POST /api/videos` | Public video list · staff publish a video. |
 | `DELETE /api/videos/{id}` | Admin: remove a video. |
 | `GET /api/settings` | Public storefront settings. |

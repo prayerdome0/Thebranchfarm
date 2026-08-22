@@ -88,7 +88,12 @@ export async function requireStaff(
     );
   }
   const header = request.headers.get("authorization") || "";
-  const token = header.startsWith("Bearer ") ? header.slice(7).trim() : "";
+  const fromHeader = header.startsWith("Bearer ") ? header.slice(7).trim() : "";
+  // Printable pages (e.g. /api/quotations/:id/print) are opened in a new
+  // browser tab where a custom header is not possible — allow the ID token
+  // as a query parameter for those GET endpoints.
+  const fromQuery = new URL(request.url).searchParams.get("token") || "";
+  const token = fromHeader || fromQuery;
   if (!token) throw new ApiError(401, "Sign in is required. Pass an Authorization: Bearer <id token> header.");
   try {
     const decoded = await admin.auth.verifyIdToken(token);

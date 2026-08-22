@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { Search, UsersRound, Phone, Mail, ShoppingBag } from "lucide-react";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -53,10 +54,10 @@ export default function CustomersPage() {
             </div>
             {visible.map((c) => (
               <article key={c.id} style={{ gridTemplateColumns: "1.4fr .9fr .7fr .5fr .7fr .6fr" }}>
-                <span className="person-cell">
+                <Link href={`/customers/${c.id}`} className="person-cell customer-cell-link">
                   <i>{c.name.slice(0,2).toUpperCase()}</i>
-                  <span><strong>{c.name}</strong><small>{c.email || "No email"}</small></span>
-                </span>
+                  <span><strong>{c.name}</strong><small>{c.email || "No email"} · History</small></span>
+                </Link>
                 <span>{c.phone}</span>
                 <span>{c.deliveryLocation || "—"}</span>
                 <span>{c.orders || 0}</span>
