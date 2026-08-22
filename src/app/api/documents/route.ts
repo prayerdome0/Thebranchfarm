@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 /**
  * GET /api/documents?docType=quotation — staff list of farm documents and
  * business paperwork (quotations, receipts, invoices). Files themselves live in
- * Cloudinary with the unsigned branch_farm preset; this route indexes them.
+ * secure server-side media storage; this route indexes them.
  */
 export async function GET(request: Request) {
   try {

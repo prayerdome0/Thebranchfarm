@@ -1,4 +1,5 @@
 import { adminConfigured, getAdmin } from "@/lib/server/admin";
+import { uploadsConfigured } from "@/lib/server/mediaUploads";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +11,8 @@ export async function GET() {
     service: "the-branch-farm",
     time: new Date().toISOString(),
     firebaseAdmin: admin ? "configured" : adminConfigured() ? "misconfigured" : "not-configured",
-    cloudinaryPreset: "branch_farm",
+    // Media storage is wired server-side only — no cloud identifiers are
+    // reported here on purpose.
+    mediaUploads: uploadsConfigured() ? "server-signed" : "not-configured",
   });
 }

@@ -4,6 +4,7 @@ import {
   Activity,
   AlertTriangle,
   BarChart3,
+  BookOpen,
   Boxes,
   ClipboardCheck,
   FileStack,
@@ -80,6 +81,7 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
     { href: "/media", label: "Farm media", icon: Images, permission: "Media", section: "Content & system" },
     { href: "/videos/manage", label: "Videos", icon: Video, permission: "Videos", section: "Content & system" },
     { href: "/settings", label: "Settings", icon: Settings, adminOnly: true, section: "Content & system" },
+    { href: "/guide", label: "Guide & user manual", icon: BookOpen, adminOnly: true, section: "Content & system" },
   ];
 
   const nav: DashboardNavItem[] = allNav

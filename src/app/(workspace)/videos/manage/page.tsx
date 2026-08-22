@@ -58,7 +58,7 @@ export default function WorkspaceVideosPage() {
       <section className="dashboard-section-title">
         <div>
           <h2>Farm Videos</h2>
-          <p>Admin can upload, delete, add title, description, thumbnail, publish/unpublish. Public gallery shows only published media. Stored Cloudinary dhad95cch / branch_farm, no folders.</p>
+          <p>Admin can upload, delete, add title, description, thumbnail, publish/unpublish. Public gallery shows only published media. Videos are stored securely by the farm server, no folders.</p>
         </div>
         <button className="button button-primary" onClick={() => setAdding((v) => !v)}><Plus size={18} /> {adding ? "Close" : "Add video"}</button>
       </section>

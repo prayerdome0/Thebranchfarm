@@ -1,12 +1,7 @@
 "use client";
 
-import {
-  cloudinaryEnabled,
-  resolveCloudinaryConfig,
-  uploadGenericFileToCloudinary,
-} from "@/lib/cloudinary";
+import { uploadGenericFileToCloudinary } from "@/lib/cloudinary";
 import { renderPrintableDocument, type PrintableDocumentInput } from "@/lib/server/printable";
-import type { FarmSettings } from "@/types";
 
 export interface GeneratedDocumentFile {
   fileUrl: string;
@@ -14,25 +9,23 @@ export interface GeneratedDocumentFile {
 }
 
 /**
- * Renders the printable document and stores it in Cloudinary (unsigned
- * `branch_farm` preset, no folders). Returns the delivery URL and
- * public ID so they can be recorded in Firestore next to the record.
+ * Renders the printable document and stores it in the farm's secure media
+ * storage (via the authenticated /api/uploads proxy — the browser never sees
+ * any storage credentials). Returns the delivery URL and public ID so they can
+ * be recorded in Firestore next to the record.
  *
- * Returns `null` (no throw) when Cloudinary is not configured, so the record
- * is still saved with its live printable page as fallback.
+ * Returns `null` (no throw) when the file cannot be stored, so the record is
+ * still saved with its live printable page as fallback.
  */
 export async function generateAndStoreDocument(
   kind: "quotation" | "receipt" | "invoice",
   input: PrintableDocumentInput,
-  settings?: Partial<FarmSettings> | null,
 ): Promise<GeneratedDocumentFile | null> {
   const html = renderPrintableDocument(input);
   const safeReference = String(input.reference || "doc").replace(/[^\w.-]+/g, "-");
   const file = new File([html], `${kind}-${safeReference}.html`, { type: "text/html" });
-  const config = resolveCloudinaryConfig(settings);
-  if (!cloudinaryEnabled(config)) return null;
   try {
-    const uploaded = await uploadGenericFileToCloudinary(file, config, kind);
+    const uploaded = await uploadGenericFileToCloudinary(file, kind);
     return { fileUrl: uploaded.url, publicId: uploaded.publicId };
   } catch {
     return null;

@@ -113,8 +113,8 @@ export default function OrderDetailPage() {
           <div style={{ marginTop: 18, display: "flex", gap: 8, flexWrap: "wrap" }}>
             <a className="button button-secondary button-small" href={phoneHref(order.customer.phone)}><Phone size={15} /> Call</a>
             <a className="button button-whatsapp button-small" href={whatsappHref(BUSINESS.whatsappLink, `Hello ${order.customer.name}, about order ${order.reference} - status ${ORDER_STATUS_LABELS[order.status]}`)} target="_blank" rel="noreferrer"><MessageSquareText size={15} /> WhatsApp Customer</a>
-            <a className="button button-secondary button-small" target="_blank" rel="noreferrer" href={`/api/orders/${order.id}/receipt?reference=${encodeURIComponent(order.reference)}`}><Receipt size={15} /> Receipt</a>
-            <a className="button button-secondary button-small" target="_blank" rel="noreferrer" href={`/api/orders/${order.id}/invoice?reference=${encodeURIComponent(order.reference)}`}><FileText size={15} /> Invoice</a>
+            <a className="button button-secondary button-small" target="_blank" rel="noreferrer" href={`/api/orders/${order.id}/receipt?reference=${encodeURIComponent(order.reference)}&edit=1`}><Receipt size={15} /> Receipt</a>
+            <a className="button button-secondary button-small" target="_blank" rel="noreferrer" href={`/api/orders/${order.id}/invoice?reference=${encodeURIComponent(order.reference)}&edit=1`}><FileText size={15} /> Invoice</a>
           </div>
         </div>
       </div>
@@ -138,6 +138,7 @@ export default function OrderDetailPage() {
 
       <section className="dashboard-panel">
         <h2 style={{ fontFamily: "var(--sans)", fontSize: "1.05rem", marginBottom: 16 }}>Proof of delivery / Signature</h2>
+        <p style={{ fontSize: ".72rem", color: "var(--muted)", marginTop: -8, marginBottom: 12 }}>Sign here after delivery. The signature prints on the receipt &amp; invoice — with the signer&apos;s name and date, never a &ldquo;signed digitally&rdquo; marker.</p>
         {order.signature ? (
           <div style={{ display: "grid", gap: 10 }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}

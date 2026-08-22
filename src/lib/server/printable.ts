@@ -77,13 +77,12 @@ const KIND_COPY = {
 
 /**
  * Signature + preparer block shown on every receipt, quotation and invoice.
- * When a digital signature was captured it is printed; otherwise a signature
- * line is left for a wet signature, so the document always shows who prepared
- * it and where to sign.
+ * When a signature was captured it is printed with the signer's name and
+ * date; otherwise a signature line is left so the document can be signed by
+ * hand after printing. No digital-signature marker text is printed.
  */
 function signatureBlockHtml(input: PrintableDocumentInput) {
-  const preparer = input.preparedBy || input.authorizedBy || input.signedByName || "";
-  if (!input.signature && !preparer) return "";
+  const preparer = input.preparedBy || input.authorizedBy || input.signedByName || "The Branch Farm";
   const name = escapeHtml(
     input.signature ? input.authorizedBy || input.signedByName || "Authorized" : preparer,
   );
@@ -93,10 +92,136 @@ function signatureBlockHtml(input: PrintableDocumentInput) {
       <div class="sig-image">${input.signature ? `<img src="${input.signature}" alt="Signature" />` : ""}</div>
       <div class="sig-details">
         <span class="sig-title">${input.signature ? "Authorized Signature" : "Signature"}</span>
-        ${input.signature ? `<span class="sig-meta">[signed digitally]</span>` : `<span class="sig-meta">sign here</span>`}
-        <span class="sig-by">Prepared by: ${name}${date}</span>
+        ${input.signature ? "" : `<span class="sig-meta">sign here</span>`}
+        <span class="sig-by" data-fill-line="preparedBy">Prepared by: ${name}${date}</span>
       </div>
     </div>`;
+}
+
+/** Inline script that powers the toolbar: fill-in fields + download. */
+function toolbarScript(input: PrintableDocumentInput, currency: string) {
+  const bootstrap = {
+    kind: input.kind,
+    reference: input.reference,
+    total: Number(input.total) || 0,
+    currency,
+    isReceipt: input.kind === "receipt",
+  };
+  return `
+  <script>
+  (function () {
+    "use strict";
+    var boot = ${JSON.stringify(bootstrap).replace(/</g, "\\u003c")};
+    var params = new URLSearchParams(location.search);
+    var toolbar = document.querySelector(".toolbar");
+    var panel = document.getElementById("fill-panel");
+
+    function money(value) {
+      var amount = Number.isFinite(value) ? value : 0;
+      var digits = Number.isInteger(amount) ? 0 : 2;
+      return boot.currency + amount.toLocaleString("en-SZ", { minimumFractionDigits: digits, maximumFractionDigits: 2 });
+    }
+    function setText(selector, value) {
+      var node = document.querySelector(selector);
+      if (node) node.textContent = value;
+    }
+    function ensureMeta(key, label) {
+      var existing = document.querySelector('[data-fill="' + key + '"]');
+      if (existing) return existing;
+      var dl = document.querySelector("dl");
+      if (!dl) return null;
+      var row = document.createElement("div");
+      var dt = document.createElement("dt"); dt.textContent = label;
+      var dd = document.createElement("dd"); dd.setAttribute("data-fill", key); dd.textContent = "—";
+      row.appendChild(dt); row.appendChild(dd); dl.appendChild(row);
+      return dd;
+    }
+    function escapeHtml(value) {
+      return String(value == null ? "" : value).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+    }
+    function apply() {
+      var preparedBy = (document.getElementById("fill-preparedBy") || {}).value || "";
+      var paymentMethod = (document.getElementById("fill-paymentMethod") || {}).value || "";
+      var paymentStatus = (document.getElementById("fill-paymentStatus") || {}).value || "";
+      var notes = (document.getElementById("fill-notes") || {}).value || "";
+      if (preparedBy.trim()) {
+        var node = ensureMeta("preparedBy", "Prepared by");
+        if (node) node.textContent = preparedBy.trim();
+        var line = document.querySelector('[data-fill-line="preparedBy"]');
+        if (line) line.textContent = "Prepared by: " + preparedBy.trim();
+      }
+      if (paymentMethod.trim()) {
+        var methodNode = ensureMeta("paymentMethod", "Payment method");
+        if (methodNode) methodNode.textContent = paymentMethod.trim();
+      }
+      if (paymentStatus) {
+        var statusNode = ensureMeta("paymentStatus", "Payment status");
+        if (statusNode) statusNode.textContent = paymentStatus;
+      }
+      if (boot.isReceipt) {
+        var paid = parseFloat((document.getElementById("fill-amountPaid") || {}).value);
+        if (!Number.isNaN(paid) && paid >= 0) {
+          setText("#amount-paid-value", money(paid));
+          var balance = Math.max(boot.total - paid, 0);
+          setText("#balance-value", money(balance));
+          var full = document.getElementById("paid-full");
+          var due = document.getElementById("paid-due");
+          var settled = paid >= boot.total;
+          if (full) full.style.display = settled ? "" : "none";
+          if (due) due.style.display = settled ? "none" : "";
+        }
+      }
+      var notesBox = document.getElementById("notes-box");
+      if (notesBox) {
+        var trimmed = notes.trim();
+        notesBox.style.display = trimmed ? "" : "none";
+        var target = notesBox.querySelector("[data-fill-line='notes']");
+        if (target) target.innerHTML = escapeHtml(trimmed).replace(/\\n/g, "<br>");
+      }
+    }
+    var inputs = panel ? panel.querySelectorAll("input, select, textarea") : [];
+    Array.prototype.forEach.call(inputs, function (input) {
+      input.addEventListener("input", apply);
+      input.addEventListener("change", apply);
+    });
+    if (panel) {
+      var toggle = document.getElementById("fill-toggle");
+      if (toggle) toggle.addEventListener("click", function () {
+        var open = panel.getAttribute("data-open") === "1";
+        panel.setAttribute("data-open", open ? "0" : "1");
+        panel.style.display = open ? "none" : "block";
+        if (!open) {
+          var first = panel.querySelector("input");
+          if (first) first.focus();
+        }
+      });
+      if (params.has("edit")) {
+        panel.setAttribute("data-open", "1");
+        panel.style.display = "block";
+      }
+      if (!boot.isReceipt) {
+        var amountField = document.getElementById("fill-amountPaid-field");
+        if (amountField) amountField.style.display = "none";
+      }
+    }
+    var downloadButton = document.getElementById("download-button");
+    if (downloadButton) downloadButton.addEventListener("click", function () {
+      apply();
+      var clone = document.documentElement.cloneNode(true);
+      var chrome = clone.querySelectorAll(".toolbar, #fill-panel");
+      Array.prototype.forEach.call(chrome, function (node) { node.parentNode.removeChild(node); });
+      var html = "<!DOCTYPE html>" + clone.outerHTML;
+      var blob = new Blob([html], { type: "text/html;charset=utf-8" });
+      var link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = boot.kind + "-" + String(boot.reference).replace(/[^\\w.-]+/g, "-") + ".html";
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.setTimeout(function () { URL.revokeObjectURL(link.href); }, 5000);
+    });
+  })();
+  </script>`;
 }
 
 export function renderPrintableDocument(input: PrintableDocumentInput) {
@@ -114,24 +239,22 @@ export function renderPrintableDocument(input: PrintableDocumentInput) {
     )
     .join("");
 
-  const meta: Array<[string, string]> = [
-    ["Date", formatDate(input.date)],
-    input.customer?.name ? ["Customer", input.customer.name] : null,
-    input.customer?.phone ? ["Phone", input.customer.phone] : null,
-    input.customer?.email ? ["Email", input.customer.email] : null,
-    input.fulfillment ? ["Fulfilment", input.fulfillment] : null,
-    input.deliveryAddress ? ["Delivery Location", input.deliveryAddress] : null,
-    input.paymentMethod ? ["Payment method", input.paymentMethod] : null,
-    input.paymentStatus ? ["Payment status", input.paymentStatus] : null,
-    input.kind === "quotation" && input.validUntil ? ["Valid until", formatDate(input.validUntil)] : null,
-    input.preparedBy ? ["Prepared by", input.preparedBy] : null,
-    input.authorizedBy ? ["Authorized by", input.authorizedBy] : null,
-  ].filter(Boolean) as Array<[string, string]>;
+  const meta: Array<[string, string, string]> = [
+    ["Date", formatDate(input.date), "date"],
+    input.customer?.name ? ["Customer", input.customer.name, "customer"] : null,
+    input.customer?.phone ? ["Phone", input.customer.phone, "phone"] : null,
+    input.customer?.email ? ["Email", input.customer.email, "email"] : null,
+    input.fulfillment ? ["Fulfilment", input.fulfillment, "fulfillment"] : null,
+    input.deliveryAddress ? ["Delivery Location", input.deliveryAddress, "deliveryAddress"] : null,
+    ["Payment method", input.paymentMethod || "—", "paymentMethod"],
+    ["Payment status", input.paymentStatus || "—", "paymentStatus"],
+    input.kind === "quotation" && input.validUntil ? ["Valid until", formatDate(input.validUntil), "validUntil"] : null,
+    ["Prepared by", input.preparedBy || input.authorizedBy || "The Branch Farm", "preparedBy"],
+  ].filter(Boolean) as Array<[string, string, string]>;
 
-  const hasPaidBlock =
-    input.kind === "receipt" && (Number(input.amountPaid) > 0 || input.balance != null);
-  const paidInFull =
-    hasPaidBlock && Number(input.balance) <= 0 && Number(input.amountPaid) > 0;
+  const amountPaid = Number(input.amountPaid ?? 0);
+  const balance = input.balance != null ? Number(input.balance) : Math.max(Number(input.total) - amountPaid, 0);
+  const paidInFull = amountPaid > 0 && balance <= 0;
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -184,11 +307,45 @@ export function renderPrintableDocument(input: PrintableDocumentInput) {
   .toolbar a { background: #fff; color: #2f5d3a; border: 1px solid #cfd8d0; }
   .notes { margin-top: 16px; font-size: .8rem; color: #405044; background: #f6f8f5; border-radius: 10px; padding: 12px 14px; font-family: Segoe UI, Arial, sans-serif; }
   .delivery { margin-top: 12px; font-size: .75rem; color: #5d6d60; background: #f0f5ef; border-radius: 8px; padding: 10px 12px; }
-  @media print { body { background: #fff; } .sheet { margin: 0; border: 0; max-width: none; } .toolbar { display: none; } }
+  #fill-panel { display: none; position: fixed; top: 60px; right: 14px; z-index: 20; width: min(330px, calc(100vw - 28px)); background: #fff; border: 1px solid #d8ded8; border-radius: 12px; padding: 14px; box-shadow: 0 16px 40px rgba(22,38,26,.18); font-family: Segoe UI, Arial, sans-serif; }
+  #fill-panel h3 { margin: 0 0 4px; font-size: .84rem; color: #2f5d3a; }
+  #fill-panel p.hint { margin: 0 0 10px; font-size: .68rem; color: #7d8a80; }
+  #fill-panel label { display: block; font-size: .68rem; font-weight: 700; color: #405044; margin-top: 9px; }
+  #fill-panel input, #fill-panel select, #fill-panel textarea { width: 100%; margin-top: 3px; padding: 7px 9px; border: 1px solid #cfd8d0; border-radius: 8px; font: 500 .78rem Segoe UI, Arial, sans-serif; color: #1d2a20; }
+  #fill-panel textarea { min-height: 58px; resize: vertical; }
+  @media print { body { background: #fff; } .sheet { margin: 0; border: 0; max-width: none; } .toolbar, #fill-panel { display: none !important; } }
 </style>
 </head>
 <body>
-  <div class="toolbar"><button onclick="window.print()">Print / Save PDF</button><a href="${escapeHtml(input.backHref || "/")}">${escapeHtml(input.backLabel || "Back to shop")}</a></div>
+  <div class="toolbar">
+    <button type="button" id="download-button">Download</button>
+    <button type="button" onclick="window.print()">Print / Save PDF</button>
+    <button type="button" id="fill-toggle">Fill details</button>
+    <a href="${escapeHtml(input.backHref || "/")}">${escapeHtml(input.backLabel || "Back to shop")}</a>
+  </div>
+
+  <div id="fill-panel">
+    <h3>Fill in the document</h3>
+    <p class="hint">Type here and the ${escapeHtml(copy.label.toLowerCase())} updates live. Then press Download, or Print / Save PDF.</p>
+    <label for="fill-preparedBy">Prepared by</label>
+    <input id="fill-preparedBy" type="text" placeholder="Name of the person completing this ${escapeHtml(copy.label.toLowerCase())}" />
+    <label for="fill-paymentMethod">Payment method</label>
+    <input id="fill-paymentMethod" type="text" placeholder="Cash, Transfer, Card…" />
+    <label for="fill-paymentStatus">Payment status</label>
+    <select id="fill-paymentStatus">
+      <option value="">Leave as is</option>
+      <option value="Paid">Paid</option>
+      <option value="Unpaid">Unpaid</option>
+      <option value="Partially paid">Partially paid</option>
+    </select>
+    <div id="fill-amountPaid-field">
+      <label for="fill-amountPaid">Amount paid (E)</label>
+      <input id="fill-amountPaid" type="number" min="0" step="0.01" placeholder="0" />
+    </div>
+    <label for="fill-notes">Notes</label>
+    <textarea id="fill-notes" placeholder="Extra notes to print on the ${escapeHtml(copy.label.toLowerCase())}"></textarea>
+  </div>
+
   <main class="sheet">
     <header>
       <div class="brand">
@@ -207,7 +364,7 @@ export function renderPrintableDocument(input: PrintableDocumentInput) {
     </header>
     <p class="tagline">${escapeHtml(copy.tagline)}</p>
 
-    <dl>${meta.map(([t, v]) => `<div><dt>${escapeHtml(t)}</dt><dd>${escapeHtml(v)}</dd></div>`).join("")}</dl>
+    <dl>${meta.map(([t, v, key]) => `<div><dt>${escapeHtml(t)}</dt><dd data-fill="${escapeHtml(key)}">${escapeHtml(v)}</dd></div>`).join("")}</dl>
 
     <div class="delivery"><strong>Delivery:</strong> ${escapeHtml(BUSINESS.deliveryFree)} ${escapeHtml(BUSINESS.deliveryOther)}</div>
 
@@ -220,16 +377,18 @@ export function renderPrintableDocument(input: PrintableDocumentInput) {
       ${input.deliveryFee != null ? `<div><span>Delivery</span><span>${input.deliveryFee ? escapeHtml(formatMoney(input.deliveryFee, currency)) : "Free"}</span></div>` : ""}
       <div class="grand"><span>Total</span><span>${escapeHtml(formatMoney(input.total, currency))}</span></div>
       ${input.kind === "receipt" ? `
-      <div class="paid"><span>Amount paid</span><span>${escapeHtml(formatMoney(input.amountPaid ?? 0, currency))}</span></div>
-      ${paidInFull ? `<div class="paid full"><span>Paid in full</span><span>&#10003;</span></div>` : `<div class="paid due"><span>Balance due</span><span>${escapeHtml(formatMoney(input.balance ?? 0, currency))}</span></div>`}` : ""}
+      <div class="paid"><span>Amount paid</span><span id="amount-paid-value">${escapeHtml(formatMoney(amountPaid, currency))}</span></div>
+      <div class="paid full" id="paid-full" style="${paidInFull ? "" : "display:none"}"><span>Paid in full</span><span>&#10003;</span></div>
+      <div class="paid due" id="paid-due" style="${paidInFull ? "display:none" : ""}"><span>Balance due</span><span id="balance-value">${escapeHtml(formatMoney(balance, currency))}</span></div>` : ""}
     </div>
 
-    ${input.notes ? `<div class="notes"><strong>Notes</strong><br />${escapeHtml(input.notes)}</div>` : ""}
+    <div class="notes" id="notes-box" style="${input.notes ? "" : "display:none"}"><strong>Notes</strong><br /><span data-fill-line="notes">${escapeHtml(input.notes)}</span></div>
 
     ${signatureBlockHtml(input)}
 
     <footer><span>${escapeHtml(BUSINESS.name)} · ${escapeHtml(BUSINESS.slogan)} · ${escapeHtml(BUSINESS.location)}</span><span>${escapeHtml(copy.label)} ${escapeHtml(input.reference)} · ${new Date().toLocaleString("en-GB")}</span></footer>
   </main>
+${toolbarScript(input, currency)}
 </body>
 </html>`;
 }

@@ -22,7 +22,7 @@ import {
 } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import { auth, db, functions } from "./config";
-import { BUSINESS, CLOUDINARY, STORE } from "@/lib/constants";
+import { BUSINESS, STORE } from "@/lib/constants";
 import { cleanFirestoreData } from "@/lib/firestoreUtils";
 import { deleteStorageObject } from "./storage";
 import {
@@ -1005,8 +1005,10 @@ export function defaultSettings(): FarmSettings {
     promoCode: "",
     promoDiscountPercent: 0,
     heroProductId: "",
-    cloudinaryCloudName: CLOUDINARY.cloudName,
-    cloudinaryUploadPreset: CLOUDINARY.uploadPreset,
+    // Media storage is configured server-side only; the browser never needs
+    // (or receives) any storage cloud identifiers.
+    cloudinaryCloudName: "",
+    cloudinaryUploadPreset: "",
     businessInfo: `${BUSINESS.name} - ${BUSINESS.slogan} - Farm in ${BUSINESS.location}`,
   };
 }

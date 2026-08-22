@@ -1,27 +1,17 @@
 "use client";
 
 import { CLOUDINARY } from "@/lib/constants";
-import type { FarmSettings } from "@/types";
+import { auth } from "@/lib/firebase/config";
 
 /**
- * Cloudinary UNSIGNED uploads for the farm's media and paperwork.
- * Spec:
- *  cloud_name: dhad95cch
- *  upload_preset: branch_farm (unsigned)
- *  signing: unsigned
- *  overwrite: false
- *  use_filename: false
- *  unique_filename: false
- *  use_filename_as_display_name: true
- *  use_asset_folder_as_public_id_prefix: false
- *  resource_type: upload (handled as auto/image/video/raw by API)
- *  folders: NONE - application/database identifies ownership
+ * Media uploads for the farm's photos, videos and paperwork.
+ *
+ * SECURITY: every upload goes through this app's own authenticated server
+ * route (/api/uploads). The browser never receives a cloud name, API key,
+ * API secret or upload preset — the server signs and forwards the file, and
+ * only the final delivery URL comes back. Ownership is identified by the
+ * application/database (recordType + recordId); there are no folders.
  */
-
-export interface CloudinaryConfig {
-  cloudName: string;
-  uploadPreset: string;
-}
 
 export interface CloudinaryUploadResult {
   url: string;
@@ -46,21 +36,6 @@ export interface FileRecordMeta {
   uploadedAt: string;
 }
 
-export function resolveCloudinaryConfig(settings?: Partial<FarmSettings> | null): CloudinaryConfig {
-  const cloudName =
-    (settings?.cloudinaryCloudName || "").trim() ||
-    process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME ||
-    CLOUDINARY.cloudName;
-  // The farm uses one fixed unsigned preset. Do not allow stale deployment
-  // environment values to silently switch upload surfaces to another preset.
-  const preset = CLOUDINARY.uploadPreset;
-  return { cloudName: cloudName || CLOUDINARY.cloudName, uploadPreset: preset };
-}
-
-export function cloudinaryEnabled(config: CloudinaryConfig) {
-  return Boolean(config.cloudName && config.uploadPreset);
-}
-
 export class CloudinaryError extends Error {
   constructor(message: string) {
     super(message);
@@ -68,54 +43,37 @@ export class CloudinaryError extends Error {
   }
 }
 
-function cloudinaryErrorMessage(status: number, detail?: string) {
-  if (status === 400 && /preset/i.test(detail || "")) {
-    return `The Cloudinary upload preset is not accepted. Make sure "${CLOUDINARY.uploadPreset}" exists as an UNSIGNED preset in cloud ${CLOUDINARY.cloudName}.`;
+async function sessionToken(): Promise<string> {
+  try {
+    const current = auth.currentUser;
+    return current ? await current.getIdToken() : "";
+  } catch {
+    return "";
   }
-  if (status === 401 || status === 403) {
-    return "Cloudinary rejected the upload. Check the cloud name and that the preset allows unsigned uploads.";
-  }
-  return detail ? `Cloudinary upload failed: ${detail}` : `Cloudinary upload failed (${status}).`;
 }
 
 /**
- * Core upload - NO FOLDERS. Everything uses same unsigned preset.
- * The preset itself is configured with:
- * overwrite=false, use_filename=false, unique_filename=false,
- * use_filename_as_display_name=true, use_asset_folder_as_public_id_prefix=false
+ * Core upload — posts the file to this app's authenticated server route,
+ * which signs and stores it server-side. NO FOLDERS: the recordType +
+ * recordId stored in Firestore identify what each file belongs to.
  */
 export function uploadToCloudinary(
   file: File,
   options: {
-    config: CloudinaryConfig;
     resourceType?: "image" | "video" | "raw" | "auto";
     recordType?: string;
-    recordId?: string;
     onProgress?: (percent: number) => void;
-  },
+  } = {},
 ): Promise<CloudinaryUploadResult> {
-  const { config, resourceType = "auto", onProgress } = options;
-  if (!cloudinaryEnabled(config)) {
-    return Promise.reject(
-      new CloudinaryError(
-        "Cloudinary is not configured. Set NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=dhad95cch and NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET=branch_farm",
-      ),
-    );
-  }
-
-  const endpoint = `https://api.cloudinary.com/v1_1/${encodeURIComponent(
-    config.cloudName,
-  )}/${resourceType}/upload`;
+  const { resourceType = "auto", onProgress } = options;
 
   return new Promise<CloudinaryUploadResult>((resolve, reject) => {
     const body = new FormData();
-    body.append("upload_preset", config.uploadPreset);
-    // Explicitly DO NOT send folder - spec says NO FOLDERS
-    // Let preset handle display_name, unique_filename etc
     body.append("file", file);
+    body.append("resourceType", resourceType);
 
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", endpoint);
+    xhr.open("POST", CLOUDINARY.uploadEndpoint);
     xhr.upload.onprogress = (event) => {
       if (event.lengthComputable) {
         onProgress?.(Math.round((event.loaded / event.total) * 100));
@@ -124,112 +82,81 @@ export function uploadToCloudinary(
     xhr.onload = () => {
       try {
         const parsed = JSON.parse(xhr.responseText || "{}");
-        if (xhr.status >= 200 && xhr.status < 300 && parsed.secure_url) {
+        if (xhr.status >= 200 && xhr.status < 300 && parsed.url) {
           onProgress?.(100);
           resolve({
-            url: parsed.secure_url as string,
-            publicId: String(parsed.public_id || ""),
+            url: parsed.url as string,
+            publicId: String(parsed.publicId || ""),
             bytes: Number(parsed.bytes || file.size),
             format: String(parsed.format || ""),
-            resourceType: String(parsed.resource_type || resourceType),
-            displayName: String(parsed.display_name || parsed.original_filename || file.name),
-            originalFilename: String(parsed.original_filename || file.name),
+            resourceType: String(parsed.resourceType || resourceType),
+            displayName: String(parsed.displayName || parsed.originalFilename || file.name),
+            originalFilename: String(parsed.originalFilename || file.name),
           });
         } else {
-          reject(
-            new CloudinaryError(
-              cloudinaryErrorMessage(
-                xhr.status,
-                parsed?.error?.message ? String(parsed.error.message) : undefined,
-              ),
-            ),
-          );
+          reject(new CloudinaryError(String(parsed?.error || "Upload failed. Please try again.")));
         }
       } catch {
-        reject(new CloudinaryError(cloudinaryErrorMessage(xhr.status)));
+        reject(new CloudinaryError("The upload response could not be read. Please try again."));
       }
     };
     xhr.onerror = () =>
-      reject(new CloudinaryError("Could not reach Cloudinary. Check your connection and try again."));
+      reject(new CloudinaryError("Could not reach the farm server. Check your connection and try again."));
     xhr.onabort = () => reject(new CloudinaryError("The upload was cancelled."));
-    xhr.send(body);
+    sessionToken().then((token) => {
+      if (token) xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+      xhr.send(body);
+    }, () => reject(new CloudinaryError("Your session could not be verified. Sign in again and retry.")));
   });
 }
 
-// All uploads go through same path - no folders
-export function uploadProductImageToCloudinary(
-  file: File,
-  config: CloudinaryConfig,
-  onProgress?: (percent: number) => void,
-) {
-  return uploadToCloudinary(file, { config, resourceType: "image", recordType: "product", onProgress });
+// Typed upload helpers — all go through the same secure server path, no folders.
+export function uploadProductImageToCloudinary(file: File, onProgress?: (percent: number) => void) {
+  return uploadToCloudinary(file, { resourceType: "image", recordType: "product", onProgress });
 }
 
 export function uploadFarmDocumentToCloudinary(
   file: File,
   docType: "general" | "quotation" | "receipt" | "invoice" | "purchase_order" | "delivery_note" | "contract" | "customer" | "supplier" | "staff" | "animal" | "other",
-  config: CloudinaryConfig,
   onProgress?: (percent: number) => void,
 ) {
-  return uploadToCloudinary(file, { config, resourceType: "auto", recordType: docType, onProgress });
+  return uploadToCloudinary(file, { resourceType: "auto", recordType: docType, onProgress });
 }
 
 export function uploadBusinessDocumentToCloudinary(
   file: File,
   docType: "quotation" | "receipt" | "invoice",
-  config: CloudinaryConfig,
   onProgress?: (percent: number) => void,
 ) {
-  return uploadFarmDocumentToCloudinary(file, docType, config, onProgress);
+  return uploadFarmDocumentToCloudinary(file, docType, onProgress);
 }
 
-export function uploadAnimalPhotoToCloudinary(
-  file: File,
-  config: CloudinaryConfig,
-  onProgress?: (percent: number) => void,
-) {
-  return uploadToCloudinary(file, { config, resourceType: "image", recordType: "animal", onProgress });
+export function uploadAnimalPhotoToCloudinary(file: File, onProgress?: (percent: number) => void) {
+  return uploadToCloudinary(file, { resourceType: "image", recordType: "animal", onProgress });
 }
 
-export function uploadHealthPhotoToCloudinary(
-  file: File,
-  config: CloudinaryConfig,
-  onProgress?: (percent: number) => void,
-) {
-  return uploadToCloudinary(file, { config, resourceType: "image", recordType: "animal_health", onProgress });
+export function uploadHealthPhotoToCloudinary(file: File, onProgress?: (percent: number) => void) {
+  return uploadToCloudinary(file, { resourceType: "image", recordType: "animal_health", onProgress });
 }
 
-export function uploadFarmVideoToCloudinary(
-  file: File,
-  config: CloudinaryConfig,
-  onProgress?: (percent: number) => void,
-) {
-  return uploadToCloudinary(file, { config, resourceType: "video", recordType: "farm_video", onProgress });
+export function uploadFarmVideoToCloudinary(file: File, onProgress?: (percent: number) => void) {
+  return uploadToCloudinary(file, { resourceType: "video", recordType: "farm_video", onProgress });
 }
 
-export function uploadVideoPosterToCloudinary(
-  file: File,
-  config: CloudinaryConfig,
-  onProgress?: (percent: number) => void,
-) {
-  return uploadToCloudinary(file, { config, resourceType: "image", recordType: "farm_photo", onProgress });
+export function uploadVideoPosterToCloudinary(file: File, onProgress?: (percent: number) => void) {
+  return uploadToCloudinary(file, { resourceType: "image", recordType: "farm_photo", onProgress });
 }
 
-export function uploadFarmPhotoToCloudinary(
-  file: File,
-  config: CloudinaryConfig,
-  onProgress?: (percent: number) => void,
-) {
-  return uploadToCloudinary(file, { config, resourceType: "image", recordType: "farm_photo", onProgress });
+export function uploadFarmPhotoToCloudinary(file: File, onProgress?: (percent: number) => void) {
+  return uploadToCloudinary(file, { resourceType: "image", recordType: "farm_photo", onProgress });
 }
 
 export function uploadGenericFileToCloudinary(
   file: File,
-  config: CloudinaryConfig,
   recordType: string,
   onProgress?: (percent: number) => void,
 ) {
-  return uploadToCloudinary(file, { config, resourceType: "auto", recordType, onProgress });
+  return uploadToCloudinary(file, { resourceType: "auto", recordType, onProgress });
 }
 
 export function asStoredCloudinaryAsset(result: CloudinaryUploadResult) {

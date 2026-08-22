@@ -2,10 +2,8 @@
 
 import { CircleAlert, FileText, UploadCloud, X } from "lucide-react";
 import { useState } from "react";
-import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import {
   asStoredCloudinaryAsset,
-  resolveCloudinaryConfig,
   uploadGenericFileToCloudinary,
   uploadHealthPhotoToCloudinary,
 } from "@/lib/cloudinary";
@@ -86,7 +84,6 @@ export function HealthRecordForm({
   const [attachments, setAttachments] = useState<OperationAttachment[]>(defaults?.attachments || []);
   const [uploadingDocument, setUploadingDocument] = useState(false);
   const [error, setError] = useState("");
-  const { settings } = useStoreConfig();
 
   const update = (name: string, value: string) => setForm((current) => ({ ...current, [name]: value }));
   const selectedAnimal = animals.find((animal) => animal.id === form.animalId || animal.animalId === form.animalId);
@@ -98,7 +95,7 @@ export function HealthRecordForm({
     setUploadingDocument(true);
     setError("");
     try {
-      const result = await uploadGenericFileToCloudinary(file, resolveCloudinaryConfig(settings), "animal_health_document");
+      const result = await uploadGenericFileToCloudinary(file, "animal_health_document");
       setAttachments((current) => [...current, {
         name: file.name,
         url: result.url,
@@ -214,7 +211,7 @@ export function HealthRecordForm({
           label="Health photo"
           value={photo.url}
           path={photo.path}
-          upload={async (file, onProgress) => asStoredCloudinaryAsset(await uploadHealthPhotoToCloudinary(file, resolveCloudinaryConfig(settings), onProgress))}
+          upload={async (file, onProgress) => asStoredCloudinaryAsset(await uploadHealthPhotoToCloudinary(file, onProgress))}
           onChange={(result) => setPhoto({ url: result.url, path: result.path })}
           hint="Attach a clear photo of the animal, medicine label or visible symptom."
         />

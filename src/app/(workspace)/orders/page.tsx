@@ -75,7 +75,7 @@ export default function OrdersPage() {
       {loading ? <Loading label="Loading orders…" /> : visible.length ? (
         <div className="operational-order-grid">
           {visible.map((order) => (
-            <article className="operational-order-card" key={order.id}>
+            <Link href={`/orders/${order.id}`} className="operational-order-card operational-order-card-link" key={order.id} aria-label={`Open order ${order.reference}`}>
               <header>
                 <div><small>Order Number</small><h3>{order.reference}</h3></div>
                 <StatusBadge status={order.status} />
@@ -101,10 +101,10 @@ export default function OrdersPage() {
 
               {order.notes && <p style={{ marginTop: 10, fontSize: ".7rem", color: "var(--muted)" }}>Notes: {order.notes}</p>}
 
-              <Link href={`/orders/${order.id}`} style={{ marginTop: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, minHeight: 36, color: "var(--green-700)", background: "var(--green-50)", borderRadius: 7, fontSize: ".7rem", fontWeight: 750 }}>
-                View & update · Receipt · Invoice <ArrowRight size={15} />
-              </Link>
-            </article>
+              <span style={{ marginTop: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, minHeight: 36, color: "var(--green-700)", background: "var(--green-50)", borderRadius: 7, fontSize: ".7rem", fontWeight: 750 }}>
+                View order · update · receipt · invoice <ArrowRight size={15} />
+              </span>
+            </Link>
           ))}
         </div>
       ) : orders.length ? (

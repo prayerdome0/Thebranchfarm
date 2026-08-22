@@ -1,7 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { BUSINESS, ANIMAL_STATUS_LABELS, CLOUDINARY, HEALTH_STATUS_LABELS } from "../src/lib/constants";
-import { resolveCloudinaryConfig } from "../src/lib/cloudinary";
 import { animalSchema, healthRecordSchema, registerSchema } from "../src/lib/validation";
 import { documentCategory, friendlyError, money } from "../src/lib/utils";
 
@@ -18,14 +17,12 @@ test("currency formatting uses Eswatini E", () => {
   assert.equal(money(undefined), "—");
 });
 
-test("every upload uses the fixed unsigned branch_farm Cloudinary preset", () => {
-  const config = resolveCloudinaryConfig({
-    cloudinaryCloudName: "the-branch-farm",
-    cloudinaryUploadPreset: "must-not-be-used",
-  });
-  assert.equal(config.uploadPreset, "branch_farm");
-  assert.equal(CLOUDINARY.uploadPreset, "branch_farm");
-  assert.equal(CLOUDINARY.cloudName, "dhad95cch");
+test("media uploads expose no cloud identifiers to the browser", () => {
+  // Uploads are proxied through this app's own authenticated server route;
+  // no cloud name, key, secret or preset may live in client constants.
+  assert.equal(CLOUDINARY.uploadEndpoint, "/api/uploads");
+  assert.equal("cloudName" in CLOUDINARY, false);
+  assert.equal("uploadPreset" in CLOUDINARY, false);
   assert.deepEqual(Object.keys(CLOUDINARY.folders), []);
 });
 
