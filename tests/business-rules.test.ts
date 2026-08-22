@@ -43,13 +43,42 @@ test("currency formatting uses Eswatini E", () => {
   assert.equal(money(undefined), "—");
 });
 
-test("media uploads expose no cloud identifiers to the browser", () => {
-  // Uploads are proxied through this app's own authenticated server route;
-  // no cloud name, key, secret or preset may live in client constants.
+test("media uploads keep every secret server-side", () => {
+  // Uploads are proxied through this app's own authenticated server route
+  // first; only the PUBLIC unsigned-preset identifiers (cloud name + preset,
+  // same trust level as the Firebase web config) may live in client
+  // constants as the automatic fallback. No API key, API secret or signing
+  // secret may ever reach the browser.
   assert.equal(CLOUDINARY.uploadEndpoint, "/api/uploads");
   assert.equal("cloudName" in CLOUDINARY, false);
   assert.equal("uploadPreset" in CLOUDINARY, false);
+  assert.equal("apiKey" in CLOUDINARY, false);
+  assert.equal("apiSecret" in CLOUDINARY, false);
+  assert.equal(CLOUDINARY.fallbackUnsigned.cloudName, "dhad95cch");
+  assert.equal(CLOUDINARY.fallbackUnsigned.uploadPreset, "branch_farm");
+  assert.equal("apiKey" in CLOUDINARY.fallbackUnsigned, false);
+  assert.equal("apiSecret" in CLOUDINARY.fallbackUnsigned, false);
   assert.deepEqual(Object.keys(CLOUDINARY.folders), []);
+});
+
+test("upload errors surface the server's real verdict instead of a generic apology", () => {
+  const uploadError = Object.assign(new Error("That file is too large. Upload files up to 200 MB."), {
+    name: "CloudinaryError",
+  });
+  assert.equal(friendlyError(uploadError), "That file is too large. Upload files up to 200 MB.");
+
+  const apiError = new Error("Media uploads are not configured on the server. Set CLOUDINARY_URL to enable uploads.");
+  assert.equal(friendlyError(apiError), "Media uploads are not configured on the server. Set CLOUDINARY_URL to enable uploads.");
+
+  // Firebase internals without a mapped code keep the generic fallback.
+  const firebaseInternal = Object.assign(new Error("Firebase: Error (auth/something-new)"), {
+    code: "auth/something-new",
+    name: "FirebaseError",
+  });
+  assert.equal(friendlyError(firebaseInternal), "Something went wrong. Please try again.");
+
+  // Nothing to show at all → generic fallback.
+  assert.equal(friendlyError(null), "Something went wrong. Please try again.");
 });
 
 test("an animal record accepts a full purchase profile", () => {

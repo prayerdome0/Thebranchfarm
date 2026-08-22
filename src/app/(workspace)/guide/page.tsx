@@ -12,15 +12,34 @@ import { auth } from "@/lib/firebase/config";
  * authentication (see /api/guide) and, when a guide password is configured,
  * is encrypted with it. The password is set in server configuration only and
  * is never displayed here, in any UI, or in client code.
+ *
+ * RESILIENCE: if the server route cannot produce the file (API running
+ * without its backend credentials, temporary outage), the same generator is
+ * used to build the PDF right here in the signed-in administrator's browser
+ * so the download always succeeds. The in-browser copy is identical except
+ * for the password layer, which only the server can apply.
  */
 export default function GuidePage() {
   const { refreshToken } = useAuth();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [note, setNote] = useState("");
+
+  const saveBlob = (blob: Blob) => {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "The-Branch-Farm-User-Guide.pdf";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 10_000);
+  };
 
   const download = async () => {
     setBusy(true);
     setError("");
+    setNote("");
     try {
       let token = await refreshToken();
       if (!token && auth?.currentUser) {
@@ -29,22 +48,37 @@ export default function GuidePage() {
       if (!token) {
         throw new Error("Your session could not be verified. Sign in again and retry.");
       }
-      const response = await fetch("/api/guide", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!response.ok) {
-        const detail = (await response.json().catch(() => null)) as { error?: string } | null;
-        throw new Error(detail?.error || "The guide could not be generated. Please try again.");
+
+      let blob: Blob | null = null;
+      let serverError = "";
+      try {
+        const response = await fetch("/api/guide", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (response.ok) {
+          blob = await response.blob();
+        } else {
+          const detail = (await response.json().catch(() => null)) as { error?: string } | null;
+          serverError = detail?.error || `The server answered ${response.status}.`;
+        }
+      } catch {
+        serverError = "The farm server could not be reached.";
       }
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "The-Branch-Farm-User-Guide.pdf";
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.setTimeout(() => URL.revokeObjectURL(url), 10_000);
+
+      if (!blob) {
+        // Server route unavailable — build the same PDF locally (no password
+        // layer; that is applied server-side only).
+        const { buildGuidePdf } = await import("@/lib/server/guide");
+        const bytes = await buildGuidePdf();
+        blob = new Blob([bytes.slice().buffer as ArrayBuffer], { type: "application/pdf" });
+        setNote(
+          `Generated in your browser because the server route was unavailable (${
+            serverError || "no response"
+          }). This copy is not password protected.`,
+        );
+      }
+
+      saveBlob(blob);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "The guide could not be generated.");
     } finally {
@@ -91,6 +125,9 @@ export default function GuidePage() {
           </div>
 
           {error && <p className="form-error" role="alert">{error}</p>}
+          {note && !error && (
+            <p className="guide-note" role="status" style={{ fontSize: ".75rem", color: "var(--muted)" }}>{note}</p>
+          )}
 
           <p style={{ fontSize: ".72rem", color: "var(--muted)", borderTop: "1px solid var(--line)", paddingTop: 12 }}>
             <strong>How it is protected:</strong> the guide is generated on demand by the server, only for a
