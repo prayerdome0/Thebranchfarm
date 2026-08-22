@@ -1,4 +1,5 @@
 import { BUSINESS } from "@/lib/constants";
+import { LOGO_DATA_URL } from "@/lib/logoData";
 
 function escapeHtml(value: unknown) {
   return String(value ?? "")
@@ -167,7 +168,7 @@ export function renderPrintableDocument(input: PrintableDocumentInput) {
   <main class="sheet">
     <header>
       <div class="brand">
-        <img src="/logo.png" alt="${escapeHtml(BUSINESS.name)} logo" style="width:72px;height:72px;object-fit:contain;float:left;margin:0 12px 4px 0" />
+        <img src="${LOGO_DATA_URL}" alt="${escapeHtml(BUSINESS.name)} logo" style="width:72px;height:72px;object-fit:contain;float:left;margin:0 12px 4px 0" />
         <h1>${escapeHtml(BUSINESS.name)}</h1>
         <div class="slogan">${escapeHtml(BUSINESS.slogan)}</div>
         <p>${escapeHtml(BUSINESS.fullLocation || BUSINESS.location)} · ${escapeHtml(BUSINESS.phoneDisplay)}</p>

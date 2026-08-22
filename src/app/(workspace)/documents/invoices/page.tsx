@@ -1,132 +1,249 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Plus, FileText, Download, Upload, X, CircleAlert } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Plus, FileText, Download, Eye, Printer, Search, X, CircleAlert } from "lucide-react";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Loading } from "@/components/ui/Loading";
 import { useToast } from "@/contexts/ToastContext";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { watchInvoices, createInvoice } from "@/lib/firebase/data";
-import { resolveCloudinaryConfig, uploadGenericFileToCloudinary } from "@/lib/cloudinary";
+import { buildInvoiceDocumentInput, generateInvoiceNumber } from "@/lib/documents";
+import { generateAndStoreDocument, openPrintableDocument } from "@/lib/documentFile";
 import { BUSINESS, INVOICE_STATUSES } from "@/lib/constants";
+import { formatDisplayDate } from "@/lib/utils";
 import type { Invoice } from "@/types";
 
-export default function InvoicesPage() {
-  const { showToast } = useToast();
-  const { settings, formatMoney } = useStoreConfig();
-  const [list, setList] = useState<Invoice[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-  const [file, setFile] = useState<File | null>(null);
-  const [form, setForm] = useState({
-    invoiceNumber: "",
+interface InvoiceForm {
+  invoiceNumber: string;
+  customer: string;
+  date: string;
+  notes: string;
+  discount: string;
+  delivery: string;
+  paymentStatus: Invoice["paymentStatus"];
+  items: { name: string; quantity: number; price: number; unit: string }[];
+}
+
+function today() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function errorMessage(err: unknown, fallback: string) {
+  return err instanceof Error && err.message ? err.message : fallback;
+}
+
+function blankForm(invoiceNumber = ""): InvoiceForm {
+  return {
+    invoiceNumber,
     customer: "",
-    date: new Date().toISOString().slice(0,10),
+    date: today(),
     notes: "",
     discount: "0",
     delivery: "0",
-    paymentStatus: "Unpaid" as Invoice["paymentStatus"],
+    paymentStatus: "Unpaid",
     items: [{ name: "", quantity: 1, price: 0, unit: "each" }],
-  });
+  };
+}
+
+export default function InvoicesPage() {
+  const { showToast } = useToast();
+  const { settings, formatMoney, currency } = useStoreConfig();
+  const [list, setList] = useState<Invoice[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [showForm, setShowForm] = useState(false);
+  const [viewing, setViewing] = useState<Invoice | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [form, setForm] = useState<InvoiceForm>(() => blankForm());
 
   useEffect(() => {
     const stop = watchInvoices((l) => { setList(l); setLoading(false); });
     return () => stop();
   }, []);
 
+  const visible = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    if (!term) return list;
+    return list.filter((inv) =>
+      [inv.invoiceNumber, inv.customer, inv.paymentStatus, inv.notes]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(term)),
+    );
+  }, [list, search]);
+
   const subtotal = form.items.reduce((s, it) => s + (Number(it.quantity) || 0) * (Number(it.price) || 0), 0);
   const total = subtotal - (Number(form.discount) || 0) + (Number(form.delivery) || 0);
 
-  const updateItem = (idx: number, key: string, value: any) => {
+  const updateItem = (idx: number, key: "name" | "quantity" | "price", value: string) => {
     setForm((f) => {
-      const items = [...f.items];
-      (items[idx] as any)[key] = value;
+      const items = f.items.map((it, i) => {
+        if (i !== idx) return it;
+        if (key === "name") return { ...it, name: value };
+        return { ...it, [key]: Number(value) };
+      });
       return { ...f, items };
     });
   };
 
+  const openNew = () => {
+    setForm(blankForm(generateInvoiceNumber(list.map((inv) => inv.invoiceNumber))));
+    setError("");
+    setShowForm(true);
+  };
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.customer || !form.invoiceNumber) { setError("Enter invoice number and customer"); return; }
+    setError("");
+    const items = form.items.filter((it) => it.name.trim());
+    if (!form.invoiceNumber.trim()) {
+      setError("Enter an invoice number (or keep the generated one).");
+      return;
+    }
+    if (!form.customer.trim()) {
+      setError("Enter the customer name.");
+      return;
+    }
+    if (!items.length) {
+      setError("Add at least one item with a name.");
+      return;
+    }
+
     setSaving(true);
     try {
-      let fileUrl = "";
-      let publicId = "";
-      if (file) {
-        const config = resolveCloudinaryConfig(settings);
-        const uploaded = await uploadGenericFileToCloudinary(file, config, "invoice");
-        fileUrl = uploaded.url;
-        publicId = uploaded.publicId;
-      }
-      await createInvoice({
-        invoiceNumber: form.invoiceNumber,
-        customer: form.customer,
-        date: form.date,
-        items: form.items,
+      const base: Omit<Invoice, "id" | "createdBy" | "createdByName" | "createdAt" | "updatedBy" | "updatedByName" | "updatedAt" | "archived"> = {
+        invoiceNumber: form.invoiceNumber.trim(),
+        customer: form.customer.trim(),
+        date: form.date || today(),
+        items,
         subtotal,
         discount: Number(form.discount) || 0,
         delivery: Number(form.delivery) || 0,
         total,
         paymentStatus: form.paymentStatus,
-        notes: form.notes,
-        fileUrl,
-        publicId,
-      } as any);
-      showToast("Invoice saved", "success");
+        notes: form.notes.trim(),
+      };
+
+      // Render the professional invoice (with the real logo) and store it in
+      // Cloudinary — URL + public ID are recorded in Firestore with the invoice.
+      const generated = await generateAndStoreDocument(
+        "invoice",
+        {
+          ...buildInvoiceDocumentInput(base as Invoice, currency),
+          backHref: "/documents/invoices",
+          backLabel: "Back to invoices",
+        },
+        settings,
+      );
+
+      const payload = {
+        ...base,
+        fileUrl: generated?.fileUrl || "",
+        publicId: generated?.publicId || "",
+      };
+
+      await createInvoice(payload);
+      showToast(`Invoice ${payload.invoiceNumber} saved`, "success");
       setShowForm(false);
-      setForm({ invoiceNumber: "", customer: "", date: new Date().toISOString().slice(0,10), notes: "", discount: "0", delivery: "0", paymentStatus: "Unpaid", items: [{ name: "", quantity: 1, price: 0, unit: "each" }] });
-      setFile(null);
-    } catch (err: any) {
-      setError(err?.message || "Failed");
+      setForm(blankForm());
+    } catch (err) {
+      setError(errorMessage(err, "Failed to save the invoice."));
     } finally {
       setSaving(false);
     }
   };
 
+  const printInvoice = (inv: Invoice) => {
+    openPrintableDocument({
+      ...buildInvoiceDocumentInput(inv, currency),
+      backHref: "/documents/invoices",
+      backLabel: "Back to invoices",
+    });
+  };
+
+  const statusClass = (status: string) => status.toLowerCase().replace(/\s+/g, "-");
+
   return (
     <div className="dashboard-stack">
       <section className="dashboard-section-title">
-        <div><h2>Invoices</h2><p>Invoice Number, Customer, Date, Products/services, Quantity, Price, Subtotal, Discount, Delivery, Total, Payment status, Notes. Statuses: Unpaid, Partially Paid, Paid, Cancelled. File stored in Cloudinary.</p></div>
-        <button className="button button-primary" onClick={() => setShowForm(true)}><Plus size={18} /> New Invoice</button>
+        <div>
+          <h2>Invoices</h2>
+          <p>
+            Invoice Number, Customer, Date, Products/services, Quantity, Price, Subtotal,
+            Discount, Delivery, Total, Payment status, Notes. Every saved invoice is rendered
+            as a professional document (with the farm logo) and stored in Cloudinary so it can
+            be downloaded or printed.
+          </p>
+        </div>
+        <button className="button button-primary" onClick={openNew}><Plus size={18} /> New Invoice</button>
       </section>
 
-      {loading ? <Loading label="Loading invoices…" /> : list.length ? (
+      <div className="farm-toolbar">
+        <div className="search-field">
+          <Search size={17} />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by number, customer, status…"
+            aria-label="Search invoices"
+          />
+        </div>
+      </div>
+
+      {loading ? <Loading label="Loading invoices…" /> : visible.length ? (
         <div className="dashboard-panel people-panel">
-          <div className="admin-product-table" style={{ minWidth: 800 }}>
-            <div className="table-head" style={{ gridTemplateColumns: "1fr 1.2fr .7fr .6fr .7fr auto" }}>
+          <div className="admin-product-table" style={{ minWidth: 820 }}>
+            <div className="table-head" style={{ gridTemplateColumns: "1fr 1.2fr .8fr .7fr .7fr auto" }}>
               <span>Number</span><span>Customer</span><span>Date</span><span>Status</span><span>Total</span><span />
             </div>
-            {list.map((inv) => (
-              <article key={inv.id} style={{ gridTemplateColumns: "1fr 1.2fr .7fr .6fr .7fr auto" }}>
-                <span><strong>{inv.invoiceNumber}</strong></span>
+            {visible.map((inv) => (
+              <article key={inv.id} style={{ gridTemplateColumns: "1fr 1.2fr .8fr .7fr .7fr auto" }}>
+                <span>
+                  <strong>{inv.invoiceNumber}</strong>
+                  <small>{inv.items?.length || 0} items</small>
+                </span>
                 <span>{inv.customer}</span>
-                <span>{inv.date}</span>
-                <span><span className={`status-badge status-${inv.paymentStatus.toLowerCase().replace(" ", "-")}`}>{inv.paymentStatus}</span></span>
+                <span>{formatDisplayDate(inv.date)}</span>
+                <span><span className={`status-badge status-${statusClass(inv.paymentStatus)}`}>{inv.paymentStatus}</span></span>
                 <span>{formatMoney(inv.total)}</span>
-                <span>{inv.fileUrl && <a className="button button-secondary button-small" href={inv.fileUrl} download={`${inv.invoiceNumber}.pdf`} target="_blank" rel="noreferrer"><Download size={14} /> Download</a>}</span>
+                <span className="row-actions">
+                  <button className="icon-button" title="View" onClick={() => setViewing(inv)}>
+                    <Eye size={16} />
+                  </button>
+                  <button className="icon-button" title="Print / Save PDF" onClick={() => printInvoice(inv)}>
+                    <Printer size={16} />
+                  </button>
+                  {inv.fileUrl ? (
+                    <a className="icon-button" title="Download document (Cloudinary)" href={inv.fileUrl} target="_blank" rel="noreferrer">
+                      <Download size={16} />
+                    </a>
+                  ) : (
+                    <button className="icon-button" title="Document not generated yet — open printable view" onClick={() => printInvoice(inv)}>
+                      <Download size={16} />
+                    </button>
+                  )}
+                </span>
               </article>
             ))}
           </div>
         </div>
       ) : (
-        <EmptyState icon={FileText} title="No invoices" description="Create/manage invoices with payment status." />
+        <EmptyState icon={FileText} title="No invoices" description="Create an invoice: add the customer and items, set discount and delivery — the document is generated with the farm logo and can be downloaded or printed." />
       )}
 
       {showForm && (
         <div className="modal-layer">
           <button className="modal-scrim" onClick={() => setShowForm(false)} />
-          <div className="record-modal">
+          <div className="record-modal wide-modal">
             <header><div><span className="eyebrow">{BUSINESS.name}</span><h2>New Invoice</h2></div><button className="icon-button" onClick={() => setShowForm(false)}><X size={18} /></button></header>
             <form onSubmit={submit} style={{ padding: 20, display: "grid", gap: 16 }}>
               <div className="form-grid">
-                <label className="field"><span>Invoice Number *</span><input value={form.invoiceNumber} onChange={(e) => setForm({ ...form, invoiceNumber: e.target.value })} placeholder="INV-00021" /></label>
+                <label className="field"><span>Invoice Number *</span><input value={form.invoiceNumber} onChange={(e) => setForm({ ...form, invoiceNumber: e.target.value })} placeholder="INV-2026-0001" /></label>
                 <label className="field"><span>Date *</span><input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} /></label>
               </div>
               <label className="field"><span>Customer *</span><input value={form.customer} onChange={(e) => setForm({ ...form, customer: e.target.value })} /></label>
               <label className="field"><span>Payment Status</span>
-                <select value={form.paymentStatus} onChange={(e) => setForm({ ...form, paymentStatus: e.target.value as any })}>
+                <select value={form.paymentStatus} onChange={(e) => setForm({ ...form, paymentStatus: e.target.value as Invoice["paymentStatus"] })}>
                   {INVOICE_STATUSES.map((s) => (<option key={s} value={s}>{s}</option>))}
                 </select>
               </label>
@@ -151,17 +268,82 @@ export default function InvoicesPage() {
 
               <label className="field"><span>Notes</span><textarea rows={3} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></label>
 
-              <label className="field"><span>Invoice file — Cloudinary no folders</span>
-                <span className="button button-secondary file-button"><Upload size={16} /> {file ? file.name : "Choose file"}<input type="file" accept=".pdf,image/*" onChange={(e) => setFile(e.target.files?.[0] || null)} /></span>
-              </label>
-
               {error && <div className="form-alert error"><CircleAlert size={16} /> {error}</div>}
 
               <div className="modal-actions">
                 <button type="button" className="button button-ghost" onClick={() => setShowForm(false)}>Cancel</button>
-                <button className="button button-primary" disabled={saving}>{saving ? "Saving…" : "Save"}</button>
+                <button className="button button-primary" disabled={saving}>{saving ? "Saving…" : "Save & Generate"}</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {viewing && (
+        <div className="modal-layer">
+          <button className="modal-scrim" onClick={() => setViewing(null)} />
+          <div className="record-modal wide-modal">
+            <header>
+              <div>
+                <span className="eyebrow">{BUSINESS.name}</span>
+                <h2>{viewing.invoiceNumber}</h2>
+                <p style={{ margin: 0, fontSize: ".72rem", color: "var(--muted)" }}>
+                  {viewing.customer} · {formatDisplayDate(viewing.date)}
+                </p>
+              </div>
+              <button className="icon-button" onClick={() => setViewing(null)}>
+                <X size={18} />
+              </button>
+            </header>
+            <div style={{ padding: 20, display: "grid", gap: 16 }}>
+              <div className="doc-view-status">
+                <span className={`status-badge status-${statusClass(viewing.paymentStatus)}`}>{viewing.paymentStatus}</span>
+              </div>
+
+              {(viewing.items || []).length > 0 && (
+                <table className="doc-view-table">
+                  <thead>
+                    <tr><th>Item</th><th>Qty</th><th>Price</th><th>Amount</th></tr>
+                  </thead>
+                  <tbody>
+                    {(viewing.items || []).map((item, i) => (
+                      <tr key={i}>
+                        <td>{item.name}{item.unit ? <small>({item.unit})</small> : null}</td>
+                        <td>{item.quantity}</td>
+                        <td>{formatMoney(item.price)}</td>
+                        <td>{formatMoney(item.price * item.quantity)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+
+              <div className="doc-totals">
+                <div><span>Subtotal</span><strong>{formatMoney(viewing.subtotal || 0)}</strong></div>
+                {Number(viewing.discount) > 0 && (
+                  <div><span>Discount</span><strong>&minus;{formatMoney(viewing.discount)}</strong></div>
+                )}
+                {Number(viewing.delivery) > 0 && (
+                  <div><span>Delivery</span><strong>{formatMoney(viewing.delivery)}</strong></div>
+                )}
+                <div className="grand"><span>Total</span><strong>{formatMoney(viewing.total || 0)}</strong></div>
+              </div>
+
+              {viewing.notes && (
+                <p style={{ fontSize: ".8rem", margin: 0 }}><strong>Notes:</strong> {viewing.notes}</p>
+              )}
+
+              <div className="modal-actions">
+                {viewing.fileUrl && (
+                  <a className="button button-secondary button-small" href={viewing.fileUrl} target="_blank" rel="noreferrer">
+                    <Download size={15} /> Download
+                  </a>
+                )}
+                <button className="button button-secondary button-small" onClick={() => printInvoice(viewing)}>
+                  <Printer size={15} /> Print / PDF
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

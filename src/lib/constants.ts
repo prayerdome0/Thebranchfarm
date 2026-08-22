@@ -250,6 +250,7 @@ export const QUOTATION_STATUS_FLOW: Record<string, string[]> = {
 /** Numbering prefixes for professional document numbers (PREFIX-YYYY-NNNN). */
 export const QUOTATION_NUMBER_PREFIX = "QF";
 export const RECEIPT_NUMBER_PREFIX = "RCP";
+export const INVOICE_NUMBER_PREFIX = "INV";
 
 export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
   unpaid: "Unpaid",

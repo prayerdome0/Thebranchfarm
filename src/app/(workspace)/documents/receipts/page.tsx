@@ -774,7 +774,7 @@ export default function ReceiptsPage() {
                       <tr key={i}>
                         <td>
                           {item.name}
-                          {item.unit ? ` <small>({item.unit})</small>` : ""}
+                          {item.unit ? <small>({item.unit})</small> : null}
                         </td>
                         <td>{item.quantity}</td>
                         <td>{formatMoney(item.price)}</td>
