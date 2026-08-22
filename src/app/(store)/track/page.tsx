@@ -2,10 +2,10 @@
 
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
-import { CircleAlert, PackageSearch, Search, Truck, MapPin, RefreshCcw } from "lucide-react";
-import { FULFILLMENT_LABELS, ORDER_STATUS_FLOW, ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS, BUSINESS } from "@/lib/constants";
+import { CircleAlert, PackageSearch, Search, ShieldCheck, Truck, RefreshCcw } from "lucide-react";
+import { FULFILLMENT_LABELS, ORDER_STATUS_FLOW, ORDER_STATUS_LABELS, BUSINESS } from "@/lib/constants";
 import { lookupOrderByReference, type LookupOrderResult } from "@/lib/firebase/data";
-import { formatDate, money } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 import type { Order } from "@/types";
 
 export default function TrackPage() {
@@ -70,7 +70,7 @@ function TrackContent() {
         <div className="container page-hero-inner">
           <span className="eyebrow eyebrow-light">{BUSINESS.name} · {BUSINESS.slogan} — My Orders</span>
           <h1>Order tracking</h1>
-          <p>Enter order number to see status: New, Confirmed, Preparing, Out for Delivery, Delivered, Cancelled. Delivery location shown. {BUSINESS.deliveryFree}</p>
+          <p>Enter order number to see status: New, Confirmed, Preparing, Out for Delivery, Delivered, Cancelled. {BUSINESS.deliveryFree}</p>
         </div>
       </section>
 
@@ -90,8 +90,8 @@ function TrackContent() {
               {!order && !result && (
                 <div className="track-placeholder">
                   <span><Truck size={30} /></span>
-                  <h2>Track any order</h2>
-                  <p>Enter reference from confirmation to see progress, delivery location, payment status, notes.</p>
+                  <h2>Track an order</h2>
+                  <p>Enter reference from your confirmation to see its progress. For privacy, tracking shows status only.</p>
                 </div>
               )}
               {result?.status === "not-found" && (
@@ -126,7 +126,7 @@ function OrderTimeline({ order }: { order: Order }) {
   return (
     <div className="order-tracking-card">
       <div className="order-track-head">
-        <div><small>Order Number</small><h2>{order.reference}</h2><p>Placed {formatDate(order.createdAt, true)} · {[order.customer.name, order.customer.phone].filter(Boolean).join(" · ")}</p><p style={{ marginTop: 4 }}><MapPin size={12} /> Delivery Location: {order.deliveryAddress || order.deliveryLocation || FULFILLMENT_LABELS[order.fulfillment]}</p></div>
+        <div><small>Order Number</small><h2>{order.reference}</h2><p>Placed {formatDate(order.createdAt, true)} · {FULFILLMENT_LABELS[order.fulfillment]}</p></div>
         <span className={`status-badge status-${order.status}`}>{ORDER_STATUS_LABELS[order.status]}</span>
       </div>
       {cancelled && <div className="cancelled-order">Cancelled. Contact farm.</div>}
@@ -137,11 +137,7 @@ function OrderTimeline({ order }: { order: Order }) {
           ))}
         </ol>
       )}
-      <div className="track-order-details">
-        <div><span>Products · Quantity</span><ul>{order.items.map((item) => (<li key={item.productId}><span>{item.name} × {item.quantity} ({item.unit})</span><span>{money(item.price * item.quantity)}</span></li>))}</ul><p>{FULFILLMENT_LABELS[order.fulfillment]} — {order.deliveryAddress || "The Branch Farm"}</p></div>
-        <div><span>Customer & Payment</span><ul><li><small>Customer</small><small>{order.customer.name || "—"}</small></li>{order.customer.phone && <li><small>Phone</small><small>{order.customer.phone}</small></li>}<li><small>Payment</small><small>{PAYMENT_STATUS_LABELS[order.paymentStatus] || order.paymentStatus}</small></li><li><small>Total</small><small>{money(order.total)}</small></li></ul>{order.notes && <p style={{ marginTop: 8, fontSize: ".75rem" }}>Notes: {order.notes}</p>}</div>
-      </div>
-      <div className="track-total"><span>Total · Subtotal + Delivery</span><strong>{money(order.total)}</strong></div>
+      <div className="track-privacy-note"><ShieldCheck size={16} /> For your privacy, tracking shows status only. Your full order details are in your confirmation.</div>
     </div>
   );
 }

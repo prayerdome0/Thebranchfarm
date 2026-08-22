@@ -28,7 +28,13 @@ export default function OrderSuccessPage() {
     lookupOrderByReference(reference).then((result) => {
       if (cancelled) return;
       if (result.status === "found") {
-        setOrder(result.order);
+        // Public tracking returns status only; keep the customer's full local
+        // copy and just refresh the live status from the lookup.
+        setOrder((prev) => {
+          const local = prev || getLocalOrder(reference);
+          if (local) return { ...local, status: result.order.status, updatedAt: result.order.updatedAt ?? local.updatedAt };
+          return result.order;
+        });
         setLookup(null);
       } else if (!getLocalOrder(reference)) {
         setOrder(null);
@@ -47,7 +53,11 @@ export default function OrderSuccessPage() {
     setLookup(null);
     lookupOrderByReference(reference).then((result) => {
       if (result.status === "found") {
-        setOrder(result.order);
+        setOrder((prev) => {
+          const local = prev || getLocalOrder(reference);
+          if (local) return { ...local, status: result.order.status, updatedAt: result.order.updatedAt ?? local.updatedAt };
+          return result.order;
+        });
         setLookup(null);
       } else {
         setOrder(null);

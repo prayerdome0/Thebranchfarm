@@ -1267,20 +1267,9 @@ export async function updateOrder(
 export interface TrackOrderPayload {
   reference: string;
   status: Order["status"];
-  paymentStatus: Order["paymentStatus"];
-  total: number;
-  subtotal: number;
-  deliveryFee: number;
   fulfillment: Order["fulfillment"];
-  items: { name: string; quantity: number; unit?: string; price?: number }[];
-  customerName?: string;
-  deliveryAddress?: string;
-  deliveryLocation?: string;
-  notes?: string;
-  paymentMethod?: string;
   createdAt?: string | null;
   updatedAt?: string | null;
-  receiptUrl?: string;
 }
 
 export type LookupOrderResult =
@@ -1295,11 +1284,12 @@ function isTrackPayload(value: unknown): value is TrackOrderPayload {
 /**
  * Public order lookup by TB-XXXXXX reference.
  *
- * Guests cannot read the `orders` collection from the browser (Firestore rules
- * limit it to staff), so the live lookup goes through the `trackOrder` Cloud
- * Function, which returns only the details a customer may see. When the
- * backend is unreachable it falls back to the local copy of orders placed on
- * this device and to the legacy Firestore path (staff sessions / demo mode).
+ * Privacy is strict: anyone may hold or guess a reference, so the live lookup
+ * returns ONLY the order's public progress (reference, status, fulfillment,
+ * dates) — never the customer's name, phone, email, delivery address, items,
+ * prices, totals or payment details. When the backend is unreachable it falls
+ * back to the local copy of orders placed on THIS device (i.e. the customer's
+ * own orders) so a customer still sees their own order.
  */
 export async function lookupOrderByReference(reference: string): Promise<LookupOrderResult> {
   const normalized = reference.trim().toUpperCase();
@@ -1308,27 +1298,22 @@ export async function lookupOrderByReference(reference: string): Promise<LookupO
     const callable = httpsCallable<{ reference: string }, TrackOrderPayload>(functions, "trackOrder");
     const response = await callable({ reference: normalized });
     if (isTrackPayload(response.data)) {
+      // Public-safe order object: no customer details, items or payment.
       const order: Order = {
         id: response.data.reference,
         reference: response.data.reference,
         status: response.data.status,
-        paymentStatus: response.data.paymentStatus,
-        total: response.data.total,
-        subtotal: response.data.subtotal,
-        deliveryFee: response.data.deliveryFee,
+        paymentStatus: "unpaid",
+        total: 0,
+        subtotal: 0,
+        deliveryFee: 0,
         fulfillment: response.data.fulfillment,
-        items: (response.data.items || []).map((item, index) => ({
-          productId: `track-${index}`,
-          name: item.name,
-          unit: item.unit || "",
-          price: item.price ?? 0,
-          quantity: item.quantity,
-        })),
-        customer: { name: response.data.customerName || "", phone: "", email: undefined },
-        deliveryAddress: response.data.deliveryAddress,
-        deliveryLocation: response.data.deliveryLocation,
-        notes: response.data.notes,
-        paymentMethod: response.data.paymentMethod,
+        items: [],
+        customer: { name: "", phone: "", email: undefined },
+        deliveryAddress: undefined,
+        deliveryLocation: undefined,
+        notes: undefined,
+        paymentMethod: undefined,
         createdAt: response.data.createdAt ?? null,
         updatedAt: response.data.updatedAt ?? null,
       };
