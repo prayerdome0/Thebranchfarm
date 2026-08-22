@@ -8,12 +8,14 @@ import {
   Eye,
   FileText,
   Pencil,
+  PenLine,
   Plus,
   Printer,
   Search,
   X,
 } from "lucide-react";
 import { ItemsEditor } from "@/components/documents/ItemsEditor";
+import { SignaturePad } from "@/components/store/SignaturePad";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Loading } from "@/components/ui/Loading";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -66,6 +68,8 @@ interface QuotationForm {
   taxRate: string;
   notes: string;
   authorizedBy: string;
+  signature: string;
+  signedByName: string;
   status: QuotationStatus;
 }
 
@@ -124,6 +128,8 @@ export default function QuotationsPage() {
       taxRate: "0",
       notes: "",
       authorizedBy: user?.fullName || "",
+      signature: "",
+      signedByName: "",
       status: "draft",
     };
   }
@@ -196,6 +202,8 @@ export default function QuotationsPage() {
       taxRate: String(q.taxRate || 0),
       notes: q.notes || "",
       authorizedBy: q.authorizedBy || user?.fullName || "",
+      signature: q.signature || "",
+      signedByName: q.signedByName || "",
       status: normalizeQuotationStatus(q.status),
     });
     setError("");
@@ -263,6 +271,11 @@ export default function QuotationsPage() {
         notes: form.notes.trim(),
         status: form.status,
         authorizedBy: form.authorizedBy.trim() || user?.fullName || "",
+        signature: form.signature || undefined,
+        signedByName: form.signedByName || undefined,
+        signedAt: form.signature
+          ? new Date().toISOString()
+          : (editing?.signedAt as string | undefined),
         validUntil: addDays(form.date || today(), Number(form.validDays) || 14),
         fileUrl: editing?.fileUrl,
         publicId: editing?.publicId,
@@ -385,6 +398,9 @@ export default function QuotationsPage() {
         paymentMethod: convertForm.paymentMethod,
         notes: `Converted from quotation ${q.quotationNumber}.`,
         authorizedBy: q.authorizedBy || user?.fullName || "",
+        signature: q.signature,
+        signedByName: q.signedByName,
+        signedAt: q.signedAt,
         quotationNumber: q.quotationNumber,
         quotationId: q.id,
       };
@@ -496,7 +512,8 @@ export default function QuotationsPage() {
               <article key={q.id} style={{ gridTemplateColumns: "1.1fr 1.3fr .8fr .7fr .7fr auto" }}>
                 <span>
                   <strong>{q.quotationNumber}</strong>
-                  <small>{q.items?.length || 0} items</small>
+                  <small>{q.items?.length || 0} items {q.signature ? "· signed" : ""}</small>
+                  {q.signature && <PenLine size={13} style={{ verticalAlign: "-2px", marginLeft: 5 }} />}
                 </span>
                 <span>
                   <strong>{q.customer}</strong>
@@ -711,6 +728,31 @@ export default function QuotationsPage() {
                 </label>
               </div>
 
+              {form.signature ? (
+                <div className="signature-saved">
+                  <img src={form.signature} alt="Signature" />
+                  <div>
+                    <strong>Signature attached</strong>
+                    <small>Authorized Signature · [signed digitally]</small>
+                    <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                      <button
+                        type="button"
+                        className="button button-ghost button-small"
+                        onClick={() => setForm({ ...form, signature: "", signedByName: "" })}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <SignaturePad
+                  label="Customer / authorized signature"
+                  hint="Sign with a finger or mouse — the signature and preparer name are printed on the quotation."
+                  onSave={(dataUrl) => setForm({ ...form, signature: dataUrl, signedByName: user?.fullName || "" })}
+                />
+              )}
+
               {error && (
                 <div className="form-alert error">
                   <CircleAlert size={16} /> {error}
@@ -810,6 +852,23 @@ export default function QuotationsPage() {
                 <p style={{ fontSize: ".8rem", margin: 0 }}>
                   <strong>Notes:</strong> {viewing.notes}
                 </p>
+              )}
+              {viewing.signature ? (
+                <div className="signature-saved">
+                  <img src={viewing.signature} alt="Customer signature" />
+                  <div>
+                    <strong>Authorized Signature</strong>
+                    <small>[signed digitally]</small>
+                    <small>
+                      Prepared by: {viewing.authorizedBy || viewing.signedByName || "—"}
+                      {viewing.signedAt ? ` · ${formatDisplayDate(viewing.signedAt)}` : ""}
+                    </small>
+                  </div>
+                </div>
+              ) : (
+                <div className="form-alert">
+                  <CircleAlert size={16} /> No signature yet — open Edit to capture one on the quotation.
+                </div>
               )}
               {viewing.authorizedBy && (
                 <p style={{ fontSize: ".74rem", margin: 0, color: "var(--muted)" }}>

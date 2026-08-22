@@ -242,6 +242,52 @@ export const DEMO_VIDEOS: Omit<FarmVideo, "id">[] = [
     createdByName: "The Branch Farm",
     createdAt: "2026-08-21T10:15:00.000Z",
   },
+  // Real stock footage (Pexels, free licence) shown while the farm's own
+  // animal clips are being uploaded from the workspace.
+  {
+    title: "Cattle — grazing and moving",
+    description: "The herd out on pasture, grazing and moving across the field.",
+    category: "Livestock",
+    videoUrl: "https://videos.pexels.com/video-files/25749459/11905810_1920_1080_30fps.mp4",
+    storagePath: "",
+    posterUrl: "https://images.pexels.com/videos/25749459/pexels-photo-25749459.jpeg",
+    createdBy: "demo",
+    createdByName: "The Branch Farm",
+    createdAt: "2026-08-22T05:10:00.000Z",
+  },
+  {
+    title: "Pigs — eating and moving",
+    description: "The pigs at the trough, eating and moving around the pen.",
+    category: "Livestock",
+    videoUrl: "https://videos.pexels.com/video-files/28647430/12442054_1920_1080_30fps.mp4",
+    storagePath: "",
+    posterUrl: "https://images.pexels.com/videos/28647430/carport-farm-animals-field-pig-farming-28647430.jpeg",
+    createdBy: "demo",
+    createdByName: "The Branch Farm",
+    createdAt: "2026-08-22T05:25:00.000Z",
+  },
+  {
+    title: "Chickens — eating and moving",
+    description: "Free-range chickens pecking and eating in the sunlit farmyard.",
+    category: "Livestock",
+    videoUrl: "https://videos.pexels.com/video-files/5563939/5563939-hd_1280_720_50fps.mp4",
+    storagePath: "",
+    posterUrl: "https://images.pexels.com/videos/5563939/active-background-backyard-beak-5563939.jpeg",
+    createdBy: "demo",
+    createdByName: "The Branch Farm",
+    createdAt: "2026-08-22T05:40:00.000Z",
+  },
+  {
+    title: "Goats — grazing and moving",
+    description: "The goat herd grazing and moving through the field.",
+    category: "Livestock",
+    videoUrl: "https://videos.pexels.com/video-files/4441040/4441040-hd_1920_1080_25fps.mp4",
+    storagePath: "",
+    posterUrl: "https://images.pexels.com/videos/4441040/pexels-photo-4441040.jpeg",
+    createdBy: "demo",
+    createdByName: "The Branch Farm",
+    createdAt: "2026-08-22T05:55:00.000Z",
+  },
 ];
 
 function readDemoOrders(): Order[] {

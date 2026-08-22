@@ -163,6 +163,10 @@ export function buildQuotationDocumentInput(
     notes: q.notes,
     validUntil: q.validUntil ? new Date(`${q.validUntil}T23:59:59`) : undefined,
     preparedBy: q.authorizedBy,
+    authorizedBy: q.authorizedBy,
+    signature: q.signature,
+    signedByName: q.signedByName,
+    signedAt: q.signedAt,
     status: quotationStatusLabel(q.status),
   };
 }
@@ -190,6 +194,11 @@ export function buildInvoiceDocumentInput(
     customer: { name: inv.customer },
     paymentStatus: inv.paymentStatus,
     notes: inv.notes,
+    preparedBy: inv.preparedBy || inv.authorizedBy,
+    authorizedBy: inv.authorizedBy || inv.preparedBy,
+    signature: inv.signature,
+    signedByName: inv.signedByName,
+    signedAt: inv.signedAt,
   };
 }
 
@@ -217,6 +226,7 @@ export function buildReceiptDocumentInput(
     paymentMethod: r.paymentMethod,
     paymentStatus: r.amount >= total && total > 0 ? "Paid in full" : amountPaid > 0 ? "Partially paid" : "Unpaid",
     notes: [r.description, r.notes].filter(Boolean).join(" · "),
+    preparedBy: r.authorizedBy || r.signedByName,
     authorizedBy: r.authorizedBy,
     signature: r.signature,
     signedByName: r.signedByName,

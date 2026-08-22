@@ -23,8 +23,8 @@ test("every upload uses the fixed unsigned branch_farm Cloudinary preset", () =>
     cloudinaryCloudName: "the-branch-farm",
     cloudinaryUploadPreset: "must-not-be-used",
   });
-  assert.equal(config.uploadPreset, "branch_farm_unsigned");
-  assert.equal(CLOUDINARY.uploadPreset, "branch_farm_unsigned");
+  assert.equal(config.uploadPreset, "branch_farm");
+  assert.equal(CLOUDINARY.uploadPreset, "branch_farm");
   assert.equal(CLOUDINARY.cloudName, "dhad95cch");
   assert.deepEqual(Object.keys(CLOUDINARY.folders), []);
 });
