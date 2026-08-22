@@ -1909,7 +1909,8 @@
 .command-hero-actions .button { justify-content: flex-start; }
 .command-alert-action { color: #fff; background: #ad473d; border: 1px solid #c15a4e; }
 .command-alert-action:hover { background: #c15146; }
-.command-log-action { color: #173e2b; background: #f0d18b; border: 1px solid #f0d18b; }
+.command-log-action { color: #f4dca2; background: rgba(240, 209, 139, .14); border: 1px solid rgba(240, 209, 139, .5); }
+.command-log-action:hover { color: #fff; background: rgba(240, 209, 139, .26); border-color: #f0d18b; }
 .farm-overview-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 15px; }
 .farm-overview-heading h2 { margin-top: 2px; font-family: var(--sans); font-size: 1.18rem; }
 .farm-overview-heading > small { color: var(--muted); font-size: .57rem; }

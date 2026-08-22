@@ -102,6 +102,27 @@ export function initials(name?: string) {
     .join("");
 }
 
+/**
+ * Convert a stored author/staff label into a clean, people-friendly name.
+ * Farm records fall back to the account email when no display name is set,
+ * so strip the domain and tidy separators so names never read as emails.
+ */
+export function displayAuthor(name?: string | null): string {
+  const fallback = "Team member";
+  if (!name || !name.trim()) return fallback;
+  const trimmed = name.trim();
+  if (trimmed.includes("@")) {
+    const localPart = trimmed.split("@")[0] ?? "";
+    const cleaned = localPart.replace(/[._\-+]+/g, " ").replace(/\s+/g, " ").trim();
+    if (!cleaned) return fallback;
+    return cleaned
+      .split(" ")
+      .map((word) => `${word.charAt(0).toUpperCase()}${word.slice(1).toLowerCase()}`)
+      .join(" ");
+  }
+  return trimmed;
+}
+
 export function friendlyError(error: unknown) {
   const rawCode =
     typeof error === "object" && error && "code" in error
