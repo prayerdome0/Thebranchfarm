@@ -11,7 +11,7 @@ import {
 } from "react";
 import { onAuthStateChanged, type User as FirebaseUser } from "firebase/auth";
 import { doc, onSnapshot } from "firebase/firestore";
-import { auth, db } from "@/lib/firebase/config";
+import { auth, db, firebaseConfigured } from "@/lib/firebase/config";
 import {
   loginUser,
   logoutUser,
@@ -56,9 +56,15 @@ function profileFromFirebaseUser(current: FirebaseUser): UserProfile {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(firebaseConfigured);
 
   useEffect(() => {
+    // A Firebase configuration is optional for the public/demo storefront.
+    // Most read paths provide local demo data, so an unconfigured deployment
+    // should render normally instead of trying to subscribe with an invalid
+    // Auth handle.
+    if (!firebaseConfigured) return;
+
     let stopProfile: (() => void) | undefined;
     let cancelled = false;
     const timeout = window.setTimeout(() => {

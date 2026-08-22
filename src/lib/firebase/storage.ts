@@ -1,7 +1,9 @@
 import { deleteObject, getStorage, ref } from "firebase/storage";
-import { app } from "./config";
+import { app, firebaseConfigured } from "./config";
 
-const storage = getStorage(app);
+// Storage is optional in demo/preview builds. Do not ask the SDK to create a
+// storage service from the intentionally empty Firebase app handle.
+const storage = firebaseConfigured ? getStorage(app) : null;
 
 /**
  * Remove a legacy Firebase Storage object.
@@ -12,6 +14,6 @@ const storage = getStorage(app);
  * removed normally.
  */
 export async function deleteStorageObject(storagePath?: string) {
-  if (!storagePath || storagePath.startsWith("cloudinary:")) return;
+  if (!storagePath || storagePath.startsWith("cloudinary:") || !storage) return;
   await deleteObject(ref(storage, storagePath));
 }

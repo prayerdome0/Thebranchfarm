@@ -11,8 +11,18 @@ import {
   type User,
 } from "firebase/auth";
 import { doc, getDoc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
-import { auth, db } from "./config";
+import { auth, db, firebaseConfigured } from "./config";
 import type { UserProfile } from "@/types";
+
+function requireFirebaseConfiguration() {
+  if (!firebaseConfigured) {
+    const error = new Error(
+      "Firebase Authentication is not configured. Please try again later.",
+    ) as Error & { code: string };
+    error.code = "auth/configuration-not-found";
+    throw error;
+  }
+}
 
 function profileFromAuth(user: User, extras?: Partial<UserProfile>): UserProfile {
   return {
@@ -59,6 +69,7 @@ export async function registerUser(input: {
   phone: string;
   password: string;
 }) {
+  requireFirebaseConfiguration();
   const fullName = input.fullName.trim();
   const email = input.email.trim().toLowerCase();
   const phone = input.phone.trim();
@@ -98,6 +109,7 @@ export async function registerUser(input: {
 }
 
 export async function loginUser(email: string, password: string): Promise<UserProfile | null> {
+  requireFirebaseConfiguration();
   const normalizedEmail = email.trim().toLowerCase();
   const credential = await signInWithEmailAndPassword(auth, normalizedEmail, password);
   const user = credential.user;
@@ -150,10 +162,12 @@ export async function loginUser(email: string, password: string): Promise<UserPr
 }
 
 export function logoutUser() {
+  requireFirebaseConfiguration();
   return signOut(auth);
 }
 
 export function resetUserPassword(email: string) {
+  requireFirebaseConfiguration();
   return sendPasswordResetEmail(auth, email.trim().toLowerCase());
 }
 
@@ -166,6 +180,7 @@ export function resetUserPassword(email: string) {
  * Firebase Auth and is the password used to sign in from this point on.
  */
 export async function changeOwnPassword(currentPassword: string, newPassword: string) {
+  requireFirebaseConfiguration();
   const current = auth.currentUser;
   if (!current || !current.email) {
     throw new Error("You must be signed in to change your password.");
@@ -188,6 +203,7 @@ export async function changeOwnPassword(currentPassword: string, newPassword: st
 }
 
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
+  requireFirebaseConfiguration();
   const snapshot = await getDoc(doc(db, "users", uid));
   if (!snapshot.exists()) return null;
   return { uid: snapshot.id, ...snapshot.data() } as UserProfile;

@@ -203,9 +203,12 @@ cp .env.example .env.local
 npm run dev
 ```
 
-The Firebase web identifiers are present as non-secret client fallbacks in
-`src/lib/firebase/config.ts`. Production deployments should still set the
-`NEXT_PUBLIC_FIREBASE_*` values explicitly.
+The Firebase web identifiers are read from `NEXT_PUBLIC_FIREBASE_*` environment
+variables. They are public client configuration, not secrets, but production
+deployments should still set them explicitly. If they are absent, the build
+remains deployable and the public storefront uses its demo/local-data fallback;
+Firebase authentication and live farm data stay disabled until the variables
+are supplied.
 
 Open `http://localhost:3000`.
 
