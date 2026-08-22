@@ -376,6 +376,21 @@ export async function setUserPermissions(uid: string, permissions: string[]) {
   await callable({ uid, permissions });
 }
 
+/**
+ * Administrator resets a member's password (for when someone has requested
+ * password help). The Cloud Function sets a fresh temporary password on the
+ * Auth account, signs the member out everywhere, and returns the new password
+ * so the admin can securely share it via WhatsApp or email.
+ */
+export async function resetMemberPassword(uid: string): Promise<string> {
+  const callable = httpsCallable<{ uid: string }, { tempPassword: string }>(
+    functions,
+    "resetUserPassword",
+  );
+  const result = await callable({ uid });
+  return result.data.tempPassword;
+}
+
 /** Update a staff member's contact details (name, phone, job title). */
 export async function updateStaffProfile(
   uid: string,

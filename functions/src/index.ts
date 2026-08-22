@@ -296,3 +296,37 @@ export const createStaffAccount = onCall({ region: REGION }, async (request) => 
 
   return { uid: user.uid, tempPassword };
 });
+
+/**
+ * Administrator resets a member's password — used when someone has requested
+ * password help. Firebase Auth never stores recoverable plaintext passwords,
+ * so this sets a fresh temporary password (the admin then shares it via
+ * WhatsApp or email). Existing sessions are revoked so the new password must
+ * be used on the next sign-in.
+ */
+export const resetUserPassword = onCall({ region: REGION }, async (request) => {
+  const current = await actor(request.auth?.uid, ["admin"]);
+  const input = z.object({ uid: z.string().min(10).max(128) }).parse(request.data);
+
+  let label = input.uid;
+  try {
+    const record = await getAuth().getUser(input.uid);
+    label = record.displayName || record.email || input.uid;
+  } catch {
+    /* fall back to uid as the label */
+  }
+
+  const tempPassword = `TBF-${randomBytes(6).toString("hex").slice(0, 10)}`;
+  await getAuth().updateUser(input.uid, { password: tempPassword });
+  // Sign the member out everywhere so the new password takes effect.
+  await getAuth().revokeRefreshTokens(input.uid);
+
+  await recordAdminAudit(current, {
+    action: "updated",
+    entityId: input.uid,
+    entityLabel: label,
+    description: `Reset password for ${label}. Existing sessions were signed out and a new temporary password was issued.`,
+  });
+
+  return { tempPassword };
+});

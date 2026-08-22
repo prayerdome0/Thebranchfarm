@@ -1,8 +1,9 @@
 "use client";
 
-import { CircleAlert, Save, Store } from "lucide-react";
+import { CircleAlert, KeyRound, Save, ShieldCheck, Store } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { ChangePassword } from "@/components/auth/ChangePassword";
 import { Loading } from "@/components/ui/Loading";
 import { useToast } from "@/contexts/ToastContext";
 import { getFarmSettings, saveFarmSettings } from "@/lib/firebase/data";
@@ -107,6 +108,17 @@ export default function SettingsPage() {
             </section>
 
             {error && <div className="form-alert error"><CircleAlert size={17} /> {error}</div>}
+
+            <section className="dashboard-panel">
+              <div className="settings-section-head">
+                <span><ShieldCheck size={19} /></span>
+                <div><h3>Change password</h3><p>Update your own administrator sign-in password</p></div>
+              </div>
+              <ChangePassword />
+              <p style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 14, color: "var(--muted)", fontSize: ".65rem" }}>
+                <KeyRound size={14} /> Only you can change your password — the new one works immediately on the next sign-in.
+              </p>
+            </section>
 
             <div className="settings-save-bar">
               <p>Changes apply immediately to shop, header, footer, receipts, invoices.</p>

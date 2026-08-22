@@ -1,6 +1,6 @@
 "use client";
 
-import { CircleAlert, KeyRound, Pencil, Plus, ShieldCheck, UsersRound, X } from "lucide-react";
+import { CircleAlert, Copy, Eye, EyeOff, KeyRound, Mail, MessageSquareText, Pencil, Plus, ShieldCheck, UsersRound, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -17,6 +17,7 @@ import {
 import {
   createStaffAccount,
   getUsers,
+  resetMemberPassword,
   setUserPermissions,
   setUserRole,
   setUserStatus,
@@ -48,6 +49,7 @@ export default function StaffPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [tempPassword, setTempPassword] = useState<string | null>(null);
+  const [passwordMember, setPasswordMember] = useState<UserProfile | null>(null);
   const [form, setForm] = useState({
     fullName: "",
     email: "",
@@ -259,6 +261,14 @@ export default function StaffPage() {
                         <Pencil size={13} /> Edit
                       </button>
                       <button
+                        className="button button-secondary button-small"
+                        disabled={isSelf || member.status === "disabled"}
+                        onClick={() => setPasswordMember(member)}
+                        title="Reset and reveal this member's password"
+                      >
+                        <KeyRound size={13} /> Password
+                      </button>
+                      <button
                         className="button button-ghost button-small"
                         disabled={isSelf}
                         onClick={() => toggleStatus(member)}
@@ -355,6 +365,13 @@ export default function StaffPage() {
             member={editing}
             onClose={() => setEditing(null)}
             onSaved={() => { setEditing(null); load(); }}
+          />
+        )}
+
+        {passwordMember && (
+          <PasswordResetModal
+            member={passwordMember}
+            onClose={() => setPasswordMember(null)}
           />
         )}
       </div>
@@ -454,6 +471,127 @@ function EditMemberModal({
             </button>
           </div>
         </form>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Admin-only: issue a fresh temporary password for a member, reveal it, and
+ * send it securely via WhatsApp or email. Firebase never stores recoverable
+ * plaintext passwords, so this sets a new one (the member is signed out
+ * everywhere and must use it to sign in next). Use it when someone has asked
+ * the admin to recover their access.
+ */
+function PasswordResetModal({ member, onClose }: { member: UserProfile; onClose: () => void }) {
+  const { showToast } = useToast();
+  const [phase, setPhase] = useState<"confirm" | "busy" | "result">("confirm");
+  const [tempPassword, setTempPassword] = useState("");
+  const [revealed, setRevealed] = useState(true);
+  const [error, setError] = useState("");
+
+  const generate = async () => {
+    setPhase("busy");
+    setError("");
+    try {
+      const password = await resetMemberPassword(member.uid);
+      setTempPassword(password);
+      setPhase("result");
+      showToast(`${member.fullName} signed out — a new password was issued.`, "success");
+    } catch (cause) {
+      setError(friendlyError(cause));
+      setPhase("confirm");
+    }
+  };
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard?.writeText(tempPassword);
+      showToast("Password copied", "success");
+    } catch {
+      showToast("Could not copy password", "error");
+    }
+  };
+
+  const phoneDigits = (member.phone || "").replace(/\D/g, "");
+  const waMessage = `Hello ${member.fullName}, here is your temporary ${BUSINESS.name} sign-in password:\n\n${tempPassword}\n\nPlease sign in and change it right away.\n— ${BUSINESS.name}`;
+  const waLink = phoneDigits ? `https://wa.me/${phoneDigits}?text=${encodeURIComponent(waMessage)}` : "";
+  const mailSubject = `Your ${BUSINESS.name} sign-in password`;
+  const mailBody = `Hello ${member.fullName},\n\nYour temporary ${BUSINESS.name} sign-in password is:\n\n${tempPassword}\n\nPlease sign in and change it right away.\n\n— ${BUSINESS.name}`;
+  const mailLink = member.email ? `mailto:${member.email}?subject=${encodeURIComponent(mailSubject)}&body=${encodeURIComponent(mailBody)}` : "";
+
+  return (
+    <div className="modal-layer">
+      <button className="modal-scrim" onClick={onClose} />
+      <div className="record-modal small-modal">
+        <header>
+          <div><span className="eyebrow">Password assistance</span><h2>{member.fullName}</h2></div>
+          <button className="icon-button" onClick={onClose}><X size={20} /></button>
+        </header>
+
+        {phase === "confirm" && (
+          <div className="dashboard-stack" style={{ padding: 20 }}>
+            <div className="form-alert" style={{ color: "var(--green-700)", background: "var(--green-50)" }}>
+              <KeyRound size={17} /> <span>Issue a new temporary password for <strong>{member.email}</strong>.</span>
+            </div>
+            <p style={{ fontSize: ".74rem", color: "var(--ink)", lineHeight: 1.5 }}>
+              Firebase never stores recoverable passwords, so this sets a fresh temporary one.
+              {member.fullName} will be signed out everywhere and must use the new password on the next sign-in.
+              Use this when someone has asked you to recover their access.
+            </p>
+            {error && <div className="form-alert error"><CircleAlert size={17} /> {error}</div>}
+            <div className="modal-actions">
+              <button type="button" className="button button-ghost" onClick={onClose}>Cancel</button>
+              <button className="button button-primary" onClick={generate}><KeyRound size={16} /> Reset &amp; reveal password</button>
+            </div>
+          </div>
+        )}
+
+        {phase === "busy" && (
+          <div className="dashboard-stack" style={{ padding: 20 }}>
+            <Loading label="Issuing new password…" />
+          </div>
+        )}
+
+        {phase === "result" && (
+          <div className="dashboard-stack" style={{ padding: 20 }}>
+            <div className="password-reveal-box">
+              <small>Temporary password</small>
+              <div>
+                <code>{revealed ? tempPassword : "•".repeat(tempPassword.length)}</code>
+                <button className="icon-button" onClick={() => setRevealed((r) => !r)} aria-label={revealed ? "Hide password" : "Show password"}>
+                  {revealed ? <EyeOff size={17} /> : <Eye size={17} />}
+                </button>
+              </div>
+              <button className="button button-secondary button-small" onClick={copy}><Copy size={14} /> Copy</button>
+            </div>
+
+            <div>
+              <span style={{ fontSize: ".8rem", fontWeight: 700 }}>Send to {member.fullName}</span>
+              <div className="password-send-grid">
+                {waLink ? (
+                  <a className="button button-whatsapp" href={waLink} target="_blank" rel="noreferrer"><MessageSquareText size={16} /> WhatsApp{member.phone ? ` · ${member.phone}` : ""}</a>
+                ) : (
+                  <span className="button button-ghost" style={{ opacity: .6, cursor: "default" }}>No phone on file</span>
+                )}
+                {mailLink ? (
+                  <a className="button button-secondary" href={mailLink}><Mail size={16} /> Email{member.email ? ` · ${member.email}` : ""}</a>
+                ) : (
+                  <span className="button button-ghost" style={{ opacity: .6, cursor: "default" }}>No email on file</span>
+                )}
+              </div>
+            </div>
+
+            <p style={{ fontSize: ".66rem", color: "var(--muted)" }}>
+              Share this securely. {member.fullName} should sign in and change it from their dashboard or settings.
+            </p>
+
+            <div className="modal-actions">
+              <button type="button" className="button button-ghost" onClick={onClose}>Done</button>
+              <button className="button button-primary" onClick={generate}><KeyRound size={16} /> Issue another</button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
