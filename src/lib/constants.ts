@@ -321,9 +321,11 @@ export const STATUS_LABELS: Record<string, string> = {
  * so nobody is locked out of the workspace by accident.
  */
 export const STAFF_PERMISSIONS = [
+  "Farm Operations",
+  "Animals",
+  "Reports",
   "Orders",
   "Products",
-  "Animals",
   "Customers",
   "Media",
   "Documents",
@@ -335,9 +337,11 @@ export const STAFF_PERMISSIONS = [
 export type StaffPermission = (typeof STAFF_PERMISSIONS)[number];
 
 export const DEFAULT_STAFF_PERMISSIONS: StaffPermission[] = [
+  "Farm Operations",
+  "Animals",
+  "Reports",
   "Orders",
   "Products",
-  "Animals",
   "Customers",
   "Media",
   "Documents",

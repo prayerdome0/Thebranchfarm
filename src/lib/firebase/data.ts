@@ -1,5 +1,6 @@
 import {
   addDoc,
+  arrayUnion,
   collection,
   deleteDoc,
   doc,
@@ -48,6 +49,12 @@ import type {
   Quotation,
   Receipt,
   UserProfile,
+  AuditAction,
+  AuditEvent,
+  FarmModule,
+  FarmOperationRecord,
+  OperationValues,
+  ReviewStatus,
 } from "@/types";
 
 function mapped<T>(snapshot: { id: string; data: () => DocumentData }) {
@@ -83,6 +90,36 @@ function updateStamp() {
     updatedByName: current?.displayName || current?.email || "Team member",
     updatedAt: serverTimestamp(),
   };
+}
+
+function auditPayload(values: {
+  action: AuditAction;
+  entityType: string;
+  entityId: string;
+  entityLabel: string;
+  description: string;
+  module?: FarmModule;
+  changes?: AuditEvent["changes"];
+}) {
+  const current = auth.currentUser;
+  return cleanFirestoreData({
+    ...values,
+    createdBy: current?.uid || "system",
+    createdByName: current?.displayName || current?.email || "System",
+    createdAt: serverTimestamp(),
+  });
+}
+
+/**
+ * Add an immutable audit event to an existing write batch. Keeping the record
+ * and its audit event in one commit means an operational change can never be
+ * saved without its Who → What → When entry.
+ */
+function appendAudit(
+  batch: ReturnType<typeof writeBatch>,
+  values: Parameters<typeof auditPayload>[0],
+) {
+  batch.set(doc(collection(db, "auditTrail")), auditPayload(values));
 }
 
 /* ----------------------------- Animals ----------------------------- */
@@ -136,21 +173,64 @@ export function watchAnimal(id: string, callback: (animal: Animal | null) => voi
 }
 
 export async function createAnimal(values: Omit<Animal, "id" | keyof ReturnType<typeof stamp>>) {
-  return addDoc(collection(db, "animals"), cleanFirestoreData({ ...values, ...stamp() }));
+  requireUser();
+  const duplicate = await getDocs(query(collection(db, "animals"), where("animalId", "==", values.animalId), limit(1)));
+  if (!duplicate.empty) throw new Error("duplicate-animal-id");
+  const reference = doc(collection(db, "animals"));
+  const batch = writeBatch(db);
+  batch.set(reference, cleanFirestoreData({ ...values, ...stamp() }));
+
+  // Birth registrations connect both parents to the permanent offspring record.
+  for (const parentId of [values.motherId, values.fatherId].filter(Boolean) as string[]) {
+    const parentRef = doc(db, "animals", parentId);
+    const parent = await getDoc(parentRef).catch(() => null);
+    if (parent?.exists()) {
+      batch.set(parentRef, { offspringIds: arrayUnion(reference.id), ...updateStamp() }, { merge: true });
+    }
+  }
+
+  appendAudit(batch, {
+    action: "created",
+    entityType: "animal",
+    entityId: reference.id,
+    entityLabel: values.animalId,
+    description: `Added ${values.animalType} ${values.animalId} to the permanent animal register.`,
+  });
+  await batch.commit();
+  return reference;
 }
 
 export async function updateAnimal(id: string, values: Omit<Animal, "id">) {
-  return setDoc(doc(db, "animals", id), cleanFirestoreData({ ...values, ...updateStamp() }));
+  requireUser();
+  const batch = writeBatch(db);
+  batch.set(doc(db, "animals", id), cleanFirestoreData({ ...values, ...updateStamp() }), { merge: true });
+  appendAudit(batch, {
+    action: "updated",
+    entityType: "animal",
+    entityId: id,
+    entityLabel: values.animalId,
+    description: `Updated the permanent record for ${values.animalId}.`,
+  });
+  await batch.commit();
 }
 
 export async function deleteAnimal(id: string) {
+  requireUser();
   const [health, animal] = await Promise.all([getHealthRecords(id), getAnimal(id)]);
-  const deletions: Promise<unknown>[] = [
-    ...health.map((record) => deleteDoc(doc(db, "animalHealth", record.id))),
-    deleteDoc(doc(db, "animals", id)),
-  ];
-  if (animal?.photoPath && !animal.photoPath.startsWith("cloudinary:")) deletions.push(deleteStorageObject(animal.photoPath).catch(() => {}));
-  await Promise.all(deletions);
+  const batch = writeBatch(db);
+  health.forEach((record) => batch.delete(doc(db, "animalHealth", record.id)));
+  batch.delete(doc(db, "animals", id));
+  appendAudit(batch, {
+    action: "deleted",
+    entityType: "animal",
+    entityId: id,
+    entityLabel: animal?.animalId || id,
+    description: `Deleted animal ${animal?.animalId || id} and its health records.`,
+  });
+  await batch.commit();
+  if (animal?.photoPath && !animal.photoPath.startsWith("cloudinary:")) {
+    await deleteStorageObject(animal.photoPath).catch(() => {});
+  }
 }
 
 /* --------------------------- Health records -------------------------- */
@@ -187,15 +267,55 @@ export function watchHealthRecords(
 }
 
 export async function addHealthRecord(values: Omit<HealthRecord, "id" | keyof ReturnType<typeof stamp>>) {
-  return addDoc(collection(db, "animalHealth"), cleanFirestoreData({ ...values, ...stamp() }));
+  requireUser();
+  const reference = doc(collection(db, "animalHealth"));
+  const batch = writeBatch(db);
+  batch.set(reference, cleanFirestoreData({ ...values, ...stamp() }));
+  if (values.healthStatus) {
+    batch.set(doc(db, "animals", values.animalId), { healthStatus: values.healthStatus, ...updateStamp() }, { merge: true });
+  }
+  appendAudit(batch, {
+    action: "created",
+    entityType: "animal-health",
+    entityId: reference.id,
+    entityLabel: values.animalLabel || values.animalId,
+    description: `Recorded ${values.type} for ${values.animalLabel || values.animalId}: ${values.problem}.`,
+  });
+  await batch.commit();
+  return reference;
 }
 
 export async function updateHealthRecord(id: string, values: Omit<HealthRecord, "id">) {
-  return setDoc(doc(db, "animalHealth", id), cleanFirestoreData({ ...values, ...updateStamp() }));
+  requireUser();
+  const batch = writeBatch(db);
+  batch.set(doc(db, "animalHealth", id), cleanFirestoreData({ ...values, ...updateStamp() }), { merge: true });
+  if (values.healthStatus) {
+    batch.set(doc(db, "animals", values.animalId), { healthStatus: values.healthStatus, ...updateStamp() }, { merge: true });
+  }
+  appendAudit(batch, {
+    action: "updated",
+    entityType: "animal-health",
+    entityId: id,
+    entityLabel: values.animalLabel || values.animalId,
+    description: `Updated ${values.type} record for ${values.animalLabel || values.animalId}.`,
+  });
+  await batch.commit();
 }
 
 export async function deleteHealthRecord(id: string) {
-  return deleteDoc(doc(db, "animalHealth", id));
+  requireUser();
+  const existing = await getDoc(doc(db, "animalHealth", id));
+  const record = existing.exists() ? (existing.data() as HealthRecord) : null;
+  const batch = writeBatch(db);
+  batch.delete(doc(db, "animalHealth", id));
+  appendAudit(batch, {
+    action: "deleted",
+    entityType: "animal-health",
+    entityId: id,
+    entityLabel: record?.animalLabel || record?.animalId || id,
+    description: `Deleted a health record for ${record?.animalLabel || record?.animalId || id}.`,
+  });
+  await batch.commit();
 }
 
 /* ------------------------------- Staff ------------------------------- */
@@ -282,14 +402,36 @@ export async function getFarmDocuments(): Promise<FarmDocument[]> {
 }
 
 export async function createFarmDocument(values: Omit<FarmDocument, "id" | keyof ReturnType<typeof stamp>>) {
-  return addDoc(collection(db, "farmDocuments"), cleanFirestoreData({ ...values, ...stamp() }));
+  requireUser();
+  const reference = doc(collection(db, "farmDocuments"));
+  const batch = writeBatch(db);
+  batch.set(reference, cleanFirestoreData({ ...values, ...stamp() }));
+  appendAudit(batch, {
+    action: "created",
+    entityType: "farm-document",
+    entityId: reference.id,
+    entityLabel: values.name,
+    description: `Uploaded farm document ${values.name}.`,
+  });
+  await batch.commit();
+  return reference;
 }
 
 export async function deleteFarmDocument(id: string) {
+  requireUser();
   const snapshot = await getDoc(doc(db, "farmDocuments", id));
   const data = snapshot.exists() ? (snapshot.data() as FarmDocument) : null;
+  const batch = writeBatch(db);
+  batch.delete(doc(db, "farmDocuments", id));
+  appendAudit(batch, {
+    action: "deleted",
+    entityType: "farm-document",
+    entityId: id,
+    entityLabel: data?.name || id,
+    description: `Deleted farm document ${data?.name || id}.`,
+  });
+  await batch.commit();
   if (data?.storagePath && !data.storagePath.startsWith("cloudinary:")) await deleteStorageObject(data.storagePath).catch(() => {});
-  return deleteDoc(doc(db, "farmDocuments", id));
 }
 
 /* ----------------------------- Quotations ----------------------------- */
@@ -298,6 +440,17 @@ export async function getQuotations(): Promise<Quotation[]> {
   try {
     const snap = await getDocs(query(collection(db, "quotations"), orderBy("createdAt", "desc"), limit(200)));
     return snap.docs.map((d) => mapped<Quotation>(d));
+  } catch {
+    return [];
+  }
+}
+
+/** Customer-safe query. Firestore rules require this exact email constraint. */
+export async function getMyQuotations(email: string): Promise<Quotation[]> {
+  if (!email.trim()) return [];
+  try {
+    const snapshot = await getDocs(query(collection(db, "quotations"), where("customerEmail", "==", email.trim().toLowerCase()), limit(100)));
+    return snapshot.docs.map((item) => mapped<Quotation>(item)).sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")));
   } catch {
     return [];
   }
@@ -351,6 +504,13 @@ export async function getReceipts(): Promise<Receipt[]> {
   try {
     const snap = await getDocs(query(collection(db, "receipts"), orderBy("createdAt", "desc"), limit(200)));
     return snap.docs.map((d) => mapped<Receipt>(d));
+  } catch { return []; }
+}
+export async function getMyReceipts(email: string): Promise<Receipt[]> {
+  if (!email.trim()) return [];
+  try {
+    const snapshot = await getDocs(query(collection(db, "receipts"), where("customerEmail", "==", email.trim().toLowerCase()), limit(100)));
+    return snapshot.docs.map((item) => mapped<Receipt>(item)).sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")));
   } catch { return []; }
 }
 export function watchReceipts(cb: (list: Receipt[]) => void): Unsubscribe {
@@ -489,11 +649,325 @@ export async function getActivities(): Promise<ActivityRecord[]> {
 }
 
 export async function addActivity(values: Omit<ActivityRecord, "id" | keyof ReturnType<typeof stamp>>) {
-  return addDoc(collection(db, "farmActivities"), cleanFirestoreData({ ...values, ...stamp() }));
+  requireUser();
+  const reference = doc(collection(db, "farmActivities"));
+  const batch = writeBatch(db);
+  batch.set(reference, cleanFirestoreData({ ...values, ...stamp() }));
+  appendAudit(batch, {
+    action: "created",
+    entityType: "daily-log",
+    entityId: reference.id,
+    entityLabel: values.activity,
+    description: `Recorded ${values.activity.toLowerCase()} in the daily farm log.`,
+    module: "daily-log",
+  });
+  await batch.commit();
+  return reference;
 }
 
 export async function deleteActivity(id: string) {
-  return deleteDoc(doc(db, "farmActivities", id));
+  requireUser();
+  const batch = writeBatch(db);
+  batch.delete(doc(db, "farmActivities", id));
+  appendAudit(batch, {
+    action: "deleted",
+    entityType: "daily-log",
+    entityId: id,
+    entityLabel: id,
+    description: "Deleted a daily farm activity entry.",
+    module: "daily-log",
+  });
+  await batch.commit();
+}
+
+/* -------------------------- Farm operations -------------------------- */
+
+export function farmOperationsCollection() {
+  // Deliberately filter module in memory. This keeps the initial deployment
+  // free of composite-index requirements while the collection is still small.
+  return query(collection(db, "farmOperations"), orderBy("createdAt", "desc"), limit(2000));
+}
+
+export async function getFarmOperations(module?: FarmModule): Promise<FarmOperationRecord[]> {
+  try {
+    const snapshot = await getDocs(farmOperationsCollection());
+    const records = snapshot.docs.map((item) => mapped<FarmOperationRecord>(item));
+    return module ? records.filter((record) => record.module === module && !record.archived) : records.filter((record) => !record.archived);
+  } catch {
+    return [];
+  }
+}
+
+export function watchFarmOperations(
+  module: FarmModule | null,
+  callback: (records: FarmOperationRecord[]) => void,
+): Unsubscribe {
+  try {
+    return onSnapshot(
+      farmOperationsCollection(),
+      (snapshot) => {
+        const records = snapshot.docs.map((item) => mapped<FarmOperationRecord>(item));
+        callback(records.filter((record) => !record.archived && (!module || record.module === module)));
+      },
+      () => callback([]),
+    );
+  } catch {
+    callback([]);
+    return () => {};
+  }
+}
+
+export async function getFarmOperation(id: string): Promise<FarmOperationRecord | null> {
+  try {
+    const snapshot = await getDoc(doc(db, "farmOperations", id));
+    return snapshot.exists() ? mapped<FarmOperationRecord>(snapshot) : null;
+  } catch {
+    return null;
+  }
+}
+
+export interface CreateFarmOperationInput {
+  module: FarmModule;
+  reference: string;
+  title: string;
+  date: string;
+  summary?: string;
+  status: string;
+  priority?: FarmOperationRecord["priority"];
+  animalId?: string;
+  animalLabel?: string;
+  relatedAnimalIds?: string[];
+  assignedTo?: string;
+  assignedToName?: string;
+  dueDate?: string;
+  values: OperationValues;
+  attachments?: FarmOperationRecord["attachments"];
+  reviewStatus: ReviewStatus;
+}
+
+/** Create an operational record plus all linked animal effects atomically. */
+export async function createFarmOperation(input: CreateFarmOperationInput) {
+  requireUser();
+  const reference = doc(collection(db, "farmOperations"));
+  const batch = writeBatch(db);
+  const values: OperationValues = { ...input.values };
+
+  if (input.module === "birth") {
+    const animalRef = doc(collection(db, "animals"));
+    const tag = String(values.tagNumber || animalRef.id);
+    const duplicate = await getDocs(query(collection(db, "animals"), where("animalId", "==", tag), limit(1)));
+    if (!duplicate.empty) throw new Error("duplicate-animal-id");
+    const firstImage = input.attachments?.find((item) => item.resourceType === "image");
+    batch.set(animalRef, cleanFirestoreData({
+      animalId: tag,
+      tagNumber: tag,
+      name: String(values.name || "") || undefined,
+      animalType: String(values.animalType || "other"),
+      breed: String(values.breed || "Unknown"),
+      sex: String(values.sex || "female"),
+      dateOfBirth: String(values.birthDate || input.date),
+      registrationType: "born",
+      acquisitionDate: String(values.birthDate || input.date),
+      location: String(values.location || "Farm"),
+      weight: typeof values.birthWeight === "number" ? values.birthWeight : null,
+      motherId: String(values.motherId || "") || undefined,
+      fatherId: String(values.fatherId || "") || undefined,
+      status: "active",
+      healthStatus: "healthy",
+      notes: String(values.healthNotes || "") || undefined,
+      photo: firstImage?.url,
+      photoPath: firstImage ? `cloudinary:${firstImage.publicId}` : undefined,
+      documents: input.attachments,
+      ...stamp(),
+    }));
+    values.createdAnimalId = animalRef.id;
+    for (const parentId of [values.motherId, values.fatherId].filter(Boolean) as string[]) {
+      batch.set(doc(db, "animals", String(parentId)), { offspringIds: arrayUnion(animalRef.id), ...updateStamp() }, { merge: true });
+    }
+    appendAudit(batch, {
+      action: "created",
+      entityType: "animal",
+      entityId: animalRef.id,
+      entityLabel: tag,
+      description: `Created permanent animal profile ${tag} from birth record ${input.reference}.`,
+      module: "birth",
+    });
+  }
+
+  if (input.module === "acquisition") {
+    const animalRef = doc(collection(db, "animals"));
+    const tag = String(values.tagNumber || animalRef.id);
+    const duplicate = await getDocs(query(collection(db, "animals"), where("animalId", "==", tag), limit(1)));
+    if (!duplicate.empty) throw new Error("duplicate-animal-id");
+    const firstImage = input.attachments?.find((item) => item.resourceType === "image");
+    batch.set(animalRef, cleanFirestoreData({
+      animalId: tag,
+      tagNumber: tag,
+      name: String(values.name || "") || undefined,
+      animalType: String(values.animalType || "other"),
+      breed: String(values.breed || "Unknown"),
+      sex: String(values.sex || "female"),
+      estimatedAge: String(values.estimatedAge || "") || undefined,
+      registrationType: "purchased",
+      datePurchased: String(values.purchaseDate || input.date),
+      acquisitionDate: String(values.purchaseDate || input.date),
+      purchasePrice: typeof values.purchasePrice === "number" ? values.purchasePrice : null,
+      supplier: String(values.seller || "") || undefined,
+      sellerContact: String(values.sellerContact || "") || undefined,
+      purchasedFor: String(values.purchasedFor || "") || undefined,
+      transportInformation: String(values.transportInformation || "") || undefined,
+      location: String(values.location || "Farm"),
+      weight: typeof values.weight === "number" ? values.weight : null,
+      status: "active",
+      healthStatus: "healthy",
+      notes: String(values.notes || "") || undefined,
+      photo: firstImage?.url,
+      photoPath: firstImage ? `cloudinary:${firstImage.publicId}` : undefined,
+      documents: input.attachments,
+      ...stamp(),
+    }));
+    values.createdAnimalId = animalRef.id;
+    appendAudit(batch, {
+      action: "created",
+      entityType: "animal",
+      entityId: animalRef.id,
+      entityLabel: tag,
+      description: `Created permanent animal profile ${tag} from acquisition ${input.reference}.`,
+      module: "acquisition",
+    });
+  }
+
+  if (input.module === "weight" && input.animalId) {
+    batch.set(doc(db, "animals", input.animalId), {
+      weight: values.currentWeight,
+      ...updateStamp(),
+    }, { merge: true });
+  }
+
+  if (input.module === "movement" && input.animalId) {
+    const status = String(values.movementType || "transferred");
+    batch.set(doc(db, "animals", input.animalId), cleanFirestoreData({
+      status,
+      statusDate: input.date,
+      statusReason: String(values.reason || ""),
+      ...updateStamp(),
+    }), { merge: true });
+  }
+
+  batch.set(reference, cleanFirestoreData({ ...input, values, ...stamp() }));
+  appendAudit(batch, {
+    action: "created",
+    entityType: "farm-operation",
+    entityId: reference.id,
+    entityLabel: input.reference,
+    description: `Recorded ${input.title} (${input.reference}) in ${input.module}.`,
+    module: input.module,
+  });
+  await batch.commit();
+  return reference;
+}
+
+export async function updateFarmOperation(
+  id: string,
+  patch: Partial<Omit<FarmOperationRecord, "id" | "createdAt" | "createdBy" | "createdByName">>,
+) {
+  requireUser();
+  const existing = await getFarmOperation(id);
+  if (!existing) throw new Error("not-found");
+  const batch = writeBatch(db);
+  batch.set(doc(db, "farmOperations", id), cleanFirestoreData({ ...patch, ...updateStamp() }), { merge: true });
+  const nextValues = patch.values || existing.values;
+  const nextAnimalId = patch.animalId || existing.animalId;
+  if (existing.module === "weight" && nextAnimalId) {
+    batch.set(doc(db, "animals", nextAnimalId), { weight: nextValues.currentWeight, ...updateStamp() }, { merge: true });
+  }
+  if (existing.module === "movement" && nextAnimalId) {
+    batch.set(doc(db, "animals", nextAnimalId), cleanFirestoreData({
+      status: String(nextValues.movementType || "transferred"),
+      statusDate: patch.date || existing.date,
+      statusReason: String(nextValues.reason || ""),
+      ...updateStamp(),
+    }), { merge: true });
+  }
+  appendAudit(batch, {
+    action: existing.status !== patch.status && patch.status ? "status-changed" : "updated",
+    entityType: "farm-operation",
+    entityId: id,
+    entityLabel: existing.reference,
+    description: existing.status !== patch.status && patch.status
+      ? `Changed ${existing.reference} from ${existing.status} to ${patch.status}.`
+      : `Updated ${existing.reference}: ${existing.title}.`,
+    module: existing.module,
+  });
+  await batch.commit();
+}
+
+export async function reviewFarmOperation(
+  id: string,
+  decision: "approved" | "rejected",
+  note = "",
+) {
+  const current = requireUser();
+  const existing = await getFarmOperation(id);
+  if (!existing) throw new Error("not-found");
+  const name = current.displayName || current.email || "Administrator";
+  const batch = writeBatch(db);
+  batch.set(doc(db, "farmOperations", id), cleanFirestoreData({
+    reviewStatus: decision,
+    reviewedBy: current.uid,
+    reviewedByName: name,
+    reviewedAt: serverTimestamp(),
+    reviewNote: note,
+    ...updateStamp(),
+  }), { merge: true });
+  appendAudit(batch, {
+    action: decision,
+    entityType: "farm-operation",
+    entityId: id,
+    entityLabel: existing.reference,
+    description: `${decision === "approved" ? "Approved" : "Returned"} ${existing.reference}${note ? `: ${note}` : "."}`,
+    module: existing.module,
+  });
+  await batch.commit();
+}
+
+export async function archiveFarmOperation(id: string) {
+  requireUser();
+  const existing = await getFarmOperation(id);
+  if (!existing) throw new Error("not-found");
+  const batch = writeBatch(db);
+  batch.set(doc(db, "farmOperations", id), { archived: true, ...updateStamp() }, { merge: true });
+  appendAudit(batch, {
+    action: "archived",
+    entityType: "farm-operation",
+    entityId: id,
+    entityLabel: existing.reference,
+    description: `Archived ${existing.reference}: ${existing.title}.`,
+    module: existing.module,
+  });
+  await batch.commit();
+}
+
+export async function getAuditTrail(maximum = 500): Promise<AuditEvent[]> {
+  try {
+    const snapshot = await getDocs(query(collection(db, "auditTrail"), orderBy("createdAt", "desc"), limit(maximum)));
+    return snapshot.docs.map((item) => mapped<AuditEvent>(item));
+  } catch {
+    return [];
+  }
+}
+
+export function watchAuditTrail(callback: (events: AuditEvent[]) => void, maximum = 500): Unsubscribe {
+  try {
+    return onSnapshot(
+      query(collection(db, "auditTrail"), orderBy("createdAt", "desc"), limit(maximum)),
+      (snapshot) => callback(snapshot.docs.map((item) => mapped<AuditEvent>(item))),
+      () => callback([]),
+    );
+  } catch {
+    callback([]);
+    return () => {};
+  }
 }
 
 /* ------------------------------ Settings ------------------------------ */
@@ -708,6 +1182,20 @@ export async function getOrders(): Promise<Order[]> {
     return snapshot.docs.map((item) => mapped<Order>(item));
   } catch {
     return demoOrders.list();
+  }
+}
+
+export async function getMyOrders(email: string): Promise<Order[]> {
+  if (!email.trim()) return [];
+  try {
+    const snapshot = await getDocs(query(collection(db, "orders"), where("customer.email", "==", email.trim().toLowerCase()), limit(100)));
+    return snapshot.docs.map((item) => mapped<Order>(item)).sort((a, b) => {
+      const aDate = typeof a.createdAt === "string" ? a.createdAt : "";
+      const bDate = typeof b.createdAt === "string" ? b.createdAt : "";
+      return bDate.localeCompare(aDate);
+    });
+  } catch {
+    return [];
   }
 }
 

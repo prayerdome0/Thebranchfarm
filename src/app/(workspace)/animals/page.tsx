@@ -6,7 +6,6 @@ import { useEffect, useMemo, useState } from "react";
 import { AnimalCard } from "@/components/farm/AnimalCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Loading } from "@/components/ui/Loading";
-import { useAuth } from "@/contexts/AuthContext";
 import { ANIMAL_CATEGORIES } from "@/lib/constants";
 import { watchAnimals } from "@/lib/firebase/data";
 import { cn } from "@/lib/utils";
@@ -22,7 +21,6 @@ const FILTERS = [
 ];
 
 export default function AnimalsPage() {
-  const { isAdmin } = useAuth();
   const [animals, setAnimals] = useState<Animal[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
@@ -53,14 +51,15 @@ export default function AnimalsPage() {
     <div className="dashboard-stack">
       <section className="dashboard-section-title">
         <div>
+          <span className="eyebrow">Permanent livestock register</span>
           <h2>Animals</h2>
-          <p>Simple Animals management — Categories: {ANIMAL_CATEGORIES.join(", ")}. Add Animal: Animal ID, Type, Name/Tag, Breed, Sex, Date Born, Date Acquired, Purchase Price, Current Status, Notes, Photo. Status: Active, Sold, Transferred, Deceased, Other.</p>
+          <p>{ANIMAL_CATEGORIES.join(", ")} — complete profiles, photos, acquisition, health, growth, breeding and movement history.</p>
         </div>
-        {isAdmin && (
-          <Link className="button button-primary" href="/animals/new">
-            <Plus size={18} /> Add animal
-          </Link>
-        )}
+        <div className="title-actions animal-register-actions">
+          <Link className="button button-secondary" href="/births"><Plus size={17} /> Record new birth</Link>
+          <Link className="button button-secondary" href="/acquisitions"><Plus size={17} /> Add purchased animal</Link>
+          <Link className="button button-primary" href="/animals/new"><Plus size={18} /> Add animal</Link>
+        </div>
       </section>
 
       <div className="farm-toolbar">
@@ -87,7 +86,7 @@ export default function AnimalsPage() {
       ) : animals.length ? (
         <EmptyState icon={Search} title="No matching animals" description="Try different search or filter." />
       ) : (
-        <EmptyState icon={Plus} title="No animals yet" description="Add first animal: Animal ID, Type, Name/Tag, Breed, Sex, Date Born, Date Acquired, Purchase Price, Current Status, Notes, Photo." action={isAdmin ? <Link className="button button-primary" href="/animals/new"><Plus size={18} /> Add animal</Link> : undefined} />
+        <EmptyState icon={Plus} title="No animals yet" description="Create the first permanent livestock record, or register a purchase or farm birth." action={<Link className="button button-primary" href="/animals/new"><Plus size={18} /> Add animal</Link>} />
       )}
     </div>
   );

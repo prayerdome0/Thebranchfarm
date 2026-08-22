@@ -40,6 +40,8 @@ export interface FarmRecordBase {
   archived?: boolean;
 }
 
+export type AnimalRegistrationType = "born" | "purchased" | "transferred-in" | "existing";
+
 export interface Animal extends FarmRecordBase {
   animalId: string;
   tagNumber?: string;
@@ -48,16 +50,30 @@ export interface Animal extends FarmRecordBase {
   breed: string;
   sex: AnimalSex;
   dateOfBirth?: string;
+  estimatedAge?: string;
+  colour?: string;
+  identifyingFeatures?: string;
+  registrationType?: AnimalRegistrationType;
   datePurchased?: string;
+  acquisitionDate?: string;
   purchasePrice?: number | null;
   supplier?: string;
+  sellerContact?: string;
+  purchasedFor?: string;
+  transportInformation?: string;
   location: string;
   weight?: number | null;
+  motherId?: string;
+  fatherId?: string;
+  offspringIds?: string[];
   status: AnimalStatus;
   healthStatus: AnimalHealthStatus;
+  statusDate?: string;
+  statusReason?: string;
   notes?: string;
   photo?: string;
   photoPath?: string;
+  documents?: OperationAttachment[];
   // Extra fields for file record tracking
   fileUrl?: string;
   publicId?: string;
@@ -78,9 +94,18 @@ export interface HealthRecord extends FarmRecordBase {
   problem: string;
   description?: string;
   observation?: string;
+  symptoms?: string;
+  reason?: string;
   actionTaken?: string;
   treatment?: string;
   medication?: string;
+  vaccineName?: string;
+  dosage?: string;
+  veterinaryVisit?: boolean;
+  vetName?: string;
+  vetContact?: string;
+  healthStatus?: AnimalHealthStatus;
+  followUp?: string;
   date: string;
   nextDate?: string;
   notes?: string;
@@ -88,6 +113,7 @@ export interface HealthRecord extends FarmRecordBase {
   photoPath?: string;
   attachmentUrl?: string;
   attachmentPublicId?: string;
+  attachments?: OperationAttachment[];
   fileUrl?: string;
   publicId?: string;
 }
@@ -285,6 +311,96 @@ export interface ActivityRecord extends FarmRecordBase {
   location?: string;
   notes: string;
   animalId?: string;
+  feedingCompleted?: boolean;
+  cleaningCompleted?: boolean;
+  animalsChecked?: boolean;
+  problemsNoticed?: string;
+  attachments?: OperationAttachment[];
+}
+
+/* -------------------------- Farm operations -------------------------- */
+
+export type FarmModule =
+  | "weight"
+  | "breeding"
+  | "birth"
+  | "acquisition"
+  | "movement"
+  | "feed"
+  | "inventory"
+  | "milk"
+  | "eggs"
+  | "daily-log"
+  | "incident"
+  | "task"
+  | "equipment"
+  | "maintenance"
+  | "expense";
+
+export type OperationValue = string | number | boolean | null;
+export type OperationValues = Record<string, OperationValue>;
+export type OperationPriority = "low" | "medium" | "high" | "critical";
+export type ReviewStatus = "not-required" | "pending" | "approved" | "rejected";
+
+export interface OperationAttachment {
+  name: string;
+  url: string;
+  publicId: string;
+  resourceType: string;
+  fileType?: string;
+  fileSize?: number;
+  uploadedAt?: string;
+}
+
+/**
+ * Shared, strongly-audited envelope used by all operational modules. Module
+ * specific information lives in `values`; the field definitions are kept in
+ * `farmModules.ts`, allowing reports and forms to use the same labels.
+ */
+export interface FarmOperationRecord extends FarmRecordBase {
+  module: FarmModule;
+  reference: string;
+  title: string;
+  date: string;
+  summary?: string;
+  status: string;
+  priority?: OperationPriority;
+  animalId?: string;
+  animalLabel?: string;
+  relatedAnimalIds?: string[];
+  assignedTo?: string;
+  assignedToName?: string;
+  dueDate?: string;
+  values: OperationValues;
+  attachments?: OperationAttachment[];
+  reviewStatus: ReviewStatus;
+  reviewedBy?: string;
+  reviewedByName?: string;
+  reviewedAt?: TimestampValue;
+  reviewNote?: string;
+}
+
+export type AuditAction =
+  | "created"
+  | "updated"
+  | "approved"
+  | "rejected"
+  | "archived"
+  | "deleted"
+  | "status-changed";
+
+export interface AuditEvent {
+  id: string;
+  action: AuditAction;
+  entityType: string;
+  entityId: string;
+  entityLabel: string;
+  module?: FarmModule;
+  description: string;
+  changes?: Record<string, { before?: OperationValue; after?: OperationValue }>;
+  createdBy: string;
+  createdByName: string;
+  createdAt: TimestampValue;
 }
 
 export interface FarmSettings {

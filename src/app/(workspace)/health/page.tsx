@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, Search, Stethoscope, X } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Clock3, Plus, Search, Stethoscope, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { HealthRecordCard } from "@/components/farm/HealthRecordCard";
 import { HealthRecordForm, type HealthRecordValues } from "@/components/farm/HealthRecordForm";
@@ -13,6 +13,7 @@ import { HEALTH_RECORD_TYPES, HEALTH_RECORD_TYPE_LABELS } from "@/lib/constants"
 import {
   addHealthRecord,
   deleteHealthRecord,
+  updateHealthRecord,
   watchAnimals,
   watchHealthRecords,
 } from "@/lib/firebase/data";
@@ -29,6 +30,7 @@ export default function HealthPage() {
   const [typeFilter, setTypeFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState<HealthRecord | null>(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -57,24 +59,51 @@ export default function HealthPage() {
     });
   }, [records, animalFilter, typeFilter, search]);
 
+  const today = new Date().toISOString().slice(0, 10);
+  const upcoming = new Date();
+  upcoming.setDate(upcoming.getDate() + 30);
+  const upcomingIso = upcoming.toISOString().slice(0, 10);
+  const attentionCount = records.filter((record) => ["sick", "injured"].includes(record.healthStatus || "") || Boolean(record.nextDate && record.nextDate < today)).length;
+  const upcomingCount = records.filter((record) => record.nextDate && record.nextDate >= today && record.nextDate <= upcomingIso).length;
+  const upToDateCount = Math.max(0, records.length - attentionCount - upcomingCount);
+
   const save = async (values: HealthRecordValues) => {
     setSaving(true);
     try {
-      await addHealthRecord({
+      const payload = {
         animalId: values.animalId,
         animalLabel: values.animalLabel,
         type: values.type as HealthRecord["type"],
         problem: values.problem,
+        description: values.description,
         observation: values.observation,
+        symptoms: values.symptoms,
+        reason: values.reason,
         actionTaken: values.actionTaken,
+        treatment: values.treatment,
         medication: values.medication,
+        vaccineName: values.vaccineName,
+        dosage: values.dosage,
+        veterinaryVisit: values.veterinaryVisit,
+        vetName: values.vetName,
+        vetContact: values.vetContact,
+        healthStatus: values.healthStatus,
+        followUp: values.followUp,
         date: values.date,
         nextDate: values.nextDate,
         notes: values.notes,
         photo: values.photo,
         photoPath: values.photoPath,
-      });
-      showToast("Health record saved.", "success");
+        attachments: values.attachments,
+      };
+      if (editing) {
+        const { id, ...existing } = editing;
+        await updateHealthRecord(id, { ...existing, ...payload });
+      } else {
+        await addHealthRecord(payload);
+      }
+      showToast(editing ? "Health record updated." : "Health record saved.", "success");
+      setEditing(null);
       setShowForm(false);
     } catch (cause) {
       showToast(friendlyError(cause), "error");
@@ -100,9 +129,15 @@ export default function HealthPage() {
           <h2>Animal health</h2>
           <p>Problems, observations, vaccinations and treatments — the complete animal health history.</p>
         </div>
-        <button className="button button-primary" onClick={() => setShowForm(true)}>
+        <button className="button button-primary" onClick={() => { setEditing(null); setShowForm(true); }}>
           <Plus size={18} /> Add health record
         </button>
+      </section>
+
+      <section className="health-status-overview">
+        <article className="danger"><span><AlertTriangle size={18} /></span><div><small>Attention required</small><strong>{attentionCount}</strong></div></article>
+        <article className="warning"><span><Clock3 size={18} /></span><div><small>Upcoming (30 days)</small><strong>{upcomingCount}</strong></div></article>
+        <article className="good"><span><CheckCircle2 size={18} /></span><div><small>Up to date</small><strong>{upToDateCount}</strong></div></article>
       </section>
 
       <div className="farm-toolbar">
@@ -158,6 +193,7 @@ export default function HealthPage() {
                 showAnimal
                 canDelete={isAdmin}
                 onDelete={remove}
+                onEdit={(record) => { setEditing(record); setShowForm(true); }}
               />
             ))}
           </div>
@@ -177,23 +213,24 @@ export default function HealthPage() {
 
       {showForm && (
         <div className="modal-layer">
-          <button className="modal-scrim" onClick={() => setShowForm(false)} aria-label="Close form" />
+            <button className="modal-scrim" onClick={() => { setShowForm(false); setEditing(null); }} aria-label="Close form" />
           <div className="record-modal" role="dialog" aria-modal="true">
             <header>
               <div>
                 <span className="eyebrow">Animal health</span>
-                <h2>Add health record</h2>
+                <h2>{editing ? "Edit health record" : "Add health record"}</h2>
               </div>
-              <button className="icon-button" onClick={() => setShowForm(false)}>
+              <button className="icon-button" onClick={() => { setShowForm(false); setEditing(null); }}>
                 <X size={20} />
               </button>
             </header>
             <ErrorBoundary label="The health record form could not be opened. Refresh and try again.">
               <HealthRecordForm
                 animals={animals}
+                defaults={editing || undefined}
                 onSubmit={save}
                 saving={saving}
-                onCancel={() => setShowForm(false)}
+                onCancel={() => { setShowForm(false); setEditing(null); }}
               />
             </ErrorBoundary>
           </div>

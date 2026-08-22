@@ -24,13 +24,23 @@ export interface AnimalFormValues {
   breed: string;
   sex: AnimalSex;
   dateOfBirth?: string;
+  estimatedAge?: string;
+  colour?: string;
+  identifyingFeatures?: string;
+  registrationType: "born" | "purchased" | "transferred-in" | "existing";
   datePurchased?: string;
+  acquisitionDate?: string;
   purchasePrice?: number | null;
   supplier?: string;
+  sellerContact?: string;
+  purchasedFor?: string;
+  transportInformation?: string;
   location: string;
   weight?: number | null;
   status: AnimalStatus;
   healthStatus: AnimalHealthStatus;
+  statusDate?: string;
+  statusReason?: string;
   notes?: string;
   photo?: string;
   photoPath?: string;
@@ -45,13 +55,23 @@ function initialValues(defaults?: Partial<Animal>): Record<string, string> {
     breed: defaults?.breed || "",
     sex: defaults?.sex || "female",
     dateOfBirth: defaults?.dateOfBirth || "",
-    datePurchased: defaults?.datePurchased || "",
+    estimatedAge: defaults?.estimatedAge || "",
+    colour: defaults?.colour || "",
+    identifyingFeatures: defaults?.identifyingFeatures || "",
+    registrationType: defaults?.registrationType || "existing",
+    datePurchased: defaults?.datePurchased || defaults?.acquisitionDate || "",
+    acquisitionDate: defaults?.acquisitionDate || defaults?.datePurchased || "",
     purchasePrice: defaults?.purchasePrice != null ? String(defaults.purchasePrice) : "",
     supplier: defaults?.supplier || "",
+    sellerContact: defaults?.sellerContact || "",
+    purchasedFor: defaults?.purchasedFor || "",
+    transportInformation: defaults?.transportInformation || "",
     location: defaults?.location || "",
     weight: defaults?.weight != null ? String(defaults.weight) : "",
     status: defaults?.status || "active",
     healthStatus: defaults?.healthStatus || "healthy",
+    statusDate: defaults?.statusDate || "",
+    statusReason: defaults?.statusReason || "",
     notes: defaults?.notes || "",
   };
 }
@@ -137,13 +157,23 @@ export function AnimalForm({
       breed: form.breed.trim(),
       sex: form.sex as AnimalSex,
       dateOfBirth: form.dateOfBirth || undefined,
+      estimatedAge: form.estimatedAge.trim() || undefined,
+      colour: form.colour.trim() || undefined,
+      identifyingFeatures: form.identifyingFeatures.trim() || undefined,
+      registrationType: form.registrationType as AnimalFormValues["registrationType"],
       datePurchased: form.datePurchased || undefined,
+      acquisitionDate: form.acquisitionDate || form.datePurchased || undefined,
       purchasePrice: form.purchasePrice === "" ? null : Number(form.purchasePrice),
       supplier: form.supplier.trim() || undefined,
+      sellerContact: form.sellerContact.trim() || undefined,
+      purchasedFor: form.purchasedFor.trim() || undefined,
+      transportInformation: form.transportInformation.trim() || undefined,
       location: form.location.trim(),
       weight: form.weight === "" ? null : Number(form.weight),
       status: form.status as AnimalStatus,
       healthStatus: form.healthStatus as AnimalHealthStatus,
+      statusDate: form.statusDate || undefined,
+      statusReason: form.statusReason.trim() || undefined,
       notes: form.notes.trim() || undefined,
       photo: photo.url,
       photoPath: photo.path,
@@ -175,11 +205,26 @@ export function AnimalForm({
           </select>
         </Field>
         <Field label="Date of birth" name="dateOfBirth" type="date" value={form.dateOfBirth} onChange={update} />
+        <Field label="Estimated age" name="estimatedAge" value={form.estimatedAge} onChange={update} placeholder="e.g. approximately 3 years" />
+        <Field label="Colour" name="colour" value={form.colour} onChange={update} placeholder="e.g. brown and white" />
+        <Field label="Identifying features" name="identifyingFeatures" value={form.identifyingFeatures} onChange={update} placeholder="Marks, horns, ear pattern…" />
+        <Field label="How this animal joined the farm" name="registrationType" value={form.registrationType} onChange={update}>
+          <select value={form.registrationType} onChange={(event) => update("registrationType", event.target.value)}>
+            <option value="existing">Existing farm animal</option>
+            <option value="purchased">Purchased</option>
+            <option value="born">Born on the farm</option>
+            <option value="transferred-in">Transferred in</option>
+          </select>
+        </Field>
+        <Field label="Acquisition date" name="acquisitionDate" type="date" value={form.acquisitionDate} onChange={update} />
         <Field label="Date purchased" name="datePurchased" type="date" value={form.datePurchased} onChange={update} />
         <Field label="Purchase price" name="purchasePrice" type="number" value={form.purchasePrice} onChange={update} placeholder="e.g. 6500" />
-        <Field label="Supplier / source" name="supplier" value={form.supplier} onChange={update} placeholder="Where the animal came from" />
+        <Field label="Seller / source" name="supplier" value={form.supplier} onChange={update} placeholder="Where the animal came from" />
+        <Field label="Seller contact" name="sellerContact" value={form.sellerContact} onChange={update} placeholder="Phone or address" />
+        <Field label="Purchased by / for" name="purchasedFor" value={form.purchasedFor} onChange={update} placeholder="Buyer or farm project" />
+        <Field label="Transport information" name="transportInformation" value={form.transportInformation} onChange={update} placeholder="Vehicle, carrier, arrival notes" />
         <Field label="Current location" name="location" value={form.location} onChange={update} required placeholder="e.g. Main cattle pen" />
-        <Field label="Weight (kg)" name="weight" type="number" value={form.weight} onChange={update} placeholder="e.g. 420" />
+        <Field label="Current weight (kg)" name="weight" type="number" value={form.weight} onChange={update} placeholder="e.g. 420" />
         <Field label="Status" name="status" value={form.status} onChange={update}>
           <select value={form.status} onChange={(event) => update("status", event.target.value)}>
             {ANIMAL_STATUSES.map((status) => (
@@ -194,6 +239,8 @@ export function AnimalForm({
             ))}
           </select>
         </Field>
+        <Field label="Status effective date" name="statusDate" type="date" value={form.statusDate} onChange={update} />
+        <Field label="Status reason" name="statusReason" value={form.statusReason} onChange={update} placeholder="Reason for sale, transfer or other status" />
       </div>
 
       <PhotoField

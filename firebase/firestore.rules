@@ -8,6 +8,13 @@ service cloud.firestore {
     function staff() { return hasRole('staff') || hasRole('admin'); }
     function admin() { return hasRole('admin'); }
     function own(uid) { return signedIn() && request.auth.uid == uid; }
+    function ownEmail(value) {
+      return signedIn()
+        && request.auth.token.email != null
+        && request.auth.token.email_verified == true
+        && value is string
+        && value.lower() == request.auth.token.email.lower();
+    }
     function safeString(value, max) { return value is string && value.size() > 0 && value.size() <= max; }
     function optionalString(value, max) { return value == null || (value is string && value.size() <= max); }
     function nonNegative(value) { return value is number && value >= 0; }
@@ -30,7 +37,7 @@ service cloud.firestore {
         && safeString(request.resource.data.breed, 100)
         && request.resource.data.sex in ['male', 'female']
         && request.resource.data.healthStatus in ['healthy', 'under-observation', 'sick', 'injured', 'recovering']
-        && request.resource.data.status in ['active', 'sold', 'deceased', 'transferred']
+        && request.resource.data.status in ['active', 'sold', 'deceased', 'transferred', 'other']
         && safeString(request.resource.data.location, 150)
         && (request.resource.data.weight == null || nonNegative(request.resource.data.weight))
         && (request.resource.data.purchasePrice == null || nonNegative(request.resource.data.purchasePrice));
@@ -107,10 +114,11 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // Animals: admin adds and removes; staff can read and update the record.
+    // Animals are operational records: staff add/update them; only an admin
+    // may permanently delete one. Sales/transfers change status instead.
     match /animals/{id} {
       allow read: if staff();
-      allow create: if admin() && validFarmCreate() && validAnimal();
+      allow create: if staff() && validFarmCreate() && validAnimal();
       allow update: if staff() && validFarmUpdate() && validAnimal();
       allow delete: if admin();
     }
@@ -139,6 +147,67 @@ service cloud.firestore {
       allow delete: if admin();
     }
 
+    function validOperation() {
+      return request.resource.data.module in [
+          'weight', 'breeding', 'birth', 'acquisition', 'movement',
+          'feed', 'inventory', 'milk', 'eggs', 'daily-log', 'incident',
+          'task', 'equipment', 'maintenance', 'expense'
+        ]
+        && safeString(request.resource.data.reference, 80)
+        && safeString(request.resource.data.title, 300)
+        && safeString(request.resource.data.date, 20)
+        && request.resource.data.values is map
+        && request.resource.data.reviewStatus in ['not-required', 'pending', 'approved', 'rejected'];
+    }
+    function reviewUpdateAllowed() {
+      return admin() || (
+        request.resource.data.reviewStatus in ['not-required', 'pending']
+        && request.resource.data.get('reviewedBy', null) == resource.data.get('reviewedBy', null)
+        && request.resource.data.get('reviewedByName', null) == resource.data.get('reviewedByName', null)
+        && request.resource.data.get('reviewedAt', null) == resource.data.get('reviewedAt', null)
+        && request.resource.data.get('reviewNote', null) == resource.data.get('reviewNote', null)
+      );
+    }
+    function taskUpdateAllowed() {
+      return resource.data.module != 'task'
+        || admin()
+        || (
+          resource.data.assignedTo == request.auth.uid
+          && request.resource.data.assignedTo == resource.data.assignedTo
+          && request.resource.data.values.diff(resource.data.values).affectedKeys()
+            .hasOnly(['status', 'completionDate', 'completionNote'])
+        );
+    }
+    function archiveUpdateAllowed() {
+      return admin()
+        || request.resource.data.get('archived', false) == resource.data.get('archived', false);
+    }
+
+    // The operational center. Important writes are stamped and committed with
+    // an immutable audit event by the client data layer.
+    match /farmOperations/{id} {
+      allow read: if staff();
+      allow create: if staff() && validFarmCreate() && validOperation()
+        && (request.resource.data.module != 'task' || admin());
+      allow update: if staff() && validFarmUpdate() && validOperation()
+        && reviewUpdateAllowed() && taskUpdateAllowed() && archiveUpdateAllowed();
+      allow delete: if false;
+    }
+
+    // Append-only Who → What → When ledger. Neither staff nor admins can edit
+    // or delete an event after it is written.
+    match /auditTrail/{id} {
+      allow read: if staff();
+      allow create: if staff()
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.action in ['created', 'updated', 'approved', 'rejected', 'archived', 'deleted', 'status-changed']
+        && safeString(request.resource.data.entityType, 80)
+        && safeString(request.resource.data.entityId, 160)
+        && safeString(request.resource.data.entityLabel, 240)
+        && safeString(request.resource.data.description, 1000);
+      allow update, delete: if false;
+    }
+
     match /settings/{settingId} {
       // Public so the storefront can show currency/delivery; only admins edit.
       allow read: if settingId == 'farm';
@@ -153,7 +222,8 @@ service cloud.firestore {
       allow delete: if admin();
     }
 
-    // Videos: public on the farm site; staff upload and admin removes.
+    // Videos and gallery media are public on the farm site; staff upload and
+    // maintain them, while only administrators permanently remove records.
     match /videos/{id} {
       allow read: if true;
       allow create: if staff() && safeString(request.resource.data.title, 160)
@@ -161,6 +231,14 @@ service cloud.firestore {
         && request.resource.data.videoUrl is string
         && request.resource.data.storagePath is string;
       allow update: if staff();
+      allow delete: if admin();
+    }
+    match /media/{id} {
+      allow read: if true;
+      allow create: if staff() && validFarmCreate()
+        && request.resource.data.fileUrl is string
+        && request.resource.data.resourceType in ['image', 'video'];
+      allow update: if staff() && validFarmUpdate();
       allow delete: if admin();
     }
 
@@ -182,7 +260,7 @@ service cloud.firestore {
 
     // Orders: guests place orders (no sign-in); only staff can list/update.
     match /orders/{id} {
-      allow read: if staff();
+      allow read: if staff() || ownEmail(resource.data.customer.email);
       allow create: if true && validOrder();
       allow update: if staff();
       allow delete: if admin();
@@ -192,12 +270,12 @@ service cloud.firestore {
     // staff. The browser stores the full record (items, totals, signature
     // data-URL, Cloudinary URL and public ID); deletion is admin-only.
     match /quotations/{id} {
-      allow read: if staff();
+      allow read: if staff() || ownEmail(resource.data.customerEmail);
       allow create, update: if staff();
       allow delete: if admin();
     }
     match /receipts/{id} {
-      allow read: if staff();
+      allow read: if staff() || ownEmail(resource.data.customerEmail);
       allow create, update: if staff();
       allow delete: if admin();
     }

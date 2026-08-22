@@ -47,7 +47,7 @@ export function ProductForm({
     videoPosterUrl: initial?.videoPosterUrl || "",
     fileUrl: initial?.fileUrl,
     publicId: initial?.publicId,
-  } as any));
+  }));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [serverError, setServerError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -91,9 +91,9 @@ export function ProductForm({
         salePrice,
         price: Number(parsed.data.price),
         stock: Number(parsed.data.stock),
-        shortDescription: (form as any).shortDescription,
+        shortDescription: form.shortDescription,
         published: form.active,
-      } as any);
+      });
     } catch (cause) {
       setServerError(friendlyError(cause));
       setSaving(false);
@@ -147,7 +147,7 @@ export function ProductForm({
           </label>
           <label className="field"><span>Unit * (e.g. Tray, kg, litre, each)</span><input value={form.unit} onChange={(e) => update("unit", e.target.value)} placeholder="Tray" />{errors.unit && <small className="field-error">{errors.unit}</small>}</label>
         </div>
-        <label className="field"><span>Short description</span><input value={(form as any).shortDescription} onChange={(e) => update("shortDescription" as any, e.target.value as any)} placeholder="Short description for cards" /></label>
+        <label className="field"><span>Short description</span><input value={form.shortDescription || ""} onChange={(e) => update("shortDescription", e.target.value)} placeholder="Short description for cards" /></label>
         <label className="field"><span>Full description *</span><textarea rows={4} value={form.description} onChange={(e) => update("description", e.target.value)} placeholder="Full description for product page" />{errors.description && <small className="field-error">{errors.description}</small>}</label>
       </section>
 
@@ -177,7 +177,7 @@ export function ProductForm({
           value={form.image}
           path={form.imagePath}
           upload={uploadImage}
-          onChange={(result) => { update("image", result.url); update("imagePath", result.path); (update as any)("fileUrl", result.url); (update as any)("publicId", (result.path || "").replace("cloudinary:", "")); }}
+          onChange={(result) => { update("image", result.url); update("imagePath", result.path); update("fileUrl", result.url); update("publicId", (result.path || "").replace("cloudinary:", "")); }}
           hint={`Primary product image. Uploaded to Cloudinary ${CLOUDINARY.cloudName} with preset ${CLOUDINARY.uploadPreset}, no folders. fileUrl + publicId saved, recordType product.`}
         />
         <div className="auth-field-grid">

@@ -285,10 +285,10 @@ export default function StaffPage() {
           <div>
             <strong>Clear roles — {BUSINESS.name}</strong>
             <p>
-              <strong>Admin:</strong> full access including Staff and Settings.{" "}
-              <strong>Staff:</strong> only the ticked areas — Orders, Products, Animals, Customers,
-              Media, Documents. <strong>Content staff:</strong> Photos, Videos and Gallery. The
-              workspace menu and the pages themselves both respect these permissions.
+              <strong>Admin:</strong> full oversight, approvals, audit, reports, Staff and Settings.{" "}
+              <strong>Staff:</strong> operational access to the areas you tick — Farm Operations,
+              Animals, Reports, Orders, Products, Customers, Media and Documents. The workspace
+              menu and every page enforce the same permissions.
             </p>
           </div>
         </div>

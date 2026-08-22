@@ -9,7 +9,7 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { SignaturePad } from "@/components/store/SignaturePad";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/contexts/ToastContext";
-import { FULFILLMENT_LABELS, ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS, ORDER_STATUS_FLOW, BUSINESS } from "@/lib/constants";
+import { FULFILLMENT_LABELS, ORDER_STATUS_LABELS, ORDER_STATUS_FLOW, BUSINESS } from "@/lib/constants";
 import { getOrder, updateOrder } from "@/lib/firebase/data";
 import { formatDate, money, phoneHref, whatsappHref } from "@/lib/utils";
 import type { Order, OrderStatus } from "@/types";
@@ -49,16 +49,17 @@ export default function OrderDetailPage() {
   const togglePaid = async () => {
     const next = order.paymentStatus === "paid" ? "unpaid" : "paid";
     setSaving(true);
-    await updateOrder(order.id, { paymentStatus: next as any });
-    setOrder({ ...order, paymentStatus: next as any });
+    await updateOrder(order.id, { paymentStatus: next });
+    setOrder({ ...order, paymentStatus: next });
     setSaving(false);
     showToast(`Payment ${next}`, "success");
   };
 
   const saveSignature = async (signature: string) => {
     setSaving(true);
-    await updateOrder(order.id, { signature, signedByName: user?.fullName || "Team", signedAt: new Date().toISOString() as any });
-    setOrder({ ...order, signature, signedByName: user?.fullName || "Team", signedAt: new Date().toISOString() as any });
+    const signedAt = new Date().toISOString();
+    await updateOrder(order.id, { signature, signedByName: user?.fullName || "Team", signedAt });
+    setOrder({ ...order, signature, signedByName: user?.fullName || "Team", signedAt });
     setSaving(false);
     showToast("Signature saved", "success");
   };
@@ -72,7 +73,7 @@ export default function OrderDetailPage() {
           <span>Order Number</span>
           <h2>{order.reference}</h2>
           <p>{order.customer.name} · {order.customer.phone} · {formatDate(order.createdAt, true)}</p>
-          <p style={{ fontSize: ".75rem", marginTop: 4 }}><MapPin size={12} /> Delivery Location: {order.deliveryAddress || (order as any).deliveryLocation || FULFILLMENT_LABELS[order.fulfillment]}</p>
+          <p style={{ fontSize: ".75rem", marginTop: 4 }}><MapPin size={12} /> Delivery Location: {order.deliveryAddress || order.deliveryLocation || FULFILLMENT_LABELS[order.fulfillment]}</p>
         </div>
         <StatusBadge status={order.status} />
       </section>
@@ -103,8 +104,8 @@ export default function OrderDetailPage() {
             <div><small>Customer</small><br /><strong>{order.customer.name}</strong></div>
             <div><small>Phone</small><br /><a href={phoneHref(order.customer.phone)} style={{ color: "var(--green-700)", fontWeight: 700 }}>{order.customer.phone}</a></div>
             {order.customer.email && <div><small>Email</small><br />{order.customer.email}</div>}
-            <div><small>Delivery Location</small><br /><strong>{order.deliveryAddress || (order as any).deliveryLocation || "—"}</strong><br /><small>{FULFILLMENT_LABELS[order.fulfillment]}</small></div>
-            <div><small>Payment Status</small><br /><StatusBadge status={order.paymentStatus as any} /> · {order.paymentMethod || "—"}</div>
+            <div><small>Delivery Location</small><br /><strong>{order.deliveryAddress || order.deliveryLocation || "—"}</strong><br /><small>{FULFILLMENT_LABELS[order.fulfillment]}</small></div>
+            <div><small>Payment Status</small><br /><StatusBadge status={order.paymentStatus} /> · {order.paymentMethod || "—"}</div>
             <div><small>Order Status</small><br /><StatusBadge status={order.status} /></div>
             {order.notes && <div><small>Order Notes</small><br /><p style={{ fontSize: ".85rem" }}>{order.notes}</p></div>}
           </div>

@@ -116,6 +116,7 @@ export function friendlyError(error: unknown) {
   const fromMessage = message.match(/\((auth|functions|firestore|storage)\/[a-z0-9-]+\)/i)?.[1] || "";
   const code = rawCode || fromMessage;
   const normalized = code.replace(/^(auth|functions|firestore|storage)\//, "");
+  if (message === "duplicate-animal-id") return "That animal ID or tag is already in the permanent register.";
   const messages: Record<string, string> = {
     "auth/email-already-in-use": "An account already exists for this email address. Try signing in instead.",
     "email-already-in-use": "An account already exists for this email address. Try signing in instead.",

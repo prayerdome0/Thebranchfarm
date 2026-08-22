@@ -149,8 +149,9 @@ function SiteHeaderContent({ pathname }: { pathname: string }) {
                     </>
                   ) : user ? (
                     <>
-                      <span className="account-role">Customer</span>
-                      <Link href="/track" onClick={() => setAccountOpen(false)}>My Orders</Link>
+                      <span className="account-role">Registered customer</span>
+                      <Link href="/account" onClick={() => setAccountOpen(false)}><UserRound size={16} /> My account</Link>
+                      <Link href="/track" onClick={() => setAccountOpen(false)}><PackageSearch size={16} /> Track an order</Link>
                       <button onClick={() => { setAccountOpen(false); logout(); }}>
                         <LogOut size={16} /> Sign out
                       </button>
@@ -208,7 +209,8 @@ function SiteHeaderContent({ pathname }: { pathname: string }) {
               </>
             ) : user ? (
               <>
-                <Link href="/track" onClick={() => setMenuOpen(false)}>My Orders</Link>
+                <Link href="/account" onClick={() => setMenuOpen(false)}>My account</Link>
+                <Link href="/track" onClick={() => setMenuOpen(false)}>Track an order</Link>
                 <button onClick={() => { setMenuOpen(false); logout(); }}>Sign out</button>
               </>
             ) : (

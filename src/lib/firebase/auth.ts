@@ -1,5 +1,6 @@
 import {
   createUserWithEmailAndPassword,
+  sendEmailVerification,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signOut,
@@ -81,6 +82,13 @@ export async function registerUser(input: {
     } catch {
       // Registration still succeeded: the member can sign in with this email.
     }
+  }
+
+  if (!credential.user.emailVerified) {
+    await sendEmailVerification(credential.user).catch(() => {
+      // The account remains usable for profile and locally placed orders;
+      // verified email is required only for reading issued documents.
+    });
   }
 
   return profileFromAuth(credential.user, { fullName, email, phone });
