@@ -13,12 +13,18 @@ export const BUSINESS = {
   name: "The Branch Farm",
   slogan: "Nayi Plug",
   established: 2026,
-  location: "GG67+P95 Mahlabane, Eswatini",
+  location: "Mahlabane, Eswatini",
+  fullLocation: "GG67+P95 Mahlabane, Eswatini",
   phoneDisplay: "+268 79777668",
   phoneLink: "+26879777668",
   whatsappDisplay: "+268 76581804",
   whatsappLink: "26876581804",
   currency: "E",
+  email: "info@thebranchfarm.sz",
+  deliveryFree: "Free delivery currently around Manzini and Matsapha.",
+  deliveryOther: "Other locations: Arranged depending on location.",
+  deliveryFee: 30,
+  freeDeliveryThreshold: 500,
 } as const;
 
 export interface SelectOption<T extends string = string> {
@@ -28,12 +34,14 @@ export interface SelectOption<T extends string = string> {
 
 export const ANIMAL_TYPES: SelectOption<AnimalType>[] = [
   { value: "cattle", label: "Cattle" },
-  { value: "pig", label: "Pig" },
-  { value: "chicken", label: "Chicken / flock" },
-  { value: "goat", label: "Goat" },
+  { value: "pig", label: "Pigs" },
+  { value: "chicken", label: "Poultry" },
+  { value: "goat", label: "Goats" },
   { value: "sheep", label: "Sheep" },
   { value: "other", label: "Other" },
 ];
+
+export const ANIMAL_CATEGORIES = ["Cattle", "Goats", "Pigs", "Poultry", "Other"] as const;
 
 export const ANIMAL_STATUSES: SelectOption<AnimalStatus>[] = [
   { value: "active", label: "Active" },
@@ -41,6 +49,8 @@ export const ANIMAL_STATUSES: SelectOption<AnimalStatus>[] = [
   { value: "deceased", label: "Deceased" },
   { value: "transferred", label: "Transferred" },
 ];
+
+export const ANIMAL_STATUS_OPTIONS = ["Active", "Sold", "Transferred", "Deceased", "Other"] as const;
 
 export const HEALTH_STATUSES: SelectOption<AnimalHealthStatus>[] = [
   { value: "healthy", label: "Healthy" },
@@ -88,6 +98,28 @@ export const DOCUMENT_TYPES = [
   { value: "quotation", label: "Quotation" },
   { value: "receipt", label: "Receipt" },
   { value: "invoice", label: "Invoice" },
+  { value: "purchase_order", label: "Purchase Order" },
+  { value: "delivery_note", label: "Delivery Note" },
+  { value: "contract", label: "Contract" },
+  { value: "supplier", label: "Supplier Document" },
+  { value: "customer", label: "Customer Document" },
+  { value: "staff", label: "Staff Document" },
+  { value: "animal", label: "Animal Document" },
+  { value: "other", label: "Other" },
+] as const;
+
+export const DOCUMENT_TYPE_OPTIONS = [
+  "Quotations",
+  "Invoices",
+  "Receipts",
+  "Purchase Orders",
+  "Delivery Notes",
+  "Contracts",
+  "Supplier Documents",
+  "Customer Documents",
+  "Staff Documents",
+  "Animal Documents",
+  "Other",
 ] as const;
 
 export type DocumentType = (typeof DOCUMENT_TYPES)[number]["value"];
@@ -104,24 +136,18 @@ export const DOCUMENT_TYPE_LABELS: Record<string, string> = DOCUMENT_TYPES.reduc
 
 /**
  * Cloudinary unsigned uploads for all farm media and downloadable files.
- * The upload preset below must exist in the farm's Cloudinary account as an
- * UNSIGNED preset. The cloud name comes from settings or NEXT_PUBLIC_* env.
+ * Exact spec:
+ *  cloud_name: dhad95cch
+ *  upload_preset: branch_farm_unsigned (unsigned)
+ *  No folders - application/database identifies what file belongs to.
  */
 export const CLOUDINARY = {
-  uploadPreset: "branch_farm",
+  cloudName: "dhad95cch",
+  uploadPreset: "branch_farm_unsigned",
   cloudNameEnv: "NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME",
-  /** Folders keep every uploaded asset organised in one Cloudinary library. */
-  folders: {
-    animals: "branch_farm/animals",
-    health: "branch_farm/health",
-    documents: "branch_farm/documents",
-    products: "branch_farm/products",
-    quotations: "branch_farm/quotations",
-    receipts: "branch_farm/receipts",
-    invoices: "branch_farm/invoices",
-    videos: "branch_farm/videos",
-    videoPosters: "branch_farm/video-posters",
-  } as Record<string, string>,
+  presetEnv: "NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET",
+  /** No folders - all uploads go to root, recordType + recordId identify ownership */
+  folders: {} as Record<string, string>,
 } as const;
 
 function toLabels<T extends string>(options: SelectOption<T>[]): Record<T, string> {
@@ -182,17 +208,22 @@ export const ORDER_STATUS_FLOW: OrderStatus[] = [
 ];
 
 export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
-  pending: "Placed",
+  pending: "New",
   confirmed: "Confirmed",
-  processing: "Processing",
-  ready: "Ready",
-  completed: "Completed",
+  processing: "Preparing",
+  ready: "Out for Delivery",
+  completed: "Delivered",
   cancelled: "Cancelled",
 };
+
+export const ORDER_STATUS_SPEC = ["New", "Confirmed", "Preparing", "Out for Delivery", "Delivered", "Cancelled"] as const;
+
+export const INVOICE_STATUSES = ["Unpaid", "Partially Paid", "Paid", "Cancelled"] as const;
 
 export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
   unpaid: "Unpaid",
   paid: "Paid",
+  partial: "Partially Paid",
 };
 
 export const FULFILLMENT_LABELS: Record<FulfillmentMethod, string> = {

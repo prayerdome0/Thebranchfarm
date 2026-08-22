@@ -1,25 +1,24 @@
 "use client";
 
-import { CircleAlert, Cloud, Save, Store } from "lucide-react";
+import { CircleAlert, Save, Store } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { Loading } from "@/components/ui/Loading";
 import { useToast } from "@/contexts/ToastContext";
-import { getAllProducts, getFarmSettings, saveFarmSettings } from "@/lib/firebase/data";
+import { getFarmSettings, saveFarmSettings } from "@/lib/firebase/data";
 import { settingsSchema } from "@/lib/validation";
 import { friendlyError } from "@/lib/utils";
-import type { FarmSettings, Product } from "@/types";
+import type { FarmSettings } from "@/types";
+import { BUSINESS } from "@/lib/constants";
 
 export default function SettingsPage() {
   const { showToast } = useToast();
   const [form, setForm] = useState<FarmSettings | null>(null);
-  const [products, setProducts] = useState<Product[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
     getFarmSettings().then(setForm);
-    getAllProducts().then(setProducts);
   }, []);
 
   const update = (key: keyof FarmSettings, value: string) =>
@@ -31,28 +30,33 @@ export default function SettingsPage() {
     setError("");
     const parsed = settingsSchema.safeParse(form);
     if (!parsed.success) {
-      setError(parsed.error.issues[0]?.message || "Please review the information.");
+      setError(parsed.error.issues[0]?.message || "Review info");
       return;
     }
     setSaving(true);
     try {
       await saveFarmSettings({
         farmName: parsed.data.farmName,
-        slogan: parsed.data.slogan || "",
+        slogan: parsed.data.slogan || BUSINESS.slogan,
         location: parsed.data.location,
-        phone: parsed.data.phone || "",
-        whatsapp: parsed.data.whatsapp || "",
-        email: parsed.data.email || "",
+        fullLocation: BUSINESS.fullLocation,
+        phone: parsed.data.phone || BUSINESS.phoneDisplay,
+        whatsapp: parsed.data.whatsapp || BUSINESS.whatsappDisplay,
+        email: parsed.data.email || BUSINESS.email,
         currency: parsed.data.currency,
         deliveryFee: parsed.data.deliveryFee,
         freeDeliveryThreshold: parsed.data.freeDeliveryThreshold,
+        deliveryInfo: `${BUSINESS.deliveryFree} ${BUSINESS.deliveryOther}`,
+        deliveryFree: BUSINESS.deliveryFree,
+        deliveryOther: BUSINESS.deliveryOther,
         promoCode: parsed.data.promoCode,
         promoDiscountPercent: parsed.data.promoDiscountPercent,
         heroProductId: parsed.data.heroProductId,
-        cloudinaryCloudName: parsed.data.cloudinaryCloudName || "",
-        cloudinaryUploadPreset: "branch_farm",
-      });
-      showToast("Settings saved.", "success");
+        cloudinaryCloudName: "dhad95cch",
+        cloudinaryUploadPreset: "branch_farm_unsigned",
+        businessInfo: `${parsed.data.farmName} - ${parsed.data.slogan} - ${parsed.data.location}`,
+      } as any);
+      showToast("Settings saved", "success");
     } catch (cause) {
       setError(friendlyError(cause));
     } finally {
@@ -66,170 +70,47 @@ export default function SettingsPage() {
         <section className="dashboard-section-title">
           <div>
             <h2>Settings</h2>
-            <p>Farm details and store configuration.</p>
+            <p>Only useful business configuration: farm name, slogan, phone, WhatsApp, email, location, delivery information, currency, business information.</p>
           </div>
         </section>
 
-        {!form ? (
-          <Loading label="Loading settings…" />
-        ) : (
+        {!form ? <Loading label="Loading settings…" /> : (
           <form onSubmit={submit} className="settings-form">
             <section className="dashboard-panel">
               <div className="settings-section-head">
-                <span>
-                  <Store size={19} />
-                </span>
-                <div>
-                  <h3>Farm details</h3>
-                  <p>Shown across the website and workspace.</p>
-                </div>
+                <span><Store size={19} /></span>
+                <div><h3>{BUSINESS.name} — {BUSINESS.slogan}</h3><p>Business information</p></div>
               </div>
               <div className="form-grid">
-                <label className="field">
-                  <span>Farm name *</span>
-                  <input value={form.farmName} onChange={(e) => update("farmName", e.target.value)} required />
-                </label>
-                <label className="field">
-                  <span>Slogan</span>
-                  <input value={form.slogan} onChange={(e) => update("slogan", e.target.value)} />
-                </label>
-                <label className="field field-full">
-                  <span>Location *</span>
-                  <input value={form.location} onChange={(e) => update("location", e.target.value)} required />
-                </label>
-                <label className="field">
-                  <span>Phone</span>
-                  <input value={form.phone} onChange={(e) => update("phone", e.target.value)} />
-                </label>
-                <label className="field">
-                  <span>WhatsApp</span>
-                  <input value={form.whatsapp} onChange={(e) => update("whatsapp", e.target.value)} />
-                </label>
-                <label className="field">
-                  <span>Email</span>
-                  <input value={form.email} onChange={(e) => update("email", e.target.value)} />
-                </label>
-                <label className="field">
-                  <span>Currency symbol *</span>
-                  <input value={form.currency} onChange={(e) => update("currency", e.target.value)} required />
-                </label>
+                <label className="field"><span>Farm name *</span><input value={form.farmName} onChange={(e) => update("farmName", e.target.value)} required /></label>
+                <label className="field"><span>Slogan *</span><input value={form.slogan} onChange={(e) => update("slogan", e.target.value)} placeholder="Nayi Plug" /></label>
+                <label className="field field-full"><span>Location *</span><input value={form.location} onChange={(e) => update("location", e.target.value)} required placeholder="Mahlabane, Eswatini" /></label>
+                <label className="field"><span>Phone *</span><input value={form.phone} onChange={(e) => update("phone", e.target.value)} placeholder={BUSINESS.phoneDisplay} /></label>
+                <label className="field"><span>WhatsApp *</span><input value={form.whatsapp} onChange={(e) => update("whatsapp", e.target.value)} placeholder={BUSINESS.whatsappDisplay} /></label>
+                <label className="field"><span>Email</span><input value={form.email} onChange={(e) => update("email", e.target.value)} placeholder={BUSINESS.email} /></label>
+                <label className="field"><span>Currency *</span><input value={form.currency} onChange={(e) => update("currency", e.target.value)} required placeholder="E" /></label>
               </div>
             </section>
 
             <section className="dashboard-panel">
               <div className="settings-section-head">
-                <span>
-                  <Store size={19} />
-                </span>
-                <div>
-                  <h3>Online shop</h3>
-                  <p>Delivery pricing, promotions and the homepage hero.</p>
-                </div>
+                <span><Store size={19} /></span>
+                <div><h3>Delivery information</h3><p>Clearly displayed to customers</p></div>
               </div>
               <div className="form-grid">
-                <label className="field">
-                  <span>Delivery fee ({form.currency || "E"})</span>
-                  <input
-                    type="number"
-                    min={0}
-                    value={form.deliveryFee}
-                    onChange={(e) => update("deliveryFee", e.target.value)}
-                  />
-                </label>
-                <label className="field">
-                  <span>Free delivery above ({form.currency || "E"})</span>
-                  <input
-                    type="number"
-                    min={0}
-                    value={form.freeDeliveryThreshold}
-                    onChange={(e) => update("freeDeliveryThreshold", e.target.value)}
-                  />
-                </label>
-                <label className="field">
-                  <span>Promo code</span>
-                  <input
-                    value={form.promoCode || ""}
-                    onChange={(e) => update("promoCode", e.target.value)}
-                    placeholder="e.g. FARM5 (leave blank to disable)"
-                  />
-                </label>
-                <label className="field">
-                  <span>Promo discount (%)</span>
-                  <input
-                    type="number"
-                    min={0}
-                    max={100}
-                    value={form.promoDiscountPercent ?? 0}
-                    onChange={(e) => update("promoDiscountPercent", e.target.value)}
-                  />
-                </label>
-                <label className="field field-full">
-                  <span>Homepage hero product</span>
-                  <select
-                    value={form.heroProductId || ""}
-                    onChange={(e) => update("heroProductId", e.target.value)}
-                  >
-                    <option value="">First featured product</option>
-                    {products.map((product) => (
-                      <option key={product.id} value={product.id}>
-                        {product.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <label className="field"><span>Delivery Fee (E)</span><input type="number" min={0} value={form.deliveryFee} onChange={(e) => update("deliveryFee", e.target.value)} /></label>
+                <label className="field"><span>Free delivery above (E)</span><input type="number" min={0} value={form.freeDeliveryThreshold} onChange={(e) => update("freeDeliveryThreshold", e.target.value)} /></label>
+                <div className="field field-full" style={{ padding: 12, background: "var(--green-50)", borderRadius: 8, fontSize: ".8rem" }}>
+                  <strong>{BUSINESS.deliveryFree}</strong><br />{BUSINESS.deliveryOther}<br />Cloudinary: dhad95cch / branch_farm_unsigned — no folders.
+                </div>
               </div>
             </section>
 
-            <section className="dashboard-panel">
-              <div className="settings-section-head">
-                <span>
-                  <Cloud size={19} />
-                </span>
-                <div>
-                  <h3>Media uploads — Cloudinary</h3>
-                  <p>
-                    All photos, videos and downloadable files upload straight to Cloudinary with
-                    the same unsigned preset.
-                  </p>
-                </div>
-              </div>
-              <div className="form-grid">
-                <label className="field">
-                  <span>Cloudinary cloud name</span>
-                  <input
-                    value={form.cloudinaryCloudName || ""}
-                    onChange={(e) => update("cloudinaryCloudName", e.target.value)}
-                    placeholder="e.g. thebranchfarm (from your Cloudinary dashboard)"
-                  />
-                </label>
-                <label className="field">
-                  <span>Unsigned upload preset</span>
-                  <input value="branch_farm" readOnly aria-readonly="true" />
-                  <small>
-                    All uploads use this fixed preset. It must be configured as UNSIGNED in Cloudinary.
-                  </small>
-                </label>
-              </div>
-            </section>
+            {error && <div className="form-alert error"><CircleAlert size={17} /> {error}</div>}
 
-            {error && (
-              <div className="form-alert error">
-                <CircleAlert size={17} /> {error}
-              </div>
-            )}
             <div className="settings-save-bar">
-              <p>Changes apply to the public shop immediately.</p>
-              <button className="button button-primary" disabled={saving}>
-                {saving ? (
-                  <>
-                    <i className="button-spinner" /> Saving…
-                  </>
-                ) : (
-                  <>
-                    <Save size={17} /> Save settings
-                  </>
-                )}
-              </button>
+              <p>Changes apply immediately to shop, header, footer, receipts, invoices.</p>
+              <button className="button button-primary" disabled={saving}>{saving ? <><i className="button-spinner" /> Saving…</> : <><Save size={17} /> Save settings</>}</button>
             </div>
           </form>
         )}

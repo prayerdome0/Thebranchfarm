@@ -1,13 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { CircleAlert, PackageSearch, Search, Truck } from "lucide-react";
-import {
-  FULFILLMENT_LABELS,
-  ORDER_STATUS_FLOW,
-  ORDER_STATUS_LABELS,
-  PAYMENT_STATUS_LABELS,
-} from "@/lib/constants";
+import { CircleAlert, PackageSearch, Search, Truck, MapPin } from "lucide-react";
+import { FULFILLMENT_LABELS, ORDER_STATUS_FLOW, ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS, BUSINESS } from "@/lib/constants";
 import { getOrderByReference } from "@/lib/firebase/data";
 import { formatDate, money } from "@/lib/utils";
 import type { Order } from "@/types";
@@ -34,9 +29,9 @@ export default function TrackPage() {
     <>
       <section className="page-hero track-hero">
         <div className="container page-hero-inner">
-          <span className="eyebrow eyebrow-light">Order tracking</span>
-          <h1>Track your order.</h1>
-          <p>Enter your order reference to see its progress and details.</p>
+          <span className="eyebrow eyebrow-light">{BUSINESS.name} · {BUSINESS.slogan} — My Orders</span>
+          <h1>Order tracking</h1>
+          <p>Enter order number to see status: New, Confirmed, Preparing, Out for Delivery, Delivered, Cancelled. Delivery location shown. {BUSINESS.deliveryFree}</p>
         </div>
       </section>
 
@@ -44,61 +39,23 @@ export default function TrackPage() {
         <div className="container">
           <div className="track-layout">
             <form className="track-form" onSubmit={submit}>
-              <span className="track-form-icon">
-                <PackageSearch size={24} />
-              </span>
-              <h2>Find an order</h2>
-              <p>Your reference looks like <strong>TB-7K2M9Q</strong>.</p>
-              <label className="field">
-                <span>Order reference</span>
-                <input
-                  value={reference}
-                  onChange={(e) => setReference(e.target.value)}
-                  placeholder="TB-XXXXXX"
-                  autoFocus
-                />
-              </label>
-              <button className="button button-primary button-full" disabled={loading}>
-                {loading ? (
-                  <>
-                    <i className="button-spinner" /> Tracking…
-                  </>
-                ) : (
-                  <>
-                    <Search size={17} /> Track order
-                  </>
-                )}
-              </button>
-              <p className="track-privacy">Only the order reference is needed — no account required.</p>
+              <span className="track-form-icon"><PackageSearch size={24} /></span>
+              <h2>Find order</h2>
+              <p>Reference like <strong>TB-7K2M9Q</strong>. Customer record created on order.</p>
+              <label className="field"><span>Order Number</span><input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="TB-XXXXXX" autoFocus /></label>
+              <button className="button button-primary button-full" disabled={loading}>{loading ? <><i className="button-spinner" /> Tracking…</> : <><Search size={17} /> Track</>}</button>
+              <p className="track-privacy">My Orders, Order Details, Order Tracking, Profile — no account required, just reference.</p>
             </form>
 
             <div className="track-result">
               {!order && !notFound && (
                 <div className="track-placeholder">
-                  <span>
-                    <Truck size={30} />
-                  </span>
+                  <span><Truck size={30} /></span>
                   <h2>Track any order</h2>
-                  <p>Enter the reference from your confirmation to see where your order is.</p>
-                  <div className="placeholder-line">
-                    <i />
-                    <i />
-                    <i />
-                    <i />
-                  </div>
+                  <p>Enter reference from confirmation to see progress, delivery location, payment status, notes.</p>
                 </div>
               )}
-
-              {notFound && (
-                <div className="track-not-found">
-                  <span>
-                    <CircleAlert size={30} />
-                  </span>
-                  <h2>Order not found</h2>
-                  <p>Double-check the reference and try again — it&apos;s on your confirmation.</p>
-                </div>
-              )}
-
+              {notFound && <div className="track-not-found"><span><CircleAlert size={30} /></span><h2>Order not found</h2><p>Check reference — on your receipt/invoice.</p></div>}
               {order && <OrderTimeline order={order} />}
             </div>
           </div>
@@ -111,88 +68,25 @@ export default function TrackPage() {
 function OrderTimeline({ order }: { order: Order }) {
   const currentIndex = ORDER_STATUS_FLOW.indexOf(order.status);
   const cancelled = order.status === "cancelled";
-
   return (
     <div className="order-tracking-card">
       <div className="order-track-head">
-        <div>
-          <small>Order reference</small>
-          <h2>{order.reference}</h2>
-          <p>Placed {formatDate(order.createdAt, true)}</p>
-        </div>
-        <span className={`status-badge status-${order.status}`}>
-          {ORDER_STATUS_LABELS[order.status]}
-        </span>
+        <div><small>Order Number</small><h2>{order.reference}</h2><p>Placed {formatDate(order.createdAt, true)} · {order.customer.name} · {order.customer.phone}</p><p style={{ marginTop: 4 }}><MapPin size={12} /> Delivery Location: {order.deliveryAddress || (order as any).deliveryLocation || FULFILLMENT_LABELS[order.fulfillment]}</p></div>
+        <span className={`status-badge status-${order.status}`}>{ORDER_STATUS_LABELS[order.status]}</span>
       </div>
-
-      {cancelled && (
-        <div className="cancelled-order">This order has been cancelled. Contact the farm for details.</div>
-      )}
-
+      {cancelled && <div className="cancelled-order">Cancelled. Contact farm.</div>}
       {!cancelled && (
         <ol className="order-timeline">
           {ORDER_STATUS_FLOW.map((step, index) => (
-            <li
-              key={step}
-              className={index <= currentIndex ? "complete" : index === currentIndex + 1 ? "current" : ""}
-            >
-              <span>{index + 1}</span>
-              <strong>{ORDER_STATUS_LABELS[step]}</strong>
-              {index === currentIndex && <small>Current</small>}
-            </li>
+            <li key={step} className={index <= currentIndex ? "complete" : ""}><span>{index + 1}</span><strong>{ORDER_STATUS_LABELS[step]}</strong>{index === currentIndex && <small>Current</small>}</li>
           ))}
         </ol>
       )}
-
       <div className="track-order-details">
-        <div>
-          <span>Items</span>
-          <ul>
-            {order.items.map((item) => (
-              <li key={item.productId}>
-                <span>
-                  {item.name} × {item.quantity}
-                </span>
-                <span>{money(item.price * item.quantity)}</span>
-              </li>
-            ))}
-          </ul>
-          <p>
-            {FULFILLMENT_LABELS[order.fulfillment]} —{" "}
-            {order.fulfillment === "delivery"
-              ? order.deliveryAddress || "address confirmed by phone"
-              : "The Branch Farm, Mahlabane"}
-          </p>
-        </div>
-        <div>
-          <span>Details</span>
-          <ul>
-            <li>
-              <small>Customer</small>
-              <small>{order.customer.name}</small>
-            </li>
-            <li>
-              <small>Phone</small>
-              <small>{order.customer.phone}</small>
-            </li>
-            <li>
-              <small>Payment</small>
-              <small>{PAYMENT_STATUS_LABELS[order.paymentStatus]}</small>
-            </li>
-            {order.paymentMethod && (
-              <li>
-                <small>Method</small>
-                <small>{order.paymentMethod}</small>
-              </li>
-            )}
-          </ul>
-        </div>
+        <div><span>Products · Quantity</span><ul>{order.items.map((item) => (<li key={item.productId}><span>{item.name} × {item.quantity} ({item.unit})</span><span>{money(item.price * item.quantity)}</span></li>))}</ul><p>{FULFILLMENT_LABELS[order.fulfillment]} — {order.deliveryAddress || "The Branch Farm"}</p></div>
+        <div><span>Customer & Payment</span><ul><li><small>Customer</small><small>{order.customer.name}</small></li><li><small>Phone</small><small>{order.customer.phone}</small></li><li><small>Payment</small><small>{(PAYMENT_STATUS_LABELS as any)[order.paymentStatus] || order.paymentStatus}</small></li><li><small>Total</small><small>{money(order.total)}</small></li></ul>{order.notes && <p style={{ marginTop: 8, fontSize: ".75rem" }}>Notes: {order.notes}</p>}</div>
       </div>
-
-      <div className="track-total">
-        <span>Order total</span>
-        <strong>{money(order.total)}</strong>
-      </div>
+      <div className="track-total"><span>Total · Subtotal + Delivery</span><strong>{money(order.total)}</strong></div>
     </div>
   );
 }

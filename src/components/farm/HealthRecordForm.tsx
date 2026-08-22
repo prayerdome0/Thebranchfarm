@@ -16,8 +16,10 @@ export interface HealthRecordValues {
   animalLabel?: string;
   type: string;
   problem: string;
+  description?: string;
   observation?: string;
   actionTaken?: string;
+  treatment?: string;
   medication?: string;
   date: string;
   nextDate?: string;
@@ -43,50 +45,51 @@ export function HealthRecordForm({
 }) {
   const [form, setForm] = useState<Record<string, string>>({
     animalId: defaults?.animalId || lockedAnimalId || "",
-    type: defaults?.type || "problem",
+    type: defaults?.type || "observation",
     problem: defaults?.problem || "",
-    observation: defaults?.observation || "",
-    actionTaken: defaults?.actionTaken || "",
-    medication: defaults?.medication || "",
+    description: (defaults as any)?.description || defaults?.observation || "",
+    treatment: (defaults as any)?.treatment || defaults?.actionTaken || "",
     date: defaults?.date || todayIso(),
-    nextDate: defaults?.nextDate || "",
     notes: defaults?.notes || "",
   });
   const [photo, setPhoto] = useState<{ url?: string; path?: string }>({
-    url: defaults?.photo,
-    path: defaults?.photoPath,
+    url: defaults?.photo || (defaults as any)?.attachmentUrl,
+    path: defaults?.photoPath || (defaults as any)?.attachmentPublicId,
   });
   const [error, setError] = useState("");
   const { settings } = useStoreConfig();
 
   const update = (name: string, value: string) => setForm((current) => ({ ...current, [name]: value }));
 
-  const selectedAnimal = animals.find(
-    (animal) => animal.id === form.animalId || animal.animalId === form.animalId,
-  );
+  const selectedAnimal = animals.find((animal) => animal.id === form.animalId || animal.animalId === form.animalId);
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     setError("");
     const parsed = healthRecordSchema.safeParse({
-      ...form,
-      nextDate: form.nextDate || "",
+      animalId: form.animalId,
+      type: form.type,
+      problem: form.problem || form.description || "Health record",
+      observation: form.description,
+      actionTaken: form.treatment,
+      date: form.date,
+      notes: form.notes,
     });
     if (!parsed.success) {
-      setError(parsed.error.issues[0]?.message || "Please review the information and try again.");
+      setError(parsed.error.issues[0]?.message || "Review info");
       return;
     }
     const values: HealthRecordValues = {
       animalId: form.animalId,
       animalLabel: animalLabel(selectedAnimal, form.animalId),
       type: form.type,
-      problem: form.problem.trim(),
-      observation: form.observation.trim() || undefined,
-      actionTaken: form.actionTaken.trim() || undefined,
-      medication: form.medication.trim() || undefined,
+      problem: form.problem || form.description || "Health record",
+      description: form.description,
+      observation: form.description,
+      actionTaken: form.treatment,
+      treatment: form.treatment,
       date: form.date,
-      nextDate: form.nextDate || undefined,
-      notes: form.notes.trim() || undefined,
+      notes: form.notes,
       photo: photo.url,
       photoPath: photo.path,
     };
@@ -98,114 +101,43 @@ export function HealthRecordForm({
   };
 
   return (
-    <form onSubmit={submit} className="dashboard-stack">
+    <form onSubmit={submit} className="dashboard-stack" style={{ padding: 20 }}>
       <div className="form-grid">
         <label className="field">
           <span>Animal *</span>
-          {lockedAnimalId ? (
-            <input value={animalLabel(selectedAnimal, lockedAnimalId)} disabled />
-          ) : (
-            <select value={form.animalId} onChange={(event) => update("animalId", event.target.value)} required>
-              <option value="">Select an animal…</option>
-              {animals.map((animal) => (
-                <option key={animal.id} value={animal.id}>
-                  {animalLabel(animal, animal.animalId)}
-                </option>
-              ))}
+          {lockedAnimalId ? <input value={animalLabel(selectedAnimal, lockedAnimalId)} disabled /> : (
+            <select value={form.animalId} onChange={(e) => update("animalId", e.target.value)} required>
+              <option value="">Select animal…</option>
+              {animals.map((a) => (<option key={a.id} value={a.id}>{animalLabel(a, a.animalId)}</option>))}
             </select>
           )}
         </label>
-        <label className="field">
-          <span>Record type</span>
-          <select value={form.type} onChange={(event) => update("type", event.target.value)}>
-            {HEALTH_RECORD_TYPES.map((type) => (
-              <option key={type.value} value={type.value}>{type.label}</option>
-            ))}
+        <label className="field"><span>Date *</span><input type="date" value={form.date} onChange={(e) => update("date", e.target.value)} required /></label>
+        <label className="field"><span>Type *</span>
+          <select value={form.type} onChange={(e) => update("type", e.target.value)}>
+            {HEALTH_RECORD_TYPES.map((t) => (<option key={t.value} value={t.value}>{t.label}</option>))}
           </select>
         </label>
-        <label className="field field-full">
-          <span>Problem / issue *</span>
-          <input
-            value={form.problem}
-            placeholder="e.g. Animal not eating normally"
-            onChange={(event) => update("problem", event.target.value)}
-            required
-          />
-        </label>
-        <label className="field">
-          <span>Observation</span>
-          <input
-            value={form.observation}
-            placeholder="e.g. Reduced appetite"
-            onChange={(event) => update("observation", event.target.value)}
-          />
-        </label>
-        <label className="field">
-          <span>Action taken</span>
-          <input
-            value={form.actionTaken}
-            placeholder="e.g. Monitoring"
-            onChange={(event) => update("actionTaken", event.target.value)}
-          />
-        </label>
-        <label className="field">
-          <span>Medication / vaccine</span>
-          <input
-            value={form.medication}
-            onChange={(event) => update("medication", event.target.value)}
-          />
-        </label>
-        <label className="field">
-          <span>Date *</span>
-          <input type="date" value={form.date} onChange={(event) => update("date", event.target.value)} required />
-        </label>
-        <label className="field">
-          <span>Next / follow-up date</span>
-          <input type="date" value={form.nextDate} onChange={(event) => update("nextDate", event.target.value)} />
-        </label>
+        <label className="field field-full"><span>Description *</span><input value={form.description} onChange={(e) => update("description", e.target.value)} placeholder="Describe observation or problem" required /></label>
+        <label className="field field-full"><span>Treatment</span><input value={form.treatment} onChange={(e) => update("treatment", e.target.value)} placeholder="Treatment given" /></label>
       </div>
 
       <PhotoField
-        label="Supporting photo (optional)"
+        label="Attachment (photo) — Cloudinary no folders"
         value={photo.url}
         path={photo.path}
-        upload={async (file, onProgress) =>
-          asStoredCloudinaryAsset(
-            await uploadHealthPhotoToCloudinary(
-              file,
-              resolveCloudinaryConfig(settings),
-              onProgress,
-            ),
-          )
-        }
+        upload={async (file, onProgress) => asStoredCloudinaryAsset(await uploadHealthPhotoToCloudinary(file, resolveCloudinaryConfig(settings), onProgress))}
         onChange={(result) => setPhoto({ url: result.url, path: result.path })}
-        hint="Uploaded to Cloudinary with the unsigned branch_farm preset. JPG, PNG or WebP up to 8 MB."
+        hint="Stored in Cloudinary dhad95cch with branch_farm_unsigned preset, no folders. recordType animal, recordId animal ID."
       />
 
-      <label className="field field-full">
-        <span>Medical notes</span>
-        <textarea rows={3} value={form.notes} onChange={(event) => update("notes", event.target.value)} />
-      </label>
+      <label className="field field-full"><span>Notes</span><textarea rows={3} value={form.notes} onChange={(e) => update("notes", e.target.value)} placeholder="Additional notes" /></label>
 
-      {error && (
-        <div className="form-alert error">
-          <CircleAlert size={17} /> {error}
-        </div>
-      )}
+      {error && <div className="form-alert error"><CircleAlert size={17} /> {error}</div>}
 
       <div className="modal-actions">
-        <button type="button" className="button button-ghost" onClick={onCancel}>
-          Cancel
-        </button>
-        <button className="button button-primary" disabled={saving}>
-          {saving ? (
-            <>
-              <i className="button-spinner" /> Saving…
-            </>
-          ) : (
-            "Save health record"
-          )}
-        </button>
+        <button type="button" className="button button-ghost" onClick={onCancel}>Cancel</button>
+        <button className="button button-primary" disabled={saving}>{saving ? <><i className="button-spinner" /> Saving…</> : "Save health record"}</button>
       </div>
     </form>
   );

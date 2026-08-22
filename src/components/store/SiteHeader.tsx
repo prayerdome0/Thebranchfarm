@@ -13,6 +13,7 @@ import {
   ShoppingBag,
   Truck,
   UserRound,
+  MessageCircle,
 } from "lucide-react";
 import { BrandMark } from "@/components/layout/BrandMark";
 import { useAuth } from "@/contexts/AuthContext";
@@ -51,14 +52,14 @@ function SiteHeaderContent({ pathname }: { pathname: string }) {
     return () => document.removeEventListener("mousedown", onClick);
   }, []);
 
+  // Spec: Home, Shop, Our Farm, Gallery, About, Contact, Cart, Sign In
   const nav = [
     { href: "/", label: "Home" },
     { href: "/shop", label: "Shop" },
-    { href: "/videos", label: "Videos" },
+    { href: "/our-farm", label: "Our Farm" },
     { href: "/gallery", label: "Gallery" },
     { href: "/about", label: "About" },
     { href: "/contact", label: "Contact" },
-    { href: "/track", label: "Track order" },
   ];
 
   const canEnter = Boolean(user && (user.role === "staff" || user.role === "admin"));
@@ -70,8 +71,8 @@ function SiteHeaderContent({ pathname }: { pathname: string }) {
           <span>
             <i className="live-dot" /> {BUSINESS.name} · {BUSINESS.slogan}
           </span>
-          <span>
-            <Truck size={14} /> Order online, collect or arrange delivery
+          <span className="announcement-delivery">
+            <Truck size={14} /> {BUSINESS.deliveryFree}
           </span>
         </div>
       </div>
@@ -107,15 +108,15 @@ function SiteHeaderContent({ pathname }: { pathname: string }) {
           </form>
 
           <div className="nav-actions">
-            <button
+            <Link
               className="icon-button"
               style={{ position: "relative" }}
-              onClick={() => router.push("/cart")}
-              aria-label={`Open cart, ${count} items`}
+              href="/cart"
+              aria-label={`Cart, ${count} items`}
             >
               <ShoppingBag size={21} />
               {count > 0 && <span className="cart-count">{count}</span>}
-            </button>
+            </Link>
 
             <div className="account-menu-wrap" ref={accountRef}>
               <button
@@ -127,9 +128,6 @@ function SiteHeaderContent({ pathname }: { pathname: string }) {
                 <span className="account-avatar">
                   {user ? initials(user.fullName) : <UserRound size={16} />}
                 </span>
-                <span style={{ display: "none" }} className="sr-only">
-                  Menu
-                </span>
               </button>
 
               {accountOpen && (
@@ -139,24 +137,35 @@ function SiteHeaderContent({ pathname }: { pathname: string }) {
                       <span className="account-role">
                         {user?.role === "admin" ? "Administrator" : "Staff"}
                       </span>
-                      <Link href="/dashboard">
+                      <Link href="/dashboard" onClick={() => setAccountOpen(false)}>
                         <LayoutDashboard size={16} /> Dashboard
                       </Link>
-                      <Link href="/orders">
+                      <Link href="/orders" onClick={() => setAccountOpen(false)}>
                         <PackageSearch size={16} /> Orders
                       </Link>
-                      <button onClick={() => logout()}>
+                      <button onClick={() => { setAccountOpen(false); logout(); }}>
+                        <LogOut size={16} /> Sign out
+                      </button>
+                    </>
+                  ) : user ? (
+                    <>
+                      <span className="account-role">Customer</span>
+                      <Link href="/track" onClick={() => setAccountOpen(false)}>My Orders</Link>
+                      <button onClick={() => { setAccountOpen(false); logout(); }}>
                         <LogOut size={16} /> Sign out
                       </button>
                     </>
                   ) : (
                     <>
-                      <span className="account-role">Farm workspace</span>
-                      <Link href="/login">
-                        <LogIn size={16} /> Sign in
+                      <span className="account-role">{BUSINESS.name}</span>
+                      <Link href="/login" onClick={() => setAccountOpen(false)}>
+                        <LogIn size={16} /> Sign In
                       </Link>
-                      <Link href="/register">
-                        <UserRound size={16} /> Request access
+                      <Link href="/register" onClick={() => setAccountOpen(false)}>
+                        <UserRound size={16} /> Register
+                      </Link>
+                      <Link href={`https://wa.me/${BUSINESS.whatsappLink}`} target="_blank" rel="noreferrer" onClick={() => setAccountOpen(false)}>
+                        <MessageCircle size={16} /> WhatsApp Us
                       </Link>
                     </>
                   )}
@@ -183,23 +192,34 @@ function SiteHeaderContent({ pathname }: { pathname: string }) {
                 className={cn(
                   (item.href === "/" ? pathname === "/" : pathname.startsWith(item.href)) && "active",
                 )}
+                onClick={() => setMenuOpen(false)}
               >
                 {item.label}
               </Link>
             ))}
-            <Link href="/cart">Cart {count > 0 ? `(${count})` : ""}</Link>
+            <Link href="/shop" onClick={() => setMenuOpen(false)}>Shop</Link>
+            <Link href="/cart" onClick={() => setMenuOpen(false)}>Cart {count > 0 ? `(${count})` : ""}</Link>
+            <Link href="/our-farm" onClick={() => setMenuOpen(false)}>Our Farm</Link>
             <div className="mobile-nav-divider" />
             {canEnter ? (
               <>
-                <Link href="/dashboard">Dashboard</Link>
-                <button onClick={() => logout()}>Sign out</button>
+                <Link href="/dashboard" onClick={() => setMenuOpen(false)}>Dashboard</Link>
+                <button onClick={() => { setMenuOpen(false); logout(); }}>Sign out</button>
+              </>
+            ) : user ? (
+              <>
+                <Link href="/track" onClick={() => setMenuOpen(false)}>My Orders</Link>
+                <button onClick={() => { setMenuOpen(false); logout(); }}>Sign out</button>
               </>
             ) : (
               <>
-                <Link href="/login">Sign in</Link>
-                <Link href="/register" className="mobile-register">
-                  Request access
+                <Link href="/login" onClick={() => setMenuOpen(false)}>Sign In</Link>
+                <Link href="/register" className="mobile-register" onClick={() => setMenuOpen(false)}>
+                  Register
                 </Link>
+                <a href={`https://wa.me/${BUSINESS.whatsappLink}`} target="_blank" rel="noreferrer" className="button button-whatsapp" style={{ marginTop: 12 }}>
+                  <MessageCircle size={16} /> WhatsApp Us
+                </a>
               </>
             )}
           </nav>

@@ -63,6 +63,6 @@ test("order references are unique and well-formed", () => {
 test("store constants expose product kinds and order statuses", () => {
   assert.equal(PRODUCT_KIND_LABELS.produce, "Farm produce");
   assert.equal(PRODUCT_KIND_LABELS.livestock, "Live animals");
-  assert.equal(ORDER_STATUS_LABELS.pending, "Placed");
-  assert.equal(ORDER_STATUS_LABELS.completed, "Completed");
+  assert.equal(ORDER_STATUS_LABELS.pending, "New");
+  assert.equal(ORDER_STATUS_LABELS.completed, "Delivered");
 });

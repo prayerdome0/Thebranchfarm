@@ -27,13 +27,18 @@ import { DEMO_PRODUCTS, DEMO_VIDEOS, demoOrders, generateOrderReference } from "
 import type {
   ActivityRecord,
   Animal,
+  Customer,
   FarmDocument,
+  FarmMedia,
   FarmSettings,
   FarmVideo,
   HealthRecord,
+  Invoice,
   Order,
   OrderItem,
   Product,
+  Quotation,
+  Receipt,
   UserProfile,
 } from "@/types";
 
@@ -48,12 +53,13 @@ function requireUser() {
 }
 
 function stamp() {
-  const current = requireUser();
-  const name = current.displayName || "Team member";
+  const current = auth.currentUser;
+  const uid = current?.uid || "system";
+  const name = current?.displayName || current?.email || "Team member";
   return {
-    createdBy: current.uid,
+    createdBy: uid,
     createdByName: name,
-    updatedBy: current.uid,
+    updatedBy: uid,
     updatedByName: name,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
@@ -62,10 +68,11 @@ function stamp() {
 }
 
 function updateStamp() {
-  const current = requireUser();
+  const current = auth.currentUser;
+  const uid = current?.uid || "system";
   return {
-    updatedBy: current.uid,
-    updatedByName: current.displayName || "Team member",
+    updatedBy: uid,
+    updatedByName: current?.displayName || current?.email || "Team member",
     updatedAt: serverTimestamp(),
   };
 }
@@ -134,7 +141,7 @@ export async function deleteAnimal(id: string) {
     ...health.map((record) => deleteDoc(doc(db, "animalHealth", record.id))),
     deleteDoc(doc(db, "animals", id)),
   ];
-  if (animal?.photoPath) deletions.push(deleteStorageObject(animal.photoPath).catch(() => {}));
+  if (animal?.photoPath && !animal.photoPath.startsWith("cloudinary:")) deletions.push(deleteStorageObject(animal.photoPath).catch(() => {}));
   await Promise.all(deletions);
 }
 
@@ -247,8 +254,161 @@ export async function createFarmDocument(values: Omit<FarmDocument, "id" | keyof
 export async function deleteFarmDocument(id: string) {
   const snapshot = await getDoc(doc(db, "farmDocuments", id));
   const data = snapshot.exists() ? (snapshot.data() as FarmDocument) : null;
-  if (data?.storagePath) await deleteStorageObject(data.storagePath).catch(() => {});
+  if (data?.storagePath && !data.storagePath.startsWith("cloudinary:")) await deleteStorageObject(data.storagePath).catch(() => {});
   return deleteDoc(doc(db, "farmDocuments", id));
+}
+
+/* ----------------------------- Quotations ----------------------------- */
+
+export async function getQuotations(): Promise<Quotation[]> {
+  try {
+    const snap = await getDocs(query(collection(db, "quotations"), orderBy("createdAt", "desc"), limit(200)));
+    return snap.docs.map((d) => mapped<Quotation>(d));
+  } catch {
+    return [];
+  }
+}
+export function watchQuotations(cb: (list: Quotation[]) => void): Unsubscribe {
+  try {
+    return onSnapshot(query(collection(db, "quotations"), orderBy("createdAt", "desc"), limit(200)), (snap) => cb(snap.docs.map((d) => mapped<Quotation>(d))), () => cb([]));
+  } catch {
+    cb([]); return () => {};
+  }
+}
+export async function createQuotation(values: Omit<Quotation, "id" | keyof ReturnType<typeof stamp>>) {
+  return addDoc(collection(db, "quotations"), { ...values, ...stamp() });
+}
+
+/* ----------------------------- Invoices ----------------------------- */
+
+export async function getInvoices(): Promise<Invoice[]> {
+  try {
+    const snap = await getDocs(query(collection(db, "invoices"), orderBy("createdAt", "desc"), limit(200)));
+    return snap.docs.map((d) => mapped<Invoice>(d));
+  } catch { return []; }
+}
+export function watchInvoices(cb: (list: Invoice[]) => void): Unsubscribe {
+  try {
+    return onSnapshot(query(collection(db, "invoices"), orderBy("createdAt", "desc"), limit(200)), (snap) => cb(snap.docs.map((d) => mapped<Invoice>(d))), () => cb([]));
+  } catch { cb([]); return () => {}; }
+}
+export async function createInvoice(values: Omit<Invoice, "id" | keyof ReturnType<typeof stamp>>) {
+  return addDoc(collection(db, "invoices"), { ...values, ...stamp() });
+}
+
+/* ----------------------------- Receipts ----------------------------- */
+
+export async function getReceipts(): Promise<Receipt[]> {
+  try {
+    const snap = await getDocs(query(collection(db, "receipts"), orderBy("createdAt", "desc"), limit(200)));
+    return snap.docs.map((d) => mapped<Receipt>(d));
+  } catch { return []; }
+}
+export function watchReceipts(cb: (list: Receipt[]) => void): Unsubscribe {
+  try {
+    return onSnapshot(query(collection(db, "receipts"), orderBy("createdAt", "desc"), limit(200)), (snap) => cb(snap.docs.map((d) => mapped<Receipt>(d))), () => cb([]));
+  } catch { cb([]); return () => {}; }
+}
+export async function createReceipt(values: Omit<Receipt, "id" | keyof ReturnType<typeof stamp>>) {
+  return addDoc(collection(db, "receipts"), { ...values, ...stamp() });
+}
+
+/* ----------------------------- Customers ----------------------------- */
+
+export async function getCustomers(): Promise<Customer[]> {
+  try {
+    const snap = await getDocs(query(collection(db, "customers"), orderBy("createdAt", "desc"), limit(500)));
+    return snap.docs.map((d) => mapped<Customer>(d));
+  } catch { return []; }
+}
+
+export function watchCustomers(cb: (list: Customer[]) => void): Unsubscribe {
+  try {
+    return onSnapshot(query(collection(db, "customers"), orderBy("createdAt", "desc"), limit(500)), (snap) => cb(snap.docs.map((d) => mapped<Customer>(d))), () => cb([]));
+  } catch { cb([]); return () => {}; }
+}
+
+export async function getCustomer(id: string): Promise<Customer | null> {
+  try {
+    const snap = await getDoc(doc(db, "customers", id));
+    return snap.exists() ? mapped<Customer>(snap) : null;
+  } catch { return null; }
+}
+
+export async function getCustomerByPhone(phone: string): Promise<Customer | null> {
+  try {
+    const snap = await getDocs(query(collection(db, "customers"), where("phone", "==", phone), limit(1)));
+    const first = snap.docs[0];
+    return first ? mapped<Customer>(first) : null;
+  } catch { return null; }
+}
+
+export async function createOrUpdateCustomerFromOrder(order: Order) {
+  try {
+    const existing = await getCustomerByPhone(order.customer.phone);
+    if (existing) {
+      const totalSpent = (existing.totalSpent || 0) + order.total;
+      await updateDoc(doc(db, "customers", existing.id), {
+        name: order.customer.name,
+        email: order.customer.email || existing.email,
+        totalSpent,
+        lastOrder: serverTimestamp(),
+        deliveryLocation: order.deliveryAddress || order.deliveryLocation || existing.deliveryLocation,
+        orders: increment(1),
+        updatedAt: serverTimestamp(),
+      });
+      return existing.id;
+    } else {
+      const ref = await addDoc(collection(db, "customers"), {
+        name: order.customer.name,
+        phone: order.customer.phone,
+        email: order.customer.email || "",
+        orders: 1,
+        totalSpent: order.total,
+        lastOrder: serverTimestamp(),
+        deliveryLocation: order.deliveryAddress || order.deliveryLocation || "",
+        status: "active",
+        dateRegistered: serverTimestamp(),
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        createdBy: "system",
+        createdByName: "System",
+        updatedBy: "system",
+        updatedByName: "System",
+      });
+      return ref.id;
+    }
+  } catch {
+    // ignore customer creation errors
+    return null;
+  }
+}
+
+/* ----------------------------- Farm Media ----------------------------- */
+
+export async function getFarmMedia(): Promise<FarmMedia[]> {
+  try {
+    const snap = await getDocs(query(collection(db, "media"), orderBy("createdAt", "desc"), limit(500)));
+    return snap.docs.map((d) => mapped<FarmMedia>(d));
+  } catch { return []; }
+}
+
+export function watchFarmMedia(cb: (list: FarmMedia[]) => void): Unsubscribe {
+  try {
+    return onSnapshot(query(collection(db, "media"), orderBy("createdAt", "desc"), limit(500)), (snap) => cb(snap.docs.map((d) => mapped<FarmMedia>(d))), () => cb([]));
+  } catch { cb([]); return () => {}; }
+}
+
+export async function createFarmMedia(values: Omit<FarmMedia, "id" | keyof ReturnType<typeof stamp>>) {
+  return addDoc(collection(db, "media"), { ...values, ...stamp() });
+}
+
+export async function deleteFarmMedia(id: string) {
+  return deleteDoc(doc(db, "media", id));
+}
+
+export async function updateFarmMedia(id: string, patch: Partial<FarmMedia>) {
+  return updateDoc(doc(db, "media", id), { ...patch, ...updateStamp() });
 }
 
 /* ----------------------------- Activities ----------------------------- */
@@ -279,17 +439,22 @@ export function defaultSettings(): FarmSettings {
     farmName: BUSINESS.name,
     slogan: BUSINESS.slogan,
     location: BUSINESS.location,
+    fullLocation: BUSINESS.fullLocation,
     phone: BUSINESS.phoneDisplay,
     whatsapp: BUSINESS.whatsappDisplay,
-    email: "",
+    email: BUSINESS.email,
     currency: BUSINESS.currency,
     deliveryFee: STORE.deliveryFee,
     freeDeliveryThreshold: STORE.freeDeliveryThreshold,
+    deliveryInfo: `${BUSINESS.deliveryFree} ${BUSINESS.deliveryOther}`,
+    deliveryFree: BUSINESS.deliveryFree,
+    deliveryOther: BUSINESS.deliveryOther,
     promoCode: "",
     promoDiscountPercent: 0,
     heroProductId: "",
-    cloudinaryCloudName: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || "",
+    cloudinaryCloudName: CLOUDINARY.cloudName,
     cloudinaryUploadPreset: CLOUDINARY.uploadPreset,
+    businessInfo: `${BUSINESS.name} - ${BUSINESS.slogan} - Farm in ${BUSINESS.location}`,
   };
 }
 
@@ -313,7 +478,6 @@ function demoProducts(): Product[] {
   return DEMO_PRODUCTS.map((product, index) => ({ ...product, id: `demo-${index + 1}` }));
 }
 
-/** Active catalogue. Falls back to the sample catalog when Firestore is unreachable. */
 export async function getProducts(): Promise<Product[]> {
   try {
     const snapshot = await getDocs(
@@ -345,7 +509,6 @@ export function watchProducts(callback: (products: Product[]) => void): Unsubscr
   }
 }
 
-/** Admin view: all products, including inactive ones. */
 export async function getAllProducts(): Promise<Product[]> {
   try {
     const snapshot = await getDocs(
@@ -390,11 +553,10 @@ export async function updateProduct(id: string, values: Omit<Product, "id">) {
 export async function deleteProduct(id: string) {
   const snapshot = await getDoc(doc(db, "products", id));
   const data = snapshot.exists() ? (snapshot.data() as Product) : null;
-  if (data?.imagePath) await deleteStorageObject(data.imagePath).catch(() => {});
+  if (data?.imagePath && !data.imagePath.startsWith("cloudinary:")) await deleteStorageObject(data.imagePath).catch(() => {});
   return deleteDoc(doc(db, "products", id));
 }
 
-/** Seeds the sample catalog into Firestore (admin convenience action). */
 export async function seedDemoProducts(): Promise<number> {
   const batch = writeBatch(db);
   const ref = collection(db, "products");
@@ -415,6 +577,7 @@ export async function createOrder(values: {
   customer: { name: string; phone: string; email?: string };
   fulfillment: Order["fulfillment"];
   deliveryAddress?: string;
+  deliveryLocation?: string;
   notes?: string;
   paymentMethod?: string;
 }): Promise<Order> {
@@ -428,8 +591,6 @@ export async function createOrder(values: {
   };
 
   try {
-    // Atomically check stock and decrement it together with creating the order,
-    // so an order can never oversell an inventory-tracked product.
     const ref = await runTransaction(db, async (transaction) => {
       for (const item of values.items) {
         if (!item.productId || item.productId.startsWith("demo-")) continue;
@@ -452,24 +613,25 @@ export async function createOrder(values: {
       return orderRef;
     });
 
-    return { ...order, id: ref.id };
+    const created: Order = { ...order, id: ref.id, createdAt: new Date(), updatedAt: new Date() } as Order;
+    // Create customer record async (don't block)
+    createOrUpdateCustomerFromOrder(created).catch(() => {});
+    return { ...order, id: ref.id } as Order;
   } catch (cause) {
     const message = cause instanceof Error ? cause.message : "";
     if (message.startsWith("insufficient-stock:")) {
       throw new Error(`Insufficient stock for "${message.slice("insufficient-stock:".length)}". Please reduce the quantity.`);
     }
-    // Firestore unreachable (e.g. preview without a backend) → store locally.
     const fallback: Order = {
       ...order,
       id: `local-${Date.now()}`,
       createdAt: new Date(),
       updatedAt: new Date(),
-    };
+    } as Order;
     return demoOrders.add(fallback);
   }
 }
 
-/** Admin list of all orders. Falls back to local demo orders. */
 export async function getOrders(): Promise<Order[]> {
   try {
     const snapshot = await getDocs(
@@ -517,7 +679,7 @@ export async function getOrderByReference(reference: string): Promise<Order | nu
 
 export async function updateOrder(
   id: string,
-  patch: Partial<Pick<Order, "status" | "paymentStatus" | "notes" | "signature" | "signedByName" | "signedAt">>,
+  patch: Partial<Pick<Order, "status" | "paymentStatus" | "notes" | "signature" | "signedByName" | "signedAt" | "deliveryAddress">>,
 ) {
   try {
     await updateDoc(doc(db, "orders", id), { ...patch, ...updateStamp() });
@@ -562,8 +724,6 @@ export function watchVideos(callback: (videos: FarmVideo[]) => void): Unsubscrib
   }
 }
 
-/** Workspace list: real Firestore records only — no demo fallback, so demo
- * entries are never shown as deletable records. */
 export function watchManagedVideos(callback: (videos: FarmVideo[]) => void): Unsubscribe {
   try {
     return onSnapshot(
@@ -581,7 +741,6 @@ export async function createVideo(values: Omit<FarmVideo, "id" | keyof ReturnTyp
   return addDoc(collection(db, "videos"), { ...values, ...stamp() });
 }
 
-/** Seeds the sample farm videos into Firestore (admin convenience action). */
 export async function seedDemoVideos(): Promise<number> {
   const batch = writeBatch(db);
   const ref = collection(db, "videos");
@@ -595,8 +754,8 @@ export async function seedDemoVideos(): Promise<number> {
 export async function deleteVideo(id: string) {
   const snapshot = await getDoc(doc(db, "videos", id));
   const data = snapshot.exists() ? (snapshot.data() as FarmVideo) : null;
-  if (data?.storagePath) await deleteStorageObject(data.storagePath).catch(() => {});
-  if (data?.posterPath) await deleteStorageObject(data.posterPath).catch(() => {});
+  if (data?.storagePath && !data.storagePath.startsWith("cloudinary:")) await deleteStorageObject(data.storagePath).catch(() => {});
+  if (data?.posterPath && !data.posterPath.startsWith("cloudinary:")) await deleteStorageObject(data.posterPath).catch(() => {});
   return deleteDoc(doc(db, "videos", id));
 }
 
