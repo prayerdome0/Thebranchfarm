@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { Search, UsersRound, Phone, Mail, ShoppingBag } from "lucide-react";
+import { Search, UsersRound } from "lucide-react";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Loading } from "@/components/ui/Loading";
 import { watchCustomers } from "@/lib/firebase/data";

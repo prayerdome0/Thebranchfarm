@@ -88,6 +88,7 @@ function AnimalClip({ clip }: { clip: (typeof ANIMAL_CLIPS)[number] }) {
   if (failed) {
     return (
       <figure className="animal-clip">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={clip.poster} alt={clip.label} className="animal-clip-fallback" />
         <span className="animal-clip-label">{clip.label}</span>
       </figure>

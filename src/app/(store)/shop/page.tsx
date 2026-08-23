@@ -2,7 +2,7 @@
 
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState, Suspense } from "react";
-import { Leaf, PackageSearch, Search, ShoppingBag, MessageCircle, Truck } from "lucide-react";
+import { Leaf, PackageSearch, Search, MessageCircle, Truck } from "lucide-react";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Loading } from "@/components/ui/Loading";
 import { Reveal } from "@/components/ui/Reveal";

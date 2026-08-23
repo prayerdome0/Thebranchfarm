@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import type { Product } from "@/types";
+import { setAppBadge } from "@/lib/pwa";
 
 export interface CartLine {
   productId: string;
@@ -68,6 +69,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
     } catch {
       /* ignore quota errors */
     }
+    // Update PWA badge
+    const count = lines.reduce((sum, line) => sum + line.quantity, 0);
+    setAppBadge(count).catch(() => {});
   }, [lines, hydrated]);
 
   const add = useCallback((product: Product, quantity = 1) => {

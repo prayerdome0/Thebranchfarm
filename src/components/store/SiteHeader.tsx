@@ -14,12 +14,16 @@ import {
   Truck,
   UserRound,
   MessageCircle,
+  Download,
+  Smartphone,
 } from "lucide-react";
 import { BrandMark } from "@/components/layout/BrandMark";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/contexts/CartContext";
 import { BUSINESS } from "@/lib/constants";
 import { cn, initials } from "@/lib/utils";
+import { usePWAInstall } from "@/hooks/usePWAInstall";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 
 export function SiteHeader() {
   const pathname = usePathname();
@@ -30,6 +34,8 @@ function SiteHeaderContent({ pathname }: { pathname: string }) {
   const router = useRouter();
   const { user, logout } = useAuth();
   const { count } = useCart();
+  const { isInstallable, isInstalled, install } = usePWAInstall();
+  const { isOnline } = useOnlineStatus();
   const [menuOpen, setMenuOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -108,6 +114,27 @@ function SiteHeaderContent({ pathname }: { pathname: string }) {
           </form>
 
           <div className="nav-actions">
+            {isInstallable && !isInstalled && (
+              <button
+                className="icon-button"
+                onClick={() => install()}
+                aria-label="Install app"
+                title="Install The Branch Farm app"
+                style={{ color: "var(--green-700)", background: "var(--green-50)", borderColor: "#c5d9c8" }}
+              >
+                <Download size={18} />
+              </button>
+            )}
+            {!isOnline && (
+              <span
+                className="icon-button"
+                style={{ color: "#fff", background: "#a33b32", borderColor: "#a33b32" }}
+                title="Offline mode"
+                aria-label="Offline"
+              >
+                <Smartphone size={16} />
+              </span>
+            )}
             <Link
               className="icon-button"
               style={{ position: "relative" }}

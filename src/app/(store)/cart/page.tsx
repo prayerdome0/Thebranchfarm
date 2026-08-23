@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 import { ArrowRight, ShoppingBag, Trash2, Truck, MessageCircle } from "lucide-react";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { QuantityStepper } from "@/components/store/ProductCard";
