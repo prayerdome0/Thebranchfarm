@@ -30,9 +30,12 @@ export function SiteFooter() {
             <li><Link href="/shop">Shop</Link></li>
             <li><Link href="/our-farm">Our Farm</Link></li>
             <li><Link href="/gallery">Gallery</Link></li>
+            <li><Link href="/videos">Videos</Link></li>
             <li><Link href="/about">About</Link></li>
             <li><Link href="/contact">Contact</Link></li>
             <li><Link href="/cart">Cart</Link></li>
+            <li><Link href="/track">Track Order</Link></li>
+            <li><Link href="/install">Install App</Link></li>
           </ul>
         </div>
 
