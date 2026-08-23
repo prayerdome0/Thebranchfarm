@@ -23,12 +23,17 @@ export function usePWAInstall(): UsePWAInstallReturn {
   const [isStandalone, setIsStandalone] = useState(false);
 
   useEffect(() => {
-    // Initial check
-    setIsInstalled(isPWAInstalled());
-    setIsStandalone(
-      typeof window !== "undefined" &&
-        window.matchMedia("(display-mode: standalone)").matches
-    );
+    // Defer initial checks to avoid synchronous setState in effect
+    const initTimer = setTimeout(() => {
+      setIsInstalled(isPWAInstalled());
+      setIsStandalone(
+        typeof window !== "undefined" &&
+          window.matchMedia("(display-mode: standalone)").matches
+      );
+      if (getDeferredPrompt()) {
+        setIsInstallable(true);
+      }
+    }, 0);
 
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
@@ -52,28 +57,24 @@ export function usePWAInstall(): UsePWAInstallReturn {
     window.addEventListener("appinstalled", handleAppInstalled);
 
     const mql = window.matchMedia("(display-mode: standalone)");
-    // Safari < 14 doesn't support addEventListener on MediaQueryList
     if ((mql as MediaQueryList).addEventListener) {
       mql.addEventListener("change", handleDisplayModeChange);
     } else {
-      (mql as unknown as { addListener: (cb: (e: MediaQueryListEvent) => void) => void }).addListener(handleDisplayModeChange);
-    }
-
-    // If prompt was already captured before hook mounted
-    if (getDeferredPrompt()) {
-      setIsInstallable(true);
+      (mql as unknown as { addListener: (cb: (e: MediaQueryListEvent) => void) => void }).addListener(
+        handleDisplayModeChange
+      );
     }
 
     return () => {
-      window.removeEventListener(
-        "beforeinstallprompt",
-        handleBeforeInstallPrompt
-      );
+      clearTimeout(initTimer);
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
       window.removeEventListener("appinstalled", handleAppInstalled);
       if ((mql as MediaQueryList).removeEventListener) {
         mql.removeEventListener("change", handleDisplayModeChange);
       } else {
-        (mql as unknown as { removeListener: (cb: (e: MediaQueryListEvent) => void) => void }).removeListener(handleDisplayModeChange);
+        (mql as unknown as { removeListener: (cb: (e: MediaQueryListEvent) => void) => void }).removeListener(
+          handleDisplayModeChange
+        );
       }
     };
   }, []);

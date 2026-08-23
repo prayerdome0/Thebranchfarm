@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable @next/next/no-img-element */
 
 import { useEffect, useMemo, useState } from "react";
 import { Plus, FileText, Download, Eye, PenLine, Printer, Search, X, CircleAlert } from "lucide-react";
@@ -55,7 +56,7 @@ function blankForm(invoiceNumber = "", preparedBy = ""): InvoiceForm {
 
 export default function InvoicesPage() {
   const { showToast } = useToast();
-  const { settings, formatMoney, currency } = useStoreConfig();
+  const { formatMoney, currency } = useStoreConfig();
   const { user } = useAuth();
   const [list, setList] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);

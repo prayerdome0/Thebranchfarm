@@ -10,10 +10,14 @@ export function OfflineIndicator() {
 
   useEffect(() => {
     if (isOnline && wasOffline) {
-      setShowReconnected(true);
-      const timer = setTimeout(() => setShowReconnected(false), 3000);
-      return () => clearTimeout(timer);
+      const showTimer = setTimeout(() => setShowReconnected(true), 0);
+      const hideTimer = setTimeout(() => setShowReconnected(false), 3000);
+      return () => {
+        clearTimeout(showTimer);
+        clearTimeout(hideTimer);
+      };
     }
+    return undefined;
   }, [isOnline, wasOffline]);
 
   if (isOnline && !showReconnected) return null;

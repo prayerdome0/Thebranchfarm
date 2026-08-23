@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { isServiceWorkerSupported } from "@/lib/pwa";
+import { isServiceWorkerSupported, setDeferredPrompt } from "@/lib/pwa";
 
 /**
  * Registers the service worker for PWA offline support.
@@ -31,7 +31,6 @@ export function ServiceWorkerRegister() {
 
         // Handle waiting worker scenario on page load
         if (registration.waiting) {
-          // There's an update waiting — will be handled by PWAUpdatePrompt
           window.dispatchEvent(
             new CustomEvent("pwa:update-available", {
               detail: registration.waiting,
@@ -43,10 +42,7 @@ export function ServiceWorkerRegister() {
           const newWorker = registration?.installing;
           if (!newWorker) return;
           newWorker.addEventListener("statechange", () => {
-            if (
-              newWorker.state === "installed" &&
-              navigator.serviceWorker.controller
-            ) {
+            if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
               window.dispatchEvent(
                 new CustomEvent("pwa:update-available", {
                   detail: newWorker,
@@ -56,7 +52,6 @@ export function ServiceWorkerRegister() {
           });
         });
 
-        // Log successful registration in development
         if (process.env.NODE_ENV === "development") {
           console.log("[PWA] Service Worker registered:", registration.scope);
         }
@@ -69,26 +64,16 @@ export function ServiceWorkerRegister() {
 
     register();
 
-    // Handle beforeinstallprompt globally
     const handleBeforeInstallPrompt = (e: Event) => {
-      // Prevent default mini-infobar
       e.preventDefault();
-      // Store for later use via pwa lib
-      const { setDeferredPrompt } = require("@/lib/pwa");
-      setDeferredPrompt(e);
-      // Dispatch custom event so UI can react
-      window.dispatchEvent(
-        new CustomEvent("pwa:installable", { detail: e })
-      );
+      setDeferredPrompt(e as import("@/lib/pwa").BeforeInstallPromptEvent);
+      window.dispatchEvent(new CustomEvent("pwa:installable", { detail: e }));
     };
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
 
     return () => {
-      window.removeEventListener(
-        "beforeinstallprompt",
-        handleBeforeInstallPrompt
-      );
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
     };
   }, []);
 

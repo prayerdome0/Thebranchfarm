@@ -52,7 +52,7 @@ self.addEventListener("install", (event) => {
         await cache.addAll(
           PRECACHE_URLS.map((url) => new Request(url, { cache: "reload" }))
         );
-      } catch (err) {
+      } catch {
         // Try individually to be resilient
         await Promise.allSettled(
           PRECACHE_URLS.map(async (url) => {
@@ -155,7 +155,7 @@ self.addEventListener("fetch", (event) => {
             cache.put(request, networkResponse.clone());
           }
           return networkResponse;
-        } catch (err) {
+        } catch {
           // Try cache
           const cached = await caches.match(request);
           if (cached) return cached;

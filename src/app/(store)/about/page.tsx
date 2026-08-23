@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Heart, Leaf, MapPin, ShieldCheck, Sprout, MessageCircle, Phone } from "lucide-react";
+import { ArrowRight, Heart, MapPin, ShieldCheck, Sprout, MessageCircle, Phone } from "lucide-react";
 import { Reveal } from "@/components/ui/Reveal";
 import { BUSINESS } from "@/lib/constants";
 

@@ -34,13 +34,9 @@ export function PWAInstallPrompt() {
   const [installing, setInstalling] = useState(false);
 
   useEffect(() => {
-    if (!isInstallable || isInstalled) {
-      setVisible(false);
-      return;
-    }
-    if (!shouldShowPrompt()) {
-      setVisible(false);
-      return;
+    if (!isInstallable || isInstalled || !shouldShowPrompt()) {
+      const timer = setTimeout(() => setVisible(false), 0);
+      return () => clearTimeout(timer);
     }
     // Delay showing by 3 seconds to not be intrusive
     const timer = setTimeout(() => setVisible(true), 3000);
@@ -80,11 +76,7 @@ export function PWAInstallPrompt() {
             onClick={handleInstall}
             disabled={installing}
           >
-            {installing ? (
-              <span className="button-spinner" />
-            ) : (
-              <Download size={16} />
-            )}
+            {installing ? <span className="button-spinner" /> : <Download size={16} />}
             Install
           </button>
           <button

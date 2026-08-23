@@ -33,7 +33,7 @@ export default function ProductDetailPage() {
 function ProductDetail({ id }: { id: string }) {
   const router = useRouter();
   const { add } = useCart();
-  const { formatMoney, deliveryFee } = useStoreConfig();
+  const { formatMoney } = useStoreConfig();
   const [product, setProduct] = useState<Product | null>(null);
   const [related, setRelated] = useState<Product[]>([]);
   const [quantity, setQuantity] = useState(1);
