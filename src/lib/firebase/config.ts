@@ -6,7 +6,13 @@ import {
   initializeAuth,
   type Auth,
 } from "firebase/auth";
-import { getFirestore, type Firestore } from "firebase/firestore";
+import {
+  getFirestore,
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+  type Firestore,
+} from "firebase/firestore";
 import { getFunctions, type Functions } from "firebase/functions";
 
 // The Firebase web identifiers for the production `thebranchfarm` app.
@@ -101,7 +107,24 @@ export function getFirebaseAuth(): Auth {
 export function getFirebaseDb(): Firestore {
   if (!firebaseConfigured) throw configurationError();
   if (dbInstance) return dbInstance;
-  dbInstance = getFirestore(getFirebaseApp());
+  const firebaseApp = getFirebaseApp();
+  if (typeof window === "undefined") {
+    dbInstance = getFirestore(firebaseApp);
+    return dbInstance;
+  }
+  try {
+    // Keep previously viewed records in IndexedDB. Repeat visits render from
+    // the device first and only download changes, which is faster and works
+    // through intermittent mobile coverage.
+    dbInstance = initializeFirestore(firebaseApp, {
+      localCache: persistentLocalCache({
+        tabManager: persistentMultipleTabManager(),
+      }),
+    });
+  } catch {
+    // Fast Refresh or another bundle may already have initialised Firestore.
+    dbInstance = getFirestore(firebaseApp);
+  }
   return dbInstance;
 }
 

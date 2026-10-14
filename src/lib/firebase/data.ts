@@ -1033,10 +1033,10 @@ function demoProducts(): Product[] {
   return DEMO_PRODUCTS.map((product, index) => ({ ...product, id: `demo-${index + 1}` }));
 }
 
-export async function getProducts(): Promise<Product[]> {
+export async function getProducts(maximum = 500): Promise<Product[]> {
   try {
     const snapshot = await getDocs(
-      query(collection(db, "products"), orderBy("createdAt", "desc"), limit(500)),
+      query(collection(db, "products"), orderBy("createdAt", "desc"), limit(maximum)),
     );
     return snapshot.docs
       .map((item) => mapped<Product>(item))
@@ -1368,10 +1368,10 @@ function demoVideos(): FarmVideo[] {
   return DEMO_VIDEOS.map((video, index) => ({ ...video, id: `demo-video-${index + 1}` }));
 }
 
-export async function getVideos(): Promise<FarmVideo[]> {
+export async function getVideos(maximum = 200): Promise<FarmVideo[]> {
   try {
     const snapshot = await getDocs(
-      query(collection(db, "videos"), orderBy("createdAt", "desc"), limit(200)),
+      query(collection(db, "videos"), orderBy("createdAt", "desc"), limit(maximum)),
     );
     const videos = snapshot.docs.map((item) => mapped<FarmVideo>(item));
     return videos.length ? videos : demoVideos();

@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { Play } from "lucide-react";
 import type { FarmVideo } from "@/types";
+import { useDataSaver } from "@/hooks/useDataSaver";
 
 /**
  * Uploaded farm clips. When `autoplay` is on (the default for preview grids)
@@ -16,9 +17,11 @@ export function VideoCard({ video, priority = false, autoplay = true }: { video:
   const isRealVideo = video.videoUrl && /\.(mp4|webm|ogg|mov|m4v)(\?|$)/i.test(video.videoUrl);
   const ref = useRef<HTMLVideoElement>(null);
   const [playing, setPlaying] = useState(false);
+  const dataSaver = useDataSaver();
+  const shouldAutoplay = autoplay && !dataSaver;
 
   useEffect(() => {
-    if (!autoplay || !isRealVideo) return;
+    if (!shouldAutoplay || !isRealVideo) return;
     const node = ref.current;
     if (!node || typeof IntersectionObserver === "undefined") return;
     const observer = new IntersectionObserver(
@@ -32,7 +35,7 @@ export function VideoCard({ video, priority = false, autoplay = true }: { video:
     );
     observer.observe(node);
     return () => observer.disconnect();
-  }, [autoplay, isRealVideo]);
+  }, [shouldAutoplay, isRealVideo]);
 
   return (
     <article className="farm-video-card">
@@ -41,10 +44,10 @@ export function VideoCard({ video, priority = false, autoplay = true }: { video:
           <video
             ref={ref}
             poster={poster}
-            preload="metadata"
+            preload="none"
             playsInline
-            muted={autoplay}
-            loop={autoplay}
+            muted={shouldAutoplay}
+            loop={shouldAutoplay}
             controls
             onPlay={() => setPlaying(true)}
             onPause={() => setPlaying(false)}
@@ -57,7 +60,7 @@ export function VideoCard({ video, priority = false, autoplay = true }: { video:
             <Image src={poster} alt={video.title} fill sizes="(max-width: 780px) 100vw, 50vw" priority={priority} />
           </div>
         )}
-        {(!playing || !autoplay) && (
+        {(!playing || !shouldAutoplay) && (
           <span className="farm-video-play" aria-hidden="true">
             <Play size={22} fill="currentColor" />
           </span>

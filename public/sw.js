@@ -8,24 +8,18 @@
  * - Everything else: Network-first
  */
 
-const CACHE_VERSION = "v2";
+const CACHE_VERSION = "v3";
 const STATIC_CACHE = `branch-farm-static-${CACHE_VERSION}`;
 const IMAGE_CACHE = `branch-farm-images-${CACHE_VERSION}`;
 const PAGE_CACHE = `branch-farm-pages-${CACHE_VERSION}`;
-const OFFLINE_URL = "/offline";
+const OFFLINE_URL = "/offline.html";
 
-// Core assets to precache on install — minimal app shell
+// Keep first-install data tiny. Pages and media are cached naturally after
+// they are visited instead of silently downloading megabytes up front.
 const PRECACHE_URLS = [
   OFFLINE_URL,
-  "/",
-  "/shop",
-  "/logo.png",
+  "/favicon.ico",
   "/icons/icon-192x192.png",
-  "/icons/icon-512x512.png",
-  "/icons/maskable-192x192.png",
-  "/icons/maskable-512x512.png",
-  "/apple-touch-icon.png",
-  "/media/farm-hero.jpg",
 ];
 
 const STATIC_PREFIXES = [
@@ -148,7 +142,9 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       (async () => {
         try {
-          const networkResponse = await fetch(request);
+          // Do not leave a previously visited page behind a long request on a
+          // weak signal. After four seconds, use its cached copy/offline page.
+          const networkResponse = await fetchWithTimeout(request, 4000);
           // Cache successful navigations
           if (networkResponse.ok) {
             const cache = await caches.open(PAGE_CACHE);
@@ -193,6 +189,16 @@ self.addEventListener("fetch", (event) => {
 });
 
 // Strategies
+
+async function fetchWithTimeout(request, milliseconds) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), milliseconds);
+  try {
+    return await fetch(request, { signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 async function staleWhileRevalidate(request, cacheName) {
   const cache = await caches.open(cacheName);

@@ -30,6 +30,7 @@ import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { getProducts, getVideos } from "@/lib/firebase/data";
 import { BUSINESS } from "@/lib/constants";
 import type { FarmVideo, Product } from "@/types";
+import { useDataSaver } from "@/hooks/useDataSaver";
 
 /**
  * Real farm footage so visitors can see the animals at work. Stock clips from
@@ -65,13 +66,13 @@ const ANIMAL_CLIPS = [
  * pauses when it leaves, so the page stays light. Falls back to the poster
  * image if the clip cannot be loaded.
  */
-function AnimalClip({ clip }: { clip: (typeof ANIMAL_CLIPS)[number] }) {
+function AnimalClip({ clip, dataSaver }: { clip: (typeof ANIMAL_CLIPS)[number]; dataSaver: boolean }) {
   const ref = useRef<HTMLVideoElement>(null);
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     const node = ref.current;
-    if (!node || typeof IntersectionObserver === "undefined") return;
+    if (!node || dataSaver || typeof IntersectionObserver === "undefined") return;
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -83,7 +84,7 @@ function AnimalClip({ clip }: { clip: (typeof ANIMAL_CLIPS)[number] }) {
     );
     observer.observe(node);
     return () => observer.disconnect();
-  }, []);
+  }, [dataSaver]);
 
   if (failed) {
     return (
@@ -99,7 +100,7 @@ function AnimalClip({ clip }: { clip: (typeof ANIMAL_CLIPS)[number] }) {
     <figure className="animal-clip">
       <video
         ref={ref}
-        src={clip.video}
+        src={dataSaver ? undefined : clip.video}
         poster={clip.poster}
         muted
         loop
@@ -117,11 +118,13 @@ export default function HomePage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [videos, setVideos] = useState<FarmVideo[]>([]);
   const { formatMoney, freeDeliveryThreshold } = useStoreConfig();
+  const dataSaver = useDataSaver();
 
   useEffect(() => {
-    getProducts().then((list) => setProducts(list.slice(0, 12)));
-    // Show every uploaded video on the homepage — no limit.
-    getVideos().then((list) => setVideos(list));
+    // The landing page only needs a small preview; the full collections load
+    // on their dedicated pages. This substantially reduces mobile reads.
+    getProducts(24).then((list) => setProducts(list.slice(0, 12)));
+    getVideos(3).then((list) => setVideos(list.slice(0, 3)));
   }, []);
 
   const featured = products.filter((p) => p.featured).slice(0, 4);
@@ -146,15 +149,15 @@ export default function HomePage() {
           />
           <video
             className="hero-video"
-            autoPlay
+            autoPlay={!dataSaver}
             muted
             loop
             playsInline
-            preload="metadata"
+            preload="none"
             poster="/media/farm-hero.jpg"
             aria-hidden="true"
           >
-            <source src="/media/videos/farm-tour.mp4" type="video/mp4" />
+            <source src={dataSaver ? undefined : "/media/videos/farm-tour.mp4"} type="video/mp4" />
           </video>
           <div className="hero-image-overlay" />
         </div>
@@ -260,7 +263,7 @@ export default function HomePage() {
               <div className="motion-shot">
                 <video
                   className="motion-video"
-                  autoPlay
+                  autoPlay={!dataSaver}
                   muted
                   loop
                   playsInline
@@ -268,7 +271,7 @@ export default function HomePage() {
                   poster="/media/farm-sunset.jpg"
                   aria-label="The Branch Farm at work"
                 >
-                  <source src="/media/videos/farm-tour.mp4" type="video/mp4" />
+                  <source src={dataSaver ? undefined : "/media/videos/farm-tour.mp4"} type="video/mp4" />
                 </video>
               </div>
               <div className="motion-vignette" />
@@ -345,7 +348,7 @@ export default function HomePage() {
           <div className="animal-clip-grid" style={{ marginTop: 28 }}>
             {ANIMAL_CLIPS.map((clip, index) => (
               <Reveal key={clip.label} delay={(index % 4) * 70}>
-                <AnimalClip clip={clip} />
+                <AnimalClip clip={clip} dataSaver={dataSaver} />
               </Reveal>
             ))}
           </div>
@@ -448,8 +451,8 @@ export default function HomePage() {
             <Link href="/videos" className="video-banner" style={{ marginTop: 28 }} aria-label="Watch farm videos">
               <span className="video-banner-frame">
                 <Image src="/media/farm-operations.jpg" alt="Farm operations" fill sizes="100vw" />
-                <video className="video-banner-video" autoPlay muted loop playsInline preload="none" poster="/media/farm-operations.jpg" aria-hidden="true">
-                  <source src="/media/videos/harvest-day.mp4" type="video/mp4" />
+                <video className="video-banner-video" autoPlay={!dataSaver} muted loop playsInline preload="none" poster="/media/farm-operations.jpg" aria-hidden="true">
+                  <source src={dataSaver ? undefined : "/media/videos/harvest-day.mp4"} type="video/mp4" />
                 </video>
               </span>
               <span className="video-banner-play"><Play size={26} fill="currentColor" /></span>

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Play, Volume2, VolumeX } from "lucide-react";
+import { useDataSaver } from "@/hooks/useDataSaver";
 
 /**
  * Muted, looping clip that starts playing when it scrolls into view and pauses
@@ -28,10 +29,11 @@ export function InlineVideo({
   const ref = useRef<HTMLVideoElement | null>(null);
   const [muted, setMuted] = useState(true);
   const [started, setStarted] = useState(false);
+  const dataSaver = useDataSaver();
 
   useEffect(() => {
     const node = ref.current;
-    if (!node || playOnHoverOnly) return;
+    if (!node || playOnHoverOnly || dataSaver) return;
     if (typeof IntersectionObserver === "undefined") return;
 
     const observer = new IntersectionObserver(
@@ -49,7 +51,13 @@ export function InlineVideo({
     );
     observer.observe(node);
     return () => observer.disconnect();
-  }, [playOnHoverOnly]);
+  }, [playOnHoverOnly, dataSaver]);
+
+  useEffect(() => {
+    if (!dataSaver || !started || !ref.current) return;
+    ref.current.load();
+    ref.current.play().catch(() => {});
+  }, [dataSaver, started]);
 
   const hoverPlay = () => {
     if (!playOnHoverOnly) return;
@@ -72,6 +80,9 @@ export function InlineVideo({
       onMouseLeave={hoverStop}
       onFocus={hoverPlay}
       onBlur={hoverStop}
+      onClick={() => {
+        if (dataSaver && !started) setStarted(true);
+      }}
     >
       <video
         ref={ref}
@@ -88,7 +99,7 @@ export function InlineVideo({
           else node.pause();
         }}
       >
-        <source src={src} />
+        <source src={dataSaver && !started ? undefined : src} />
       </video>
       {!started && (
         <span className="inline-video-play" aria-hidden="true">
