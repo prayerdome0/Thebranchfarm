@@ -1,15 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import { AnimalCard } from "@/components/farm/AnimalCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Loading } from "@/components/ui/Loading";
+import { deleteAnimal } from "@/lib/firebase/data";
 import { ANIMAL_CATEGORIES } from "@/lib/constants";
 import { watchAnimals } from "@/lib/firebase/data";
 import { cn } from "@/lib/utils";
 import type { Animal } from "@/types";
+import { useToast } from "@/contexts/ToastContext";
 
 const FILTERS = [
   { value: "all", label: "All" },
@@ -21,10 +24,14 @@ const FILTERS = [
 ];
 
 export default function AnimalsPage() {
+  const { isAdmin } = useAuth();
   const [animals, setAnimals] = useState<Animal[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
+  const { showToast } = useToast();
+
+  const [deleting, setDeleting] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const stop = watchAnimals((list) => {
@@ -47,20 +54,52 @@ export default function AnimalsPage() {
     });
   }, [animals, filter, search]);
 
+  const handleDelete = async (id: string) => {
+    setDeleting((prev) => new Set([...prev, id]));
+    if (!confirm("Delete this animal and its health records? This cannot be undone.")) {
+      setDeleting((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+      return;
+    }
+    try {
+      await deleteAnimal(id);
+      showToast("Animal deleted", "success");
+    } catch (cause) {
+      showToast(`Failed to delete animal: ${cause}`, "error");
+    } finally {
+      setDeleting((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }
+  };
+
   return (
     <div className="dashboard-stack">
       <section className="dashboard-section-title">
-        <div>
+        <div className="section-header">
           <span className="eyebrow">Permanent livestock register</span>
           <h2>Animals</h2>
           <p>{ANIMAL_CATEGORIES.join(", ")} — complete profiles, photos, acquisition, health, growth, breeding and movement history.</p>
         </div>
-        <div className="title-actions animal-register-actions">
-          <Link className="button button-secondary" href="/births"><Plus size={17} /> Record new birth</Link>
-          <Link className="button button-secondary" href="/acquisitions"><Plus size={17} /> Add purchased animal</Link>
+        <div className="section-actions">
+          <div className="actions-row">
+            <Link className="button button-secondary" href="/births"><Plus size={17} /> Record new birth</Link>
+            <Link className="button button-secondary" href="/acquisitions"><Plus size={17} /> Add purchased animal</Link>
+          </div>
           <Link className="button button-primary" href="/animals/new"><Plus size={18} /> Add animal</Link>
         </div>
       </section>
+
+      {deleting.size > 0 && (
+        <div className="toast toast-warning" role="alert">
+          <span className="toast-content">Deleting selected animals…</span>
+        </div>
+      )}
 
       <div className="farm-toolbar">
         <div className="search-field">
@@ -80,7 +119,20 @@ export default function AnimalsPage() {
       {loading ? <Loading label="Loading animals…" /> : visible.length ? (
         <div className="animal-grid">
           {visible.map((animal) => (
-            <AnimalCard key={animal.id} animal={animal} />
+            <article key={animal.id} className="animal-grid-item">
+              <AnimalCard animal={animal} />
+              <div className="animal-grid-actions">
+                {isAdmin && (
+                  <button
+                    className="icon-button icon-button-small"
+                    onClick={() => handleDelete(animal.id)}
+                    aria-label="Delete animal"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                )}
+              </div>
+            </article>
           ))}
         </div>
       ) : animals.length ? (
