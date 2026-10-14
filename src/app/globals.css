@@ -2403,6 +2403,16 @@
   }
 }
 
+/* Skip layout and paint work for homepage sections that are far below the
+   viewport. The browser retains an estimated height and renders them as the
+   visitor approaches, reducing initial CPU and memory on low-end phones. */
+@supports (content-visibility: auto) {
+  .home-hero ~ .section {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 800px;
+  }
+}
+
 /* PWA display mode — standalone adjustments */
 @media (display-mode: standalone) {
   .site-header {
