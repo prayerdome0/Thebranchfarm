@@ -9,7 +9,11 @@ export function AnimalCard({ animal }: { animal: Animal }) {
   const typeLabel = ANIMAL_TYPE_LABELS[animal.animalType] || animal.animalType;
   const statusLabel = ANIMAL_STATUS_LABELS[animal.status] || animal.status;
   return (
-    <Link href={`/animals/${animal.id}`} className="animal-card" aria-label={`View ${typeLabel} ${animal.animalId}`}>
+    <Link
+      href={`/animals/${animal.id}`}
+      className="animal-card"
+      aria-label={`View ${typeLabel} ${animal.animalId}`}
+    >
       <div className="animal-card-photo">
         {animal.photo ? (
           // eslint-disable-next-line @next/next/no-img-element

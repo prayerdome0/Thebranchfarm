@@ -1448,8 +1448,21 @@
     .customer-order-list > a { grid-template-columns: auto 1fr auto; padding: 10px 0; }
     .order-list-location, .customer-order-list > a > strong, .customer-order-list > a > svg { display: none; }
     .dashboard-two-columns { grid-template-columns: 1fr; }
-    .dashboard-section-title { align-items: stretch; flex-direction: column; }
-    .dashboard-section-title .button { width: 100%; }
+.dashboard-section-title { align-items: stretch; flex-direction: column; }
+.dashboard-section-title .button { width: 100%; }
+
+.section-header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.section-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+}
     .title-actions { flex-direction: column; align-items: stretch; }
     .title-actions .button, .title-actions select { width: 100%; }
     .account-order-card .order-timeline { padding-inline: 0; }
