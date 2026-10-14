@@ -21,7 +21,7 @@ type Role = (typeof VALID_ROLES)[number];
  * callable — the browser can be trusted to hold a token, never a role.
  */
 async function actor(uid: string | undefined, roles: Role[]) {
-  if (!uid) throw new HttpsError("unauthenticated", "Sign in is required.");
+  if (!uid) throw new HttpsError("unauthenticated", "Your session at The Branch Farm has expired. Sign in again to continue.");
   const snapshot = await db.doc(`users/${uid}`).get();
   const data = snapshot.data();
   if (!data || data.status !== "active" || !roles.includes(data.role as Role)) {

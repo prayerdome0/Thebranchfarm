@@ -46,7 +46,7 @@ export default function GuidePage() {
         token = await auth.currentUser.getIdToken(false).catch(() => null);
       }
       if (!token) {
-        throw new Error("Your session could not be verified. Sign in again and retry.");
+        throw new Error("Your session at The Branch Farm could not be verified. Sign in again and retry.");
       }
 
       let blob: Blob | null = null;

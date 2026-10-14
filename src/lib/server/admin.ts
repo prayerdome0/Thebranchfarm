@@ -129,7 +129,7 @@ export async function requireStaff(
   // as a query parameter for those GET endpoints.
   const fromQuery = new URL(request.url).searchParams.get("token") || "";
   const token = fromHeader || fromQuery;
-  if (!token) throw new ApiError(401, "Sign in is required. Pass an Authorization: Bearer <id token> header.");
+  if (!token) throw new ApiError(401, "Your session at The Branch Farm has expired. Sign in again to continue.");
   try {
     const decoded = await admin.auth.verifyIdToken(token);
 
@@ -194,7 +194,7 @@ export async function requireStaff(
     };
   } catch (cause) {
     if (cause instanceof ApiError) throw cause;
-    throw new ApiError(401, "Your session could not be verified. Sign in again and retry.");
+    throw new ApiError(401, "Your session at The Branch Farm could not be verified. Sign in again and retry.");
   }
 }
 

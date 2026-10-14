@@ -52,7 +52,7 @@ export default function Error({
           {isChunkLoad ? "Update available" : "Something went wrong"}
         </span>
         <h1 style={{ fontSize: "2.1rem" }}>
-          {isChunkLoad ? "A new version is available." : "We couldn't load this page."}
+          {isChunkLoad ? "A new version is available." : "The Branch Farm couldn't load this page."}
         </h1>
         <p style={{ margin: "12px 0 26px" }}>
           {isChunkLoad
@@ -73,11 +73,6 @@ export default function Error({
             <ArrowLeft size={18} /> Back to home
           </Link>
         </div>
-        {error.digest && (
-          <small style={{ display: "block", marginTop: 18, color: "var(--muted)", fontSize: ".62rem" }}>
-            Ref: {error.digest}
-          </small>
-        )}
       </div>
     </section>
   );

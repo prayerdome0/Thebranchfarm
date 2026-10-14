@@ -171,7 +171,7 @@ export function uploadViaFarmServer(
         if (token) xhr.setRequestHeader("Authorization", `Bearer ${token}`);
         xhr.send(body);
       },
-      () => reject(new CloudinaryError("Your session could not be verified. Sign in again and retry.")),
+      () => reject(new CloudinaryError("Your session at The Branch Farm could not be verified. Sign in again and retry.")),
     );
   });
 }

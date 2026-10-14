@@ -128,12 +128,16 @@ export function friendlyError(error: unknown) {
     typeof error === "object" && error && "code" in error
       ? String((error as { code: string }).code)
       : "";
-  const message =
+  const rawMessage =
     error instanceof Error
       ? error.message
       : typeof error === "object" && error && "message" in error
         ? String((error as { message: string }).message)
         : "";
+  // Never show raw provider reference codes ("Ref: X984CC131B6") on a page.
+  const message = rawMessage
+    .replace(/\s*\bRef:\s*[A-Z0-9][A-Z0-9-]{3,}\s*$/i, "")
+    .trim();
   const fromMessage = message.match(/\((auth|functions|firestore|storage)\/[a-z0-9-]+\)/i)?.[1] || "";
   const code = rawCode || fromMessage;
   const normalized = code.replace(/^(auth|functions|firestore|storage)\//, "");
@@ -161,8 +165,8 @@ export function friendlyError(error: unknown) {
     "operation-not-allowed": "Email sign-in is not enabled yet. Please contact the farm administrator.",
     "auth/weak-password": "Use a stronger password with at least 8 characters.",
     "weak-password": "Use a stronger password with at least 8 characters.",
-    "auth/too-many-requests": "Too many attempts. Please wait and try again.",
-    "too-many-requests": "Too many attempts. Please wait and try again.",
+    "auth/too-many-requests": "Too many attempts on The Branch Farm. Please wait a moment and try again.",
+    "too-many-requests": "Too many attempts on The Branch Farm. Please wait a moment and try again.",
     "auth/network-request-failed": "We could not reach the service. Check your connection and try again.",
     "network-request-failed": "We could not reach the service. Check your connection and try again.",
     "auth/invalid-api-key": "The sign-in service is not configured correctly. Please try again later.",
@@ -172,7 +176,7 @@ export function friendlyError(error: unknown) {
     "auth/configuration-not-found": "Firebase Authentication is not fully configured yet. Please try again later.",
     "configuration-not-found": "Firebase Authentication is not fully configured yet. Please try again later.",
     "permission-denied": "You do not have permission to complete that action.",
-    unauthenticated: "Please sign in and try again.",
+    unauthenticated: "Your session at The Branch Farm has expired. Sign in again to continue.",
     unavailable: "The service is temporarily unavailable. Please try again.",
     "failed-precondition": "That action is not valid in the current state. Refresh and try again.",
     "invalid-argument": "Please review the information and try again.",
@@ -188,6 +192,12 @@ export function friendlyError(error: unknown) {
   };
   const mapped = messages[code] || messages[normalized] || messages[`auth/${normalized}`];
   if (mapped) return mapped;
+  // Rebrand generic session / sign-in pace notices (e.g. raw identity-provider
+  // copy such as "Your session has expired. Sign in again to continue.") so
+  // every page shows The Branch Farm's own wording.
+  if (/too many (attempts|requests)/i.test(message)) return "Too many attempts on The Branch Farm. Please wait a moment and try again.";
+  if (/session could not be verified/i.test(message)) return "Your session at The Branch Farm could not be verified. Sign in again and retry.";
+  if (/session (has )?expired/i.test(message) || /sign in again to continue/i.test(message)) return "Your session at The Branch Farm has expired. Sign in again to continue.";
   // Errors raised by this app itself (upload proxy verdicts, API responses,
   // validation) carry a clear, safe message written for the team — show it
   // instead of masking it behind a generic apology. Unknown internal Firebase
